@@ -1,6 +1,6 @@
 ## CrossChannel is Pub/Sub library for .NET
 
-
+![Nuget](https://img.shields.io/nuget/v/Arc.CrossChannel) ![Build and Test](https://github.com/archi-Doc/CrossChannel/workflows/Build%20and%20Test/badge.svg)
 
 - Faster than most Pub/Sub libraries.
 - Easy to use.
@@ -36,13 +36,13 @@ Performance is the top priority.
 
 ## Weak reference
 
-
+.
 
 
 
 ## Close channel
 
-
+.
 
 
 
@@ -58,7 +58,7 @@ The delegates passed to `Open()` functions must satisfy these requirements.
 
 ## Other
 
-
+.
 
 
 
