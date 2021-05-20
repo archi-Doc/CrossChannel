@@ -8,7 +8,7 @@ namespace CrossChannel
 {
     public class RadioClass
     {
-        public XChannel Open<TMessage>(object? weakReference, Action<TMessage> method)
+        public XChannel Open<TMessage>(Action<TMessage> method, object? weakReference = null)
         {
             var list = (FastList<XChannel_Message<TMessage>>)this.dictionaryMessage.GetOrAdd(
                 typeof(TMessage),
@@ -27,12 +27,12 @@ namespace CrossChannel
             return channel;
         }
 
-        public XChannel OpenAsync<TMessage>(object? weakReference, Func<TMessage, Task> method) => this.OpenTwoWay<TMessage, Task>(weakReference, method);
+        public XChannel OpenAsync<TMessage>(Func<TMessage, Task> method, object? weakReference = null) => this.OpenTwoWay<TMessage, Task>(method, weakReference);
 
-        public XChannel OpenAsyncKey<TKey, TMessage>(object? weakReference, TKey key, Func<TMessage, Task> method)
-            where TKey : notnull => this.OpenTwoWayKey<TKey, TMessage, Task>(weakReference, key, method);
+        public XChannel OpenAsyncKey<TKey, TMessage>(TKey key, Func<TMessage, Task> method, object? weakReference = null)
+            where TKey : notnull => this.OpenTwoWayKey<TKey, TMessage, Task>(key, method, weakReference);
 
-        public XChannel OpenKey<TKey, TMessage>(object? weakReference, TKey key, Action<TMessage> method)
+        public XChannel OpenKey<TKey, TMessage>(TKey key, Action<TMessage> method, object? weakReference = null)
             where TKey : notnull
         {
             var collection = (XCollection_KeyMessage<TKey, TMessage>)this.dictionaryKeyMessage.GetOrAdd(
@@ -52,7 +52,7 @@ namespace CrossChannel
             return channel;
         }
 
-        public XChannel OpenTwoWay<TMessage, TResult>(object? weakReference, Func<TMessage, TResult> method)
+        public XChannel OpenTwoWay<TMessage, TResult>(Func<TMessage, TResult> method, object? weakReference = null)
         {
             var list = (FastList<XChannel_MessageResult<TMessage, TResult>>)this.dictionaryMessageResult.GetOrAdd(
                 new Identifier_MessageResult(typeof(TMessage), typeof(TResult)),
@@ -71,12 +71,12 @@ namespace CrossChannel
             return channel;
         }
 
-        public XChannel OpenTwoWayAsync<TMessage, TResult>(object? weakReference, Func<TMessage, Task<TResult>> method) => this.OpenTwoWay<TMessage, Task<TResult>>(weakReference, method);
+        public XChannel OpenTwoWayAsync<TMessage, TResult>(Func<TMessage, Task<TResult>> method, object? weakReference = null) => this.OpenTwoWay<TMessage, Task<TResult>>(method, weakReference);
 
-        public XChannel OpenTwoWayAsyncKey<TKey, TMessage, TResult>(object? weakReference, TKey key, Func<TMessage, Task<TResult>> method)
-             where TKey : notnull => this.OpenTwoWayKey<TKey, TMessage, Task<TResult>>(weakReference, key, method);
+        public XChannel OpenTwoWayAsyncKey<TKey, TMessage, TResult>(TKey key, Func<TMessage, Task<TResult>> method, object? weakReference = null)
+             where TKey : notnull => this.OpenTwoWayKey<TKey, TMessage, Task<TResult>>(key, method, weakReference);
 
-        public XChannel OpenTwoWayKey<TKey, TMessage, TResult>(object? weakReference, TKey key, Func<TMessage, TResult> method)
+        public XChannel OpenTwoWayKey<TKey, TMessage, TResult>(TKey key, Func<TMessage, TResult> method, object? weakReference = null)
             where TKey : notnull
         {
             var collection = (XCollection_KeyMessageResult<TKey, TMessage, TResult>)this.dictionaryKeyMessageResult.GetOrAdd(
