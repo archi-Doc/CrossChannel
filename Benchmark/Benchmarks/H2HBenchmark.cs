@@ -6,8 +6,6 @@ using MessagePipe;
 using Microsoft.Extensions.DependencyInjection;
 using PubSub;
 
-#pragma warning disable SA1649 // File name should match first type name
-
 namespace Benchmark
 {
     [Config(typeof(BenchmarkConfig))]
@@ -63,7 +61,7 @@ namespace Benchmark
             var pub = this.Provider.GetService<IPublisher<int>>()!;
             using (var i = sub.Subscribe(x => { }))
             {
-                pub.Publish(3);
+                pub.Publish(1);
             }
 
             return;
@@ -93,7 +91,7 @@ namespace Benchmark
         public void PS_OpenSend()
         {
             Hub.Default.Subscribe<int>(x => { });
-            Hub.Default.Publish<int>(3);
+            Hub.Default.Publish<int>(1);
             Hub.Default.Unsubscribe<int>();
 
             return;
@@ -177,34 +175,5 @@ namespace Benchmark
 
             return;
         }
-
-        /*[Benchmark]
-        public void CCO_OpenSend()
-        {
-            using (var c = Arc.CrossChannel.Obsolete.CrossChannel.Open<int>(this, x => { }))
-            {
-                Arc.CrossChannel.Obsolete.CrossChannel.Send<int>(1);
-            }
-
-            return;
-        }
-
-        [Benchmark]
-        public void CCO_OpenSend8()
-        {
-            using (var c = Arc.CrossChannel.Obsolete.CrossChannel.Open<int>(this, x => { }))
-            {
-                Arc.CrossChannel.Obsolete.CrossChannel.Send<int>(1);
-                Arc.CrossChannel.Obsolete.CrossChannel.Send<int>(2);
-                Arc.CrossChannel.Obsolete.CrossChannel.Send<int>(3);
-                Arc.CrossChannel.Obsolete.CrossChannel.Send<int>(4);
-                Arc.CrossChannel.Obsolete.CrossChannel.Send<int>(5);
-                Arc.CrossChannel.Obsolete.CrossChannel.Send<int>(6);
-                Arc.CrossChannel.Obsolete.CrossChannel.Send<int>(7);
-                Arc.CrossChannel.Obsolete.CrossChannel.Send<int>(8);
-            }
-
-            return;
-        }*/
     }
 }
