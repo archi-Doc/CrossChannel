@@ -10,4 +10,10 @@
     <ProjectReference Include="..\CrossChannel\CrossChannel.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="MessagePipe" Version="1.3.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
+  </ItemGroup>
+
+
 </Project>
