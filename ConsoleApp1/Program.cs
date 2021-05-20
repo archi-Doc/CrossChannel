@@ -36,7 +36,7 @@ namespace ConsoleApp1
             // This message will not be displayed because the channel is automatically closed.
             CrossChannel.Radio.Send<string>("Message not received.");
 
-            // Don't forget to close a channel when you don't specify a weak reference, since this will cause memory leaks.
+            // Don't forget to close the channel when you did not specify a weak reference, since this will cause memory leaks.
             CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Leak " + x); });
 
             // You can create a local radio class.
