@@ -165,7 +165,7 @@ namespace CrossChannel
                     var empty = this.List.Remove(this);
                     this.WeakDelegate?.MarkForDeletion();
 
-                    if (empty && this.Collection.Count >= Radio.Const.HoldDictionaryThreshold)
+                    if (empty && this.Collection.Count >= CrossChannelConst.HoldDictionaryThreshold)
                     {
                         this.Collection.Dictionary.TryRemove(this.Key, out _);
                         this.Collection.Count--;
@@ -238,7 +238,7 @@ namespace CrossChannel
                     var empty = this.List.Remove(this);
                     this.WeakDelegate?.MarkForDeletion();
 
-                    if (empty && this.Collection.Count >= Radio.Const.HoldDictionaryThreshold)
+                    if (empty && this.Collection.Count >= CrossChannelConst.HoldDictionaryThreshold)
                     {
                         this.Collection.Dictionary.TryRemove(this.Key, out _);
                         this.Collection.Count--;

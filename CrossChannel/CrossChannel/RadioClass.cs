@@ -14,11 +14,11 @@ namespace CrossChannel
                 typeof(TMessage),
                 x => new FastList<XChannel_Message<TMessage>>());
 
-            if (list.CleanupCount++ >= Radio.Const.CleanupListThreshold)
+            if (list.CleanupCount++ >= CrossChannelConst.CleanupListThreshold)
             {
                 lock (list)
                 {
-                    list.CleanupCount = 0;
+                    list.CleanupCount = 1;
                     list.Cleanup();
                 }
             }
@@ -39,11 +39,11 @@ namespace CrossChannel
                 new Identifier_KeyMessage(typeof(TKey), typeof(TMessage)),
                 x => new XCollection_KeyMessage<TKey, TMessage>());
 
-            if (collection.CleanupCount++ >= Radio.Const.CleanupDictionaryThreshold)
+            if (collection.CleanupCount++ >= CrossChannelConst.CleanupDictionaryThreshold)
             {
                 lock (collection)
                 {
-                    collection.CleanupCount = 0;
+                    collection.CleanupCount = 1;
                     collection.Cleanup();
                 }
             }
@@ -58,11 +58,11 @@ namespace CrossChannel
                 new Identifier_MessageResult(typeof(TMessage), typeof(TResult)),
                 x => new FastList<XChannel_MessageResult<TMessage, TResult>>());
 
-            if (list.CleanupCount++ >= Radio.Const.CleanupListThreshold)
+            if (list.CleanupCount++ >= CrossChannelConst.CleanupListThreshold)
             {
                 lock (list)
                 {
-                    list.CleanupCount = 0;
+                    list.CleanupCount = 1;
                     list.Cleanup();
                 }
             }
@@ -83,11 +83,11 @@ namespace CrossChannel
                 new Identifier_KeyMessageResult(typeof(TKey), typeof(TMessage), typeof(TResult)),
                 x => new XCollection_KeyMessageResult<TKey, TMessage, TResult>());
 
-            if(collection.CleanupCount++ >= Radio.Const.CleanupDictionaryThreshold)
+            if(collection.CleanupCount++ >= CrossChannelConst.CleanupDictionaryThreshold)
             {
                 lock (collection)
                 {
-                    collection.CleanupCount = 0;
+                    collection.CleanupCount = 1;
                     collection.Cleanup();
                 }
             }
