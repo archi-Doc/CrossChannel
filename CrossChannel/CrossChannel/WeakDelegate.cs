@@ -103,7 +103,12 @@ namespace Arc.WeakDelegate
 
         public void Execute(out bool executed)
         {// Thread safe
-            if (this.StaticDelegate is Action method)
+            if (!this.IsAlive)
+            {
+                executed = false;
+                return;
+            }
+            else if (this.StaticDelegate is Action method)
             {
                 executed = true;
                 method();
@@ -111,7 +116,7 @@ namespace Arc.WeakDelegate
             }
 
             var delegateTarget = this.DelegateTarget;
-            if (this.IsAlive && this.compiledDelegate != null && delegateTarget != null)
+            if (this.compiledDelegate != null && delegateTarget != null)
             {
                 executed = true;
                 this.compiledDelegate(delegateTarget);
@@ -124,14 +129,18 @@ namespace Arc.WeakDelegate
 
         public void Execute()
         {// Thread safe
-            if (this.StaticDelegate is Action method)
+            if (!this.IsAlive)
+            {
+                return;
+            }
+            else if (this.StaticDelegate is Action method)
             {
                 method();
                 return;
             }
 
             var delegateTarget = this.DelegateTarget;
-            if (this.IsAlive && this.compiledDelegate != null && delegateTarget != null)
+            if (this.compiledDelegate != null && delegateTarget != null)
             {
                 this.compiledDelegate(delegateTarget);
             }
@@ -186,7 +195,12 @@ namespace Arc.WeakDelegate
 
         public void Execute(T t, out bool executed)
         {// Thread safe
-            if (this.StaticDelegate is Action<T> method)
+            if (!this.IsAlive)
+            {
+                executed = false;
+                return;
+            }
+            else if (this.StaticDelegate is Action<T> method)
             {
                 executed = true;
                 method(t);
@@ -194,7 +208,7 @@ namespace Arc.WeakDelegate
             }
 
             var delegateTarget = this.DelegateTarget;
-            if (this.IsAlive && this.compiledDelegate != null && delegateTarget != null)
+            if (this.compiledDelegate != null && delegateTarget != null)
             {
                 executed = true;
                 this.compiledDelegate(delegateTarget, t);
@@ -207,14 +221,18 @@ namespace Arc.WeakDelegate
 
         public void Execute(T t)
         {// Thread safe
-            if (this.StaticDelegate is Action<T> method)
+            if (!this.IsAlive)
+            {
+                return;
+            }
+            else if (this.StaticDelegate is Action<T> method)
             {
                 method(t);
                 return;
             }
 
             var delegateTarget = this.DelegateTarget;
-            if (this.IsAlive && this.compiledDelegate != null && delegateTarget != null)
+            if (this.compiledDelegate != null && delegateTarget != null)
             {
                 this.compiledDelegate(delegateTarget, t);
             }
@@ -265,14 +283,19 @@ namespace Arc.WeakDelegate
         [return: MaybeNull]
         public TResult Execute(out bool executed)
         {// Thread safe
-            if (this.StaticDelegate is Func<TResult> method)
+            if (!this.IsAlive)
+            {
+                executed = false;
+                return default;
+            }
+            else if (this.StaticDelegate is Func<TResult> method)
             {
                 executed = true;
                 return method();
             }
 
             var delegateTarget = this.DelegateTarget;
-            if (this.IsAlive && this.compiledDelegate != null && delegateTarget != null)
+            if (this.compiledDelegate != null && delegateTarget != null)
             {
                 executed = true;
                 return this.compiledDelegate(delegateTarget);
@@ -285,13 +308,17 @@ namespace Arc.WeakDelegate
         [return: MaybeNull]
         public TResult Execute()
         {// Thread safe
-            if (this.StaticDelegate is Func<TResult> method)
+            if (!this.IsAlive)
+            {
+                return default;
+            }
+            else if (this.StaticDelegate is Func<TResult> method)
             {
                 return method();
             }
 
             var delegateTarget = this.DelegateTarget;
-            if (this.IsAlive && this.compiledDelegate != null && delegateTarget != null)
+            if (this.compiledDelegate != null && delegateTarget != null)
             {
                 return this.compiledDelegate(delegateTarget);
             }
@@ -345,14 +372,19 @@ namespace Arc.WeakDelegate
         [return: MaybeNull]
         public TResult Execute(T t, out bool executed)
         {// Thread safe
-            if (this.StaticDelegate is Func<T, TResult> method)
+            if (!this.IsAlive)
+            {
+                executed = false;
+                return default;
+            }
+            else if (this.StaticDelegate is Func<T, TResult> method)
             {
                 executed = true;
                 return method(t);
             }
 
             var delegateTarget = this.DelegateTarget;
-            if (this.IsAlive && this.compiledDelegate != null && delegateTarget != null)
+            if (this.compiledDelegate != null && delegateTarget != null)
             {
                 executed = true;
                 return this.compiledDelegate(delegateTarget, t);
@@ -365,13 +397,17 @@ namespace Arc.WeakDelegate
         [return: MaybeNull]
         public TResult Execute(T t)
         {// Thread safe
-            if (this.StaticDelegate is Func<T, TResult> method)
+            if (!this.IsAlive)
+            {
+                return default;
+            }
+            else if (this.StaticDelegate is Func<T, TResult> method)
             {
                 return method(t);
             }
 
             var delegateTarget = this.DelegateTarget;
-            if (this.IsAlive && this.compiledDelegate != null && delegateTarget != null)
+            if (this.compiledDelegate != null && delegateTarget != null)
             {
                 return this.compiledDelegate(delegateTarget, t);
             }
@@ -476,10 +512,10 @@ namespace Arc.WeakDelegate
                     return w.IsAlive;
                 }
 
-                if (this.StaticDelegate != null)
+                /*if (this.StaticDelegate != null)
                 {
                     return true;
-                }
+                }*/
 
                 return false;
             }

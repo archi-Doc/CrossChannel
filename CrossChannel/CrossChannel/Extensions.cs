@@ -341,7 +341,7 @@ namespace CrossChannel
                     }
                 }
 
-                if (list.Shrink() && collection.Count >= Radio.Const.HoldDictionaryThreshold)
+                if (list.Shrink() && collection.Count >= CrossChannelConst.HoldDictionaryThreshold)
                 {
                     collection.Dictionary.TryRemove(x.Key, out _);
                     collection.Count--;
@@ -370,7 +370,7 @@ namespace CrossChannel
                     }
                 }
 
-                if (list.Shrink() && collection.Count >= Radio.Const.HoldDictionaryThreshold)
+                if (list.Shrink() && collection.Count >= CrossChannelConst.HoldDictionaryThreshold)
                 {
                     collection.Dictionary.TryRemove(x.Key, out _);
                     collection.Count--;

@@ -9,27 +9,29 @@ namespace XUnitTest
     public class CleanupTest
     {
         [Fact]
-        public void Static_TwoWay()
+        public void Test1()
         {
-            static void CreateChannel()
+            var radio = new RadioClass();
+
+            void CreateChannel()
             {
-                Radio.OpenTwoWay<int, int>(x => x * 2, new object());
+                radio.OpenTwoWay<int, int>(x => x * 2, new object());
             }
 
-            Radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { });
+            radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { });
 
-            for (var i = 0; i < Radio.Const.CleanupListThreshold; i++)
+            for (var i = 0; i < CrossChannelConst.CleanupListThreshold; i++)
             {
                 CreateChannel();
             }
 
             GC.Collect(); // Empty list
 
-            for (var i = 0; i < Radio.Const.CleanupListThreshold; i++)
+            for (var i = 0; i < CrossChannelConst.CleanupListThreshold; i++)
             {
                 if (i % 3 == 0)
                 {
-                    Radio.OpenTwoWay<int, int>(x => x * 2, new object());
+                    radio.OpenTwoWay<int, int>(x => x * 2, new object());
                 }
                 else
                 {

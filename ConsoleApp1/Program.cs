@@ -9,6 +9,8 @@ namespace ConsoleApp1
             Console.WriteLine("CrossChannel Sample:");
             Console.WriteLine();
 
+            Sample.WeakReference();
+
             // CrossChannel.Radio is a public static class.
             // Open a channel which simply outputs the received message to the console.
             using (var channel = CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Test " + x); }))

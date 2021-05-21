@@ -15,7 +15,6 @@
 - [Quick Start](#quick-start)
 - [Performance](#performance)
 - [Weak reference](#weak-reference)
-- [Close channel](#close-channel)
 - [Delegates](#delegates)
 - [Other](#other)
 
@@ -59,7 +58,7 @@ GC.Collect();
 // This message will not be displayed because the channel is automatically closed.
 CrossChannel.Radio.Send<string>("Message not received.");
 
-// Don't forget to close a channel when you don't specify a weak reference, since this will cause memory leaks.
+// Don't forget to close the channel when you did not specify a weak reference, since this will cause memory leaks.
 CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Leak " + x); });
 
 // You can create a local radio class.
@@ -98,19 +97,34 @@ PS: [upta/pubsub](https://github.com/upta/pubsub)
 | MP_OpenSend_Key  |   287.17 ns |  4.814 ns |   6.904 ns | 0.0725 |     - |     - |     304 B |
 | MP_OpenSend8_Key |   467.52 ns |  0.884 ns |   1.295 ns | 0.0725 |     - |     - |     304 B |
 
-The actual code is simple: open a channel (subscribe), send a message (publish), and close the channel (unsubscribe).
+The [benchmark code](/Benchmark/Benchmarks/H2HBenchmark.cs) is simple: open a channel (subscribe), send a message (publish), and close the channel (unsubscribe).
 
 
 
 ## Weak reference
 
-.
+If you specify a weak reference to a channel, you do not need to close the channel.
 
+```csharp
+CreateChannel();
+void CreateChannel()
+{
+    var obj = new object(); // Target object
 
+    // Open a channel with a weak reference.
+    Radio.Open<int>(x => System.Console.WriteLine(x), obj);
 
-## Close channel
+    Radio.Send(1); // The result "1"
+}
 
-.
+GC.Collect(); // The channel will be closed when the object is garbage collected.
+Radio.Send(2); // The result ""
+
+var channel = Radio.Open<int>(x => System.Console.WriteLine(x), new object());
+channel.Dispose(); // Of course, you can close the channel manually.
+```
+
+It's quite useful for WPF program (e.g. view service).
 
 
 

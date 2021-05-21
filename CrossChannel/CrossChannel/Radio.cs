@@ -7,13 +7,6 @@ namespace CrossChannel
 {
     public static class Radio
     {
-        public static class Const
-        {
-            public const int CleanupListThreshold = 32;
-            public const int CleanupDictionaryThreshold = 128;
-            public const int HoldDictionaryThreshold = 16;
-        }
-
         /// <summary>
         /// Open a channel to receive a message.
         /// </summary>
@@ -27,7 +20,7 @@ namespace CrossChannel
         public static XChannel Open<TMessage>(Action<TMessage> method, object? weakReference = null)
         {
             var list = Cache_Message<TMessage>.List;
-            if (list.CleanupCount++ >= Const.CleanupListThreshold)
+            if (list.CleanupCount++ >= CrossChannelConst.CleanupListThreshold)
             {
                 lock (list)
                 {
@@ -49,7 +42,7 @@ namespace CrossChannel
             where TKey : notnull
         {
             var collection = Cache_KeyMessage<TKey, TMessage>.Collection;
-            if (collection.CleanupCount++ >= Const.CleanupDictionaryThreshold)
+            if (collection.CleanupCount++ >= CrossChannelConst.CleanupDictionaryThreshold)
             {
                 lock (collection)
                 {
@@ -65,7 +58,7 @@ namespace CrossChannel
         public static XChannel OpenTwoWay<TMessage, TResult>(Func<TMessage, TResult> method, object? weakReference = null)
         {
             var list = Cache_MessageResult<TMessage, TResult>.List;
-            if (list.CleanupCount++ >= Const.CleanupListThreshold)
+            if (list.CleanupCount++ >= CrossChannelConst.CleanupListThreshold)
             {
                 lock (list)
                 {
@@ -100,7 +93,7 @@ namespace CrossChannel
             where TKey : notnull
         {
             var collection = Cache_KeyMessageResult<TKey, TMessage, TResult>.Collection;
-            if (collection.CleanupCount++ >= Const.CleanupDictionaryThreshold)
+            if (collection.CleanupCount++ >= CrossChannelConst.CleanupDictionaryThreshold)
             {
                 lock (collection)
                 {
