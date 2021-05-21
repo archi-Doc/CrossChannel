@@ -138,7 +138,13 @@ The delegates passed to `Open()` functions must satisfy these requirements.
 
 ## Other
 
-.
+```csharp
+public static async Task Other()
+{
+}
+```
+
+
 
 
 
