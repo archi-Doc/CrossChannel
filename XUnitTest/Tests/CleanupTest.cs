@@ -1,6 +1,7 @@
 // Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 using System;
+using System.Linq;
 using CrossChannel;
 using Xunit;
 
@@ -9,7 +10,7 @@ namespace XUnitTest
     public class CleanupTest
     {
         [Fact]
-        public void Test1()
+        public void WeakReference()
         {
             var radio = new RadioClass();
 
@@ -18,7 +19,7 @@ namespace XUnitTest
                 radio.OpenTwoWay<int, int>(x => x * 2, new object());
             }
 
-            radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { });
+            radio.SendTwoWay<int, int>(1).Length.Is(0);
 
             for (var i = 0; i < CrossChannelConst.CleanupListThreshold; i++)
             {
@@ -26,12 +27,17 @@ namespace XUnitTest
             }
 
             GC.Collect(); // Empty list
+            radio.SendTwoWay<int, int>(1).Length.Is(0);
+
+            var objects = Enumerable.Repeat(new object(), CrossChannelConst.CleanupListThreshold).ToArray();
+            var number = 0;
 
             for (var i = 0; i < CrossChannelConst.CleanupListThreshold; i++)
             {
                 if (i % 3 == 0)
                 {
-                    radio.OpenTwoWay<int, int>(x => x * 2, new object());
+                    radio.OpenTwoWay<int, int>(x => x * 2, objects[i]);
+                    number++;
                 }
                 else
                 {
@@ -39,8 +45,11 @@ namespace XUnitTest
                 }
             }
 
-            GC.Collect(); // Empty list
-            CreateChannel();
+            GC.Collect();
+            radio.SendTwoWay<int, int>(1).Length.Is(number);
+
+            radio.OpenTwoWay<int, int>(x => x * 2, new object());
+            radio.SendTwoWay<int, int>(1).Length.Is(number + 1);
         }
     }
 }

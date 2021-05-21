@@ -18,7 +18,7 @@ namespace CrossChannel
             {
                 lock (list)
                 {
-                    list.CleanupCount = 0;
+                    list.CleanupCount = 1;
                     list.Cleanup();
                 }
             }
@@ -43,7 +43,7 @@ namespace CrossChannel
             {
                 lock (collection)
                 {
-                    collection.CleanupCount = 0;
+                    collection.CleanupCount = 1;
                     collection.Cleanup();
                 }
             }
@@ -62,7 +62,7 @@ namespace CrossChannel
             {
                 lock (list)
                 {
-                    list.CleanupCount = 0;
+                    list.CleanupCount = 1;
                     list.Cleanup();
                 }
             }
@@ -87,7 +87,7 @@ namespace CrossChannel
             {
                 lock (collection)
                 {
-                    collection.CleanupCount = 0;
+                    collection.CleanupCount = 1;
                     collection.Cleanup();
                 }
             }
