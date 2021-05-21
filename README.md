@@ -74,9 +74,7 @@ using (radio.Open<string>(x => { Console.WriteLine("Local " + x); }))
 
 ## Performance
 
-Performance is the top priority.
-
-This is a benchmark with other Pub/Sub libraries.
+Performance is the top priority. This is a benchmark with other Pub/Sub libraries.
 
 CC: [archi-Doc/CrossChannel](https://github.com/archi-Doc/CrossChannel)
 
