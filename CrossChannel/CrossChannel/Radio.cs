@@ -69,7 +69,7 @@ namespace CrossChannel
             {
                 lock (list)
                 {
-                    list.CleanupCount = 0;
+                    list.CleanupCount = 1;
                     list.Cleanup();
                 }
             }
