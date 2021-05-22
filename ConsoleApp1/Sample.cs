@@ -85,11 +85,11 @@ namespace ConsoleApp1
                 return x * 2;
             }))
             {
-                Radio.SendTwoWay<int, int>(0); // TwoWay: 0 -> 0
                 Radio.SendTwoWay<int, int>(2); // TwoWay: 2 -> 4
 
                 using (var channelTwoWay2 = Radio.OpenTwoWay<int, int>(x => x * 3))
                 {
+                    // The result is an array of TResult.
                     var result = Radio.SendTwoWay<int, int>(3); // TwoWay: 3 -> 6
                     Console.WriteLine($"Results: {string.Join(", ", result)}"); // Results: 6, 9
                 }

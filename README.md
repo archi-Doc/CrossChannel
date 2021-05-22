@@ -4,9 +4,11 @@
 
 - Faster than most Pub/Sub libraries.
 - Easy to use.
+
 - Supports **Weak references**, **Asynchronous** methods.
 - Supports `Action<TMessage>`, `Func<TMessage, TResult>` delegates.
 - **Key** feature can limit the delivery of messages.
+- Thread safe.
 
 
 
@@ -16,7 +18,7 @@
 - [Performance](#performance)
 - [Weak reference](#weak-reference)
 - [Delegates](#delegates)
-- [Other](#other)
+- [Sample code](#sample-code)
 
 
 
@@ -119,7 +121,7 @@ GC.Collect(); // The channel will be closed when the object is garbage collected
 Radio.Send(2); // The result ""
 
 var channel = Radio.Open<int>(x => System.Console.WriteLine(x), new object());
-channel.Dispose(); // Of course, you can close the channel manually.
+channel.Dispose(); // Of course, you can close a channel manually.
 ```
 
 It's quite useful for WPF program (e.g. view service).
@@ -132,17 +134,63 @@ The delegates passed to `Open()` functions must satisfy these requirements.
 
 - **Thread safe**.
 - May be called from any thread (**UI** or **non-UI**).
-- Avoid recursive call (e.g. `CrossChannel.Open<int>(null, x => { CrossChannel.Send<int>(0); });`).
+- Avoid recursive call (e.g. `Radio.Open<int>(x => { Radio.Send<int>(0); });`).
 
 
 
-## Other
+## Sample code
 
 ```csharp
-public static async Task Other()
+// Open a channel with the key which limits the delivery of messages.
+using (var channelKey = Radio.OpenKey<int, string>(1, x => Console.WriteLine(x)))
+{// Channel with Key 1
+    Radio.SendKey(0, "Key 0"); // Message is not received.
+    Radio.SendKey(1, "Key 1"); // Message is received.
+}
+
+Console.WriteLine();
+
+// Open a two-way (bidirectional) channel which receives a message and sends back a result.
+using (var channelTwoWay = Radio.OpenTwoWay<int, int>(x =>
 {
+    Console.WriteLine($"TwoWay: {x} -> {x * 2}");
+    return x * 2;
+}))
+{
+    Radio.SendTwoWay<int, int>(2); // TwoWay: 2 -> 4
+
+    using (var channelTwoWay2 = Radio.OpenTwoWay<int, int>(x => x * 3))
+    {
+        // The result is an array of TResult.
+        var result = Radio.SendTwoWay<int, int>(3); // TwoWay: 3 -> 6
+        Console.WriteLine($"Results: {string.Join(", ", result)}"); // Results: 6, 9
+    }
+}
+
+Console.WriteLine();
+
+// Open a channel which receives a message asynchronously.
+using (var channelAsync = Radio.OpenAsync<string>(async x =>
+{
+    Console.WriteLine($"Received: {x}");
+    await Task.Delay(1000);
+    Console.WriteLine($"Done.");
+}))
+{
+    await Radio.SendAsync("Test async");
 }
 ```
+
+
+
+## Feature benchmark
+
+Here is a benchmark for each feature.
+
+- `Radio` is the fastest since it uses static type caching.
+- `RadioClass` uses `ConcurrentDictionary`, so a bit slower than Radio.
+- `Async` and `Key` features have slight performance penalty.
+- Opening a channel with weak reference takes some time.
 
 
 
