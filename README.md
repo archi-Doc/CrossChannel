@@ -35,7 +35,7 @@ Install-Package Arc.CrossChannel
 
 CrossChannel is a library for Publish–subscribe pattern. It's very easy to use.
 
-1. **Subscribe**: Open a channel to receive messages, specifying the delegate to be called. 
+1. **Subscribe**: Open a channel to receive messages, specifying a delegate to be called. 
 2. **Publish**: Send a message. The channel identifier is the type of message (and key and result if necessary).
 3. **Unsubscribe**: Close the channel.
 
@@ -199,7 +199,7 @@ Here is a benchmark for each feature.
 - `Radio` is the fastest since it uses static type caching.
 - `RadioClass` uses `ConcurrentDictionary` which is a bit slower than static type caching, but still fast enough.
 - `Async` and `Key` features cause slight performance degradation.
-- Opening a channel with weak reference is 8x slower, but sending messages is not that slow.
+- Opening a channel with weak reference is about 8x slower, but sending messages is not that slow.
 
 | Method              |       Mean |     Error |    StdDev |     Median |  Gen 0 | Gen 1 | Gen 2 | Allocated |
 | ------------------- | ---------: | --------: | --------: | ---------: | -----: | ----: | ----: | --------: |
@@ -221,8 +221,6 @@ Here is a benchmark for each feature.
 | Class_SendTwoWayKey |  61.940 ns | 0.5976 ns | 0.7977 ns |  62.584 ns | 0.0267 |     - |     - |     112 B |
 | Radio_Weak_Open     | 405.360 ns | 1.6483 ns | 2.3107 ns | 406.124 ns | 0.0458 |     - |     - |     192 B |
 | Radio_Weak_Send     |  15.726 ns | 0.2326 ns | 0.3410 ns |  15.480 ns |      - |     - |     - |         - |
-
-
 
 
 

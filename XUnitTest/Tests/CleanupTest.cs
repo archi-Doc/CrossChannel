@@ -50,6 +50,8 @@ namespace XUnitTest
 
             radio.OpenTwoWay<int, int>(x => x * 2, new object());
             radio.SendTwoWay<int, int>(1).Length.Is(number + 1);
+
+            GC.KeepAlive(objects);
         }
     }
 }
