@@ -15,13 +15,14 @@ namespace Benchmark
     {
         public static void Main(string[] args)
         {
-            DebugRun<CrossChannelBenchmark>();
+            DebugRun<CrossChannelBenchmark2>();
 
             // var summary = BenchmarkRunner.Run<ReconstructTest>();
             var switcher = new BenchmarkSwitcher(new[]
             {
                 typeof(H2HBenchmark),
                 typeof(CrossChannelBenchmark),
+                typeof(CrossChannelBenchmark2),
             });
             switcher.Run(args);
         }
