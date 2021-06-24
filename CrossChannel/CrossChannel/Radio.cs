@@ -12,9 +12,9 @@ namespace CrossChannel
         /// </summary>
         /// <typeparam name="TMessage">The type of the message.</typeparam>
         /// <param name="method">The delegate that is called when the message is sent.</param>
-        /// <param name="weakReference">A weak reference of the object.<br/>
+        /// <param name="weakReference">The weak reference of the object.<br/>
         /// The channel will be automatically closed when the object is garbage collected.<br/>
-        /// To achieve maximum performance, you can set this value to null (DON'T forget close the channel manually).</param>
+        /// To achieve maximum performance, you can set this value to null (DON'T forget to close the channel manually).</param>
         /// <returns>A new instance of XChannel.<br/>
         /// You need to call <see cref="XChannel.Dispose()"/> when the channel is no longer necessary, unless the weak reference is specified.</returns>
         public static XChannel Open<TMessage>(Action<TMessage> method, object? weakReference = null)
@@ -33,11 +33,45 @@ namespace CrossChannel
             return channel;
         }
 
+        /// <summary>
+        /// Open a channel to receive a message asynchronously.
+        /// </summary>
+        /// <typeparam name="TMessage">The type of the message.</typeparam>
+        /// <param name="method">The delegate that is called when the message is sent.</param>
+        /// <param name="weakReference">The weak reference of the object.<br/>
+        /// The channel will be automatically closed when the object is garbage collected.<br/>
+        /// To achieve maximum performance, you can set this value to null (DON'T forget to close the channel manually).</param>
+        /// <returns>A new instance of XChannel.<br/>
+        /// You need to call <see cref="XChannel.Dispose()"/> when the channel is no longer necessary, unless the weak reference is specified.</returns>
         public static XChannel OpenAsync<TMessage>(Func<TMessage, Task> method, object? weakReference = null) => Radio.OpenTwoWay<TMessage, Task>(method, weakReference);
 
+        /// <summary>
+        /// Open a channel to receive a message asynchronously.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key.</typeparam>
+        /// <typeparam name="TMessage">The type of the message.</typeparam>
+        /// <param name="key">Specify a key to limit the channels to receive the message.</param>
+        /// <param name="method">The delegate that is called when the message is sent.</param>
+        /// <param name="weakReference">The weak reference of the object.<br/>
+        /// The channel will be automatically closed when the object is garbage collected.<br/>
+        /// To achieve maximum performance, you can set this value to null (DON'T forget to close the channel manually).</param>
+        /// <returns>A new instance of XChannel.<br/>
+        /// You need to call <see cref="XChannel.Dispose()"/> when the channel is no longer necessary, unless the weak reference is specified.</returns>
         public static XChannel OpenAsyncKey<TKey, TMessage>(TKey key, Func<TMessage, Task> method, object? weakReference = null)
             where TKey : notnull => Radio.OpenTwoWayKey<TKey, TMessage, Task>(key, method, weakReference);
 
+        /// <summary>
+        /// Open a channel to receive a message.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key.</typeparam>
+        /// <typeparam name="TMessage">The type of the message.</typeparam>
+        /// <param name="key">Specify a key to limit the channels to receive the message.</param>
+        /// <param name="method">The delegate that is called when the message is sent.</param>
+        /// <param name="weakReference">The weak reference of the object.<br/>
+        /// The channel will be automatically closed when the object is garbage collected.<br/>
+        /// To achieve maximum performance, you can set this value to null (DON'T forget to close the channel manually).</param>
+        /// <returns>A new instance of XChannel.<br/>
+        /// You need to call <see cref="XChannel.Dispose()"/> when the channel is no longer necessary, unless the weak reference is specified.</returns>
         public static XChannel OpenKey<TKey, TMessage>(TKey key, Action<TMessage> method, object? weakReference = null)
             where TKey : notnull
         {
@@ -55,6 +89,17 @@ namespace CrossChannel
             return channel;
         }
 
+        /// <summary>
+        /// Open a channel to receive a message and send a result.
+        /// </summary>
+        /// <typeparam name="TMessage">The type of the message.</typeparam>
+        /// <typeparam name="TResult">The type of the result.</typeparam>
+        /// <param name="method">The delegate that is called when the message is sent.</param>
+        /// <param name="weakReference">The weak reference of the object.<br/>
+        /// The channel will be automatically closed when the object is garbage collected.<br/>
+        /// To achieve maximum performance, you can set this value to null (DON'T forget to close the channel manually).</param>
+        /// <returns>A new instance of XChannel.<br/>
+        /// You need to call <see cref="XChannel.Dispose()"/> when the channel is no longer necessary, unless the weak reference is specified.</returns>
         public static XChannel OpenTwoWay<TMessage, TResult>(Func<TMessage, TResult> method, object? weakReference = null)
         {
             var list = Cache_MessageResult<TMessage, TResult>.List;
@@ -71,6 +116,17 @@ namespace CrossChannel
             return channel;
         }
 
+        /// <summary>
+        /// Open a channel to receive a message and send a result asynchronously.
+        /// </summary>
+        /// <typeparam name="TMessage">The type of the message.</typeparam>
+        /// <typeparam name="TResult">The type of the result.</typeparam>
+        /// <param name="method">The delegate that is called when the message is sent.</param>
+        /// <param name="weakReference">The weak reference of the object.<br/>
+        /// The channel will be automatically closed when the object is garbage collected.<br/>
+        /// To achieve maximum performance, you can set this value to null (DON'T forget to close the channel manually).</param>
+        /// <returns>A new instance of XChannel.<br/>
+        /// You need to call <see cref="XChannel.Dispose()"/> when the channel is no longer necessary, unless the weak reference is specified.</returns>
         public static XChannel OpenTwoWayAsync<TMessage, TResult>(Func<TMessage, Task<TResult>> method, object? weakReference = null) => Radio.OpenTwoWay<TMessage, Task<TResult>>(method, weakReference);
 
         /// <summary>
@@ -81,14 +137,27 @@ namespace CrossChannel
         /// <typeparam name="TResult">The type of the result.</typeparam>
         /// <param name="key">Specify a key to limit the channels to receive the message.</param>
         /// <param name="method">The delegate that is called when the message is sent.</param>
-        /// <param name="weakReference">A weak reference of the object.<br/>
+        /// <param name="weakReference">The weak reference of the object.<br/>
         /// The channel will be automatically closed when the object is garbage collected.<br/>
-        /// To achieve maximum performance, you can set this value to null (DON'T forget close the channel manually).</param>
+        /// To achieve maximum performance, you can set this value to null (DON'T forget to close the channel manually).</param>
         /// <returns>A new instance of XChannel.<br/>
         /// You need to call <see cref="XChannel.Dispose()"/> when the channel is no longer necessary, unless the weak reference is specified.</returns>
         public static XChannel OpenTwoWayAsyncKey<TKey, TMessage, TResult>(TKey key, Func<TMessage, Task<TResult>> method, object? weakReference = null)
              where TKey : notnull => Radio.OpenTwoWayKey<TKey, TMessage, Task<TResult>>(key, method, weakReference);
 
+        /// <summary>
+        /// Open a channel to receive a message and send a result.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key.</typeparam>
+        /// <typeparam name="TMessage">The type of the message.</typeparam>
+        /// <typeparam name="TResult">The type of the result.</typeparam>
+        /// <param name="key">Specify a key to limit the channels to receive the message.</param>
+        /// <param name="method">The delegate that is called when the message is sent.</param>
+        /// <param name="weakReference">The weak reference of the object.<br/>
+        /// The channel will be automatically closed when the object is garbage collected.<br/>
+        /// To achieve maximum performance, you can set this value to null (DON'T forget to close the channel manually).</param>
+        /// <returns>A new instance of XChannel.<br/>
+        /// You need to call <see cref="XChannel.Dispose()"/> when the channel is no longer necessary, unless the weak reference is specified.</returns>
         public static XChannel OpenTwoWayKey<TKey, TMessage, TResult>(TKey key, Func<TMessage, TResult> method, object? weakReference = null)
             where TKey : notnull
         {
