@@ -6,6 +6,12 @@ using System.Threading.Tasks;
 
 namespace CrossChannel
 {
+    /// <summary>
+    /// RadioClass is a non-static version of <see cref="Radio"/>.<br/>
+    /// It's easy to use.<br/>
+    /// 1. Open a channel (register a subscriber) : <see cref="Open{TMessage}(Action{TMessage}, object?)"/>.<br/>
+    /// 2. Send a message (publish) : <see cref="Send{TMessage}(TMessage)"/>.
+    /// </summary>
     public class RadioClass
     {
         /// <summary>

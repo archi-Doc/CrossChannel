@@ -5,6 +5,12 @@ using System.Threading.Tasks;
 
 namespace CrossChannel
 {
+    /// <summary>
+    /// Radio is a static class for pub/sub service.<br/>
+    /// It's easy to use.<br/>
+    /// 1. Open a channel (register a subscriber) : <see cref="Open{TMessage}(Action{TMessage}, object?)"/>.<br/>
+    /// 2. Send a message (publish) : <see cref="Send{TMessage}(TMessage)"/>.
+    /// </summary>
     public static class Radio
     {
         /// <summary>

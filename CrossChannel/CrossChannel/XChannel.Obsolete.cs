@@ -81,7 +81,7 @@ namespace CrossChannel
             lock (map)
             {
                 // this.List = map.GetOrAdd(key, x => new FastList<XChannel_Key2<TKey, TMessage>>());
-                if (!map.TryGetValue(key, out this.List))
+                if (!map.TryGetValue(key, out this.List!))
                 {
                     this.List = new FastList<XChannel_Key2<TKey, TMessage>>();
                     map.TryAdd(key, this.List);
