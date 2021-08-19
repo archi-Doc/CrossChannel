@@ -131,7 +131,7 @@ namespace CrossChannel
             this.Collection = collection;
             lock (this.Collection)
             {
-                if (!this.Collection.Dictionary.TryGetValue(key, out this.List))
+                if (!this.Collection.Dictionary.TryGetValue(key, out this.List!))
                 {
                     this.List = new FastList<XChannel_KeyMessage<TKey, TMessage>>();
                     this.Collection.Dictionary.TryAdd(key, this.List);
@@ -204,7 +204,7 @@ namespace CrossChannel
             this.Collection = collection;
             lock (this.Collection)
             {
-                if (!this.Collection.Dictionary.TryGetValue(key, out this.List))
+                if (!this.Collection.Dictionary.TryGetValue(key, out this.List!))
                 {
                     this.List = new FastList<XChannel_KeyMessageResult<TKey, TMessage, TResult>>();
                     this.Collection.Dictionary.TryAdd(key, this.List);
