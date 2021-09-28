@@ -16,10 +16,13 @@
 
 - [Quick Start](#quick-start)
 - [Performance](#performance)
-- [Weak reference](#weak-reference)
 - [Delegates](#delegates)
-- [Sample code](#sample-code)
-- [Feature benchmark](#feature-benchmark)
+- [Features](#features)
+  - [Weak reference](#weak-reference)
+  - [Async](#async)
+  - [Key](#key)
+  - [Two way](#two-way)
+- [Benchmark](#benchmark)
 
 
 
@@ -110,7 +113,19 @@ The [benchmark code](/Benchmark/Benchmarks/H2HBenchmark.cs) is simple: open a ch
 
 
 
-## Weak reference
+## Delegates
+
+The delegates passed to `Open()` functions must satisfy these requirements.
+
+- Should be **Thread safe** (multiple threads may call `Send()`).
+- May be called from any thread (**UI** or **non-UI**).
+- Avoid recursive call (e.g. `Radio.Open<int>(x => { Radio.Send<int>(0); });`).
+
+
+
+## Features
+
+### Weak reference
 
 If you specify a weak reference to a channel, you do not need to close the channel.
 
@@ -130,24 +145,31 @@ GC.Collect(); // The channel will be closed when the object is garbage collected
 Radio.Send(2); // The result ""
 
 var channel = Radio.Open<int>(x => System.Console.WriteLine(x), new object());
-channel.Dispose(); // Of course, you can close a channel manually.
+channel.Dispose(); // Of course, you can close the channel manually.
 ```
 
 It's quite useful for WPF program (e.g. view service).
 
 
 
-## Delegates
+### Async
 
-The delegates passed to `Open()` functions must satisfy these requirements.
+```csharp
+// Open a channel which receives a message asynchronously.
+using (var channelAsync = Radio.OpenAsync<string>(async x =>
+{
+    Console.WriteLine($"Received: {x}");
+    await Task.Delay(1000);
+    Console.WriteLine($"Done.");
+}))
+{
+    await Radio.SendAsync("Test async");
+}
+```
 
-- **Thread safe**.
-- May be called from any thread (**UI** or **non-UI**).
-- Avoid recursive call (e.g. `Radio.Open<int>(x => { Radio.Send<int>(0); });`).
 
 
-
-## Sample code
+### Key
 
 ```csharp
 // Open a channel with the key which limits the delivery of messages.
@@ -157,8 +179,13 @@ using (var channelKey = Radio.OpenKey<int, string>(1, x => Console.WriteLine(x))
     Radio.SendKey(1, "Key 1"); // Message is received.
 }
 
-Console.WriteLine();
+```
 
+
+
+### Two way
+
+```csharp
 // Open a two-way (bidirectional) channel which receives a message and sends back a result.
 using (var channelTwoWay = Radio.OpenTwoWay<int, int>(x =>
 {
@@ -175,24 +202,11 @@ using (var channelTwoWay = Radio.OpenTwoWay<int, int>(x =>
         Console.WriteLine($"Results: {string.Join(", ", result)}"); // Results: 6, 9
     }
 }
-
-Console.WriteLine();
-
-// Open a channel which receives a message asynchronously.
-using (var channelAsync = Radio.OpenAsync<string>(async x =>
-{
-    Console.WriteLine($"Received: {x}");
-    await Task.Delay(1000);
-    Console.WriteLine($"Done.");
-}))
-{
-    await Radio.SendAsync("Test async");
-}
 ```
 
 
 
-## Feature benchmark
+## Benchmark
 
 Here is a benchmark for each feature.
 
