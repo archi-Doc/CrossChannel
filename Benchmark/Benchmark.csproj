@@ -13,9 +13,9 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.13.1" />
-    <PackageReference Include="MessagePipe" Version="1.6.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
-    <PackageReference Include="PubSub" Version="4.0.1" />
+    <PackageReference Include="MessagePipe" Version="1.7.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+    <PackageReference Include="PubSub" Version="4.0.2" />
   </ItemGroup>
 
 </Project>
