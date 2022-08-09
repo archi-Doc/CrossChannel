@@ -101,7 +101,7 @@ namespace Arc.CrossChannel.Original
             lock (cs)
             {
                 var list = Cache_WeakFunction<TMessage, TResult>.List;
-                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, TResult>(method));
+                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, TResult>(method.Target!, method));
                 CleanupList(list);
             }
 
@@ -116,7 +116,7 @@ namespace Arc.CrossChannel.Original
             lock (cs)
             {
                 var list = Cache_WeakAction<TMessage>.List;
-                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakAction<TMessage>(method));
+                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakAction<TMessage>(method.Target!, method));
                 CleanupList(list);
             }
 
@@ -131,7 +131,7 @@ namespace Arc.CrossChannel.Original
             lock (cs)
             {
                 var list = Cache_WeakFunction<TMessage, Task<TResult>>.List;
-                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, Task<TResult>>(method));
+                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, Task<TResult>>(method.Target!, method));
                 CleanupList(list);
             }
 
@@ -146,7 +146,7 @@ namespace Arc.CrossChannel.Original
             lock (cs)
             {
                 var list = Cache_WeakFunction<TMessage, Task>.List;
-                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, Task>(method));
+                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, Task>(method.Target!, method));
                 CleanupList(list);
             }
 

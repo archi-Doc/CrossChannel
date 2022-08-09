@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace ConsoleApp1
-{
-    class Program
-    {
-        static async Task Main(string[] args)
-        {
-            Console.WriteLine("CrossChannel Sample:");
-            Console.WriteLine();
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 
-            await Sample.Other();
-        }
+namespace ConsoleApp1;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        Console.WriteLine("CrossChannel Sample:");
+        Console.WriteLine();
+
+        Sample.QuickStart();
     }
 }
