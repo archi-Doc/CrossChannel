@@ -67,12 +67,7 @@ public class WeakAction : WeakDelegate
     private static Hashtable delegateCache = new Hashtable();
     private Action<object>? compiledDelegate;
 
-    public WeakAction(Action method)
-        : this(method.Target, method)
-    {
-    }
-
-    public WeakAction(object? target, Action method)
+    public WeakAction(object target, Action method)
         : base(target, method)
     {
         if (method.Target == null)
@@ -154,12 +149,7 @@ public class WeakAction<T> : WeakDelegate
     private static ConcurrentDictionary<DelegateKey, Action<object, T>> delegateCache = new();
     private Action<object, T>? compiledDelegate;
 
-    public WeakAction(Action<T> method)
-        : this(method.Target, method)
-    {
-    }
-
-    public WeakAction(object? target, Action<T> method)
+    public WeakAction(object target, Action<T> method)
         : base(target, method)
     {
         if (method.Target == null)
@@ -246,12 +236,7 @@ public class WeakFunc<TResult> : WeakDelegate
     private static Hashtable delegateCache = new Hashtable();
     private Func<object, TResult>? compiledDelegate;
 
-    public WeakFunc(Func<TResult> method)
-        : this(method.Target, method)
-    {
-    }
-
-    public WeakFunc(object? target, Func<TResult> method)
+    public WeakFunc(object target, Func<TResult> method)
         : base(target, method)
     {
         if (method.Target == null)
@@ -332,12 +317,7 @@ public class WeakFunc<T, TResult> : WeakDelegate
     private static Hashtable delegateCache = new Hashtable();
     private Func<object, T, TResult>? compiledDelegate;
 
-    public WeakFunc(Func<T, TResult> method)
-        : this(method.Target, method)
-    {
-    }
-
-    public WeakFunc(object? target, Func<T, TResult> method)
+    public WeakFunc(object target, Func<T, TResult> method)
         : base(target, method)
     {
         if (method.Target == null)
@@ -421,19 +401,12 @@ public class WeakDelegate : IWeakDelegate
     /// <summary>
     /// Initializes a new instance of the <see cref="WeakDelegate"/> class.
     /// </summary>
-    /// <param name="delegate">The action that will be associated to this instance.</param>
-    public WeakDelegate(Delegate @delegate)
-        : this(@delegate.Target, @delegate)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="WeakDelegate"/> class.
-    /// </summary>
     /// <param name="target">The action's owner.</param>
     /// <param name="delegate">The action that will be associated to this instance.</param>
-    public WeakDelegate(object? target, Delegate @delegate)
+    public WeakDelegate(object target, Delegate @delegate)
     {
+        this.Reference = new WeakReference(target);
+
 #if NETFX_CORE
         if (@delegate.GetMethodInfo().IsStatic)
 #else
@@ -441,31 +414,22 @@ public class WeakDelegate : IWeakDelegate
 #endif
         {
             this.StaticDelegate = @delegate;
-
-            if (target != null)
-            {
-                // Keep a reference to the target to control the WeakAction's lifetime.
-                this.Reference = new WeakReference(target);
-            }
-
             return;
         }
 
 #if NETFX_CORE
         this.Method = @delegate.GetMethodInfo();
 #else
-        this.Method = @delegate.Method;
+        this.methodInfo = @delegate.Method;
 #endif
 
         if (target == @delegate.Target)
         {
-            this.DelegateReference = new WeakReference(@delegate.Target);
-            this.Reference = this.DelegateReference;
+            this.weakDelegateTarget = this.Reference;
         }
         else
         {
-            this.delegateReference = @delegate.Target;
-            this.Reference = new WeakReference(target);
+            this.hardDelegateTarget = @delegate.Target;
         }
     }
 
@@ -476,54 +440,38 @@ public class WeakDelegate : IWeakDelegate
     {// Thread safe
         get
         {
-            if (this.StaticDelegate is { } sd)
+            if (this.StaticDelegate is { } staticDelegate)
             {
 #if NETFX_CORE
-                return sd.GetMethodInfo().Name;
+                return staticDelegate.GetMethodInfo().Name;
 #else
-                return sd.Method.Name;
+                return staticDelegate.Method.Name;
 #endif
             }
 
-            if (this.Method is { } m)
+            if (this.methodInfo is { } methodInfo)
             {
-                return m.Name;
+                return methodInfo.Name;
             }
 
             return string.Empty;
         }
     }
 
-    public object? Target => this.Reference?.Target; // Thread safe
+    public object? Target => this.Reference?.Target;
 
-    public bool IsAlive
-    {// Thread safe
-        get
-        {
-            if (this.Reference is { } w)
-            {
-                return w.IsAlive;
-            }
-
-            /*if (this.StaticDelegate != null)
-            {
-                return true;
-            }*/
-
-            return false;
-        }
-    }
+    public bool IsAlive => this.Reference?.IsAlive == true;
 
     /// <summary>
     /// Gets a value indicating whether the WeakDelegate is static or not.
     /// </summary>
-    public bool IsStatic => this.StaticDelegate != null; // Thread safe
+    public bool IsStatic => this.StaticDelegate != null;
 
     /// <summary>
     /// Gets the target of this delegate.
     /// </summary>
     protected object? DelegateTarget
-        => this.delegateReference ?? this.DelegateReference?.Target;
+        => this.hardDelegateTarget ?? this.weakDelegateTarget?.Target;
 
     /// <summary>
     /// Gets or sets a hard reference of this delegate. This property is used only when the delegate is static.
@@ -531,30 +479,23 @@ public class WeakDelegate : IWeakDelegate
     protected Delegate? StaticDelegate { get; set; }
 
     /// <summary>
-    /// Gets or sets the <see cref="MethodInfo" /> corresponding to this WeakDelegate's method passed in the constructor.
-    /// </summary>
-    protected MethodInfo? Method { get; set; }
-
-    /// <summary>
-    /// Gets or sets a WeakReference to this delegate's target (new WeakReference(@delegate.Target)).
-    /// </summary>
-    protected WeakReference? DelegateReference { get; set; }
-
-    private object? delegateReference;
-
-    /// <summary>
     /// Gets or sets a WeakReference to the target passed when constructing the WeakDelegate (new WeakReference(target)).
     /// </summary>
     protected WeakReference? Reference { get; set; }
+
+    private MethodInfo? methodInfo;
+    private WeakReference? weakDelegateTarget;
+    private object? hardDelegateTarget;
 
     /// <summary>
     /// Sets the reference that this instance stores to null. Thread safe.
     /// </summary>
     public void MarkForDeletion()
     {// Thread safe
-        this.Reference = null;
-        this.DelegateReference = null;
-        this.Method = null;
         this.StaticDelegate = null;
+        this.Reference = null;
+        this.methodInfo = null;
+        this.weakDelegateTarget = null;
+        this.hardDelegateTarget = null;
     }
 }

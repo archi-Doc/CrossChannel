@@ -101,14 +101,14 @@ namespace Arc.CrossChannel.Obsolete
             lock (cs)
             {
                 var list = Cache_WeakFunction<TMessage, TResult>.List;
-                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, TResult>(method));
+                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, TResult>(method.Target!, method));
                 CleanupList(list);
             }
 
             return channel;
         }
 
-        public static XChannel Open<TMessage>(object? weakReference, Action<TMessage> method, object? targetId = null, bool exclusiveChannel = false)
+        public static XChannel Open<TMessage>(object weakReference, Action<TMessage> method, object? targetId = null, bool exclusiveChannel = false)
         {
             XChannel channel;
             var identification = new ChannelIdentification(typeof(TMessage));
@@ -131,7 +131,7 @@ namespace Arc.CrossChannel.Obsolete
             lock (cs)
             {
                 var list = Cache_WeakFunction<TMessage, Task<TResult>>.List;
-                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, Task<TResult>>(method));
+                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, Task<TResult>>(method.Target!, method));
                 CleanupList(list);
             }
 
@@ -146,7 +146,7 @@ namespace Arc.CrossChannel.Obsolete
             lock (cs)
             {
                 var list = Cache_WeakFunction<TMessage, Task>.List;
-                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, Task>(method));
+                channel = AddXChannel(list, identification, targetId, exclusiveChannel, new WeakFunc<TMessage, Task>(method.Target!, method));
                 CleanupList(list);
             }
 
