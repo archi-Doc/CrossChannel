@@ -8,7 +8,7 @@ internal static class Sample
 {
     public static void QuickStart()
     {
-        // CrossChannel.Radio is a public static class.
+        // Test 1: CrossChannel.Radio is a public static class.
         // Open a channel which simply outputs the received message to the console.
         using (var channel = CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Test " + x); }))
         {
@@ -19,7 +19,8 @@ internal static class Sample
         // This message will not be displayed because the channel is closed.
         CrossChannel.Radio.Send<string>("Message not received.");
 
-        // Open a channel which has a weak reference to an object.
+
+        // Test2: Open a channel which has a weak reference to an object.
         OpenWithWeakReference();
         static void OpenWithWeakReference()
         {
@@ -36,23 +37,16 @@ internal static class Sample
         // The object is garbage collected.
         GC.Collect();
 
-        /*var obj = new object();
-        OpenWithWeakReference2(obj);
-        static void OpenWithWeakReference2(object obj)
-        {
-            new TestClass3(obj);
-        }
+        // This message will not be displayed because the channel is automatically closed.
+        CrossChannel.Radio.Send<string>("Message not received.");
 
-        // The object is garbage collected.
-        GC.Collect();
 
-        // Send a message. The result is "Weak2 message."
-        CrossChannel.Radio.Send<string>("message.");*/
-
-        // Don't forget to close the channel when you did not specify a weak reference, since this will cause memory leaks.
+        // Test 3: Don't forget to close the channel when you did not specify a weak reference, since this will cause memory leaks.
         CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Leak " + x); });
+        CrossChannel.Radio.Send<string>("message.");
 
-        // You can create a local radio class.
+
+        // Test 4: You can create a local radio class.
         var radio = new CrossChannel.RadioClass();
         using (radio.Open<string>(x => { Console.WriteLine("Local " + x); }))
         {
@@ -141,14 +135,6 @@ internal static class Sample
         public static void Message(string message)
         {
             Console.WriteLine($"TestClass2: {message}");
-        }
-    }
-
-    private class TestClass3
-    {
-        public TestClass3(object obj)
-        {
-            CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Weak2 " + x); }, obj);
         }
     }
 }
