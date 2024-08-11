@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using CrossChannel;
 
-namespace ConsoleApp1;
+namespace QuickStart;
 
 internal static class Sample
 {
