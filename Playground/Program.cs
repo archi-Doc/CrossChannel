@@ -1,15 +1,25 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using Arc.WeakDelegate;
 using CrossChannel;
 using MessagePipe;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Playground;
 
+public interface ITestService : IRadioService
+{
+    RadioResult<int> Test();
+}
+
 class Program
 {
     static void Main(string[] args)
     {
+        NewRadio.Open<ITestService>(default!);
+        NewRadio.Send<ITestService>().Test();
+
         Console.WriteLine("Hello World!");
 
         var sc = new ServiceCollection();
