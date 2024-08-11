@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 
-namespace ConsoleApp1;
+namespace QuickStart;
 
 class Program
 {
