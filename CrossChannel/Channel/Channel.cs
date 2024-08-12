@@ -4,58 +4,38 @@ namespace CrossChannel;
 
 public class Channel<TService>
 {
-    public class Connection : IDisposable
+    public class Connection : XChannel //opt
     {
         private readonly Channel<TService> channel;
+        private readonly WeakReference? weakReference;
 
-        public Connection(Channel<TService> channel)
+        public Connection(Channel<TService> channel, object? weakReference)
         {
             this.channel = channel;
+            if (weakReference is not null)
+            {
+                this.weakReference = new(weakReference);
+            }
         }
 
         public void Close()
             => this.Dispose();
 
-        #region IDisposable Support
-
-        private bool disposed = false; // To detect redundant calls.
-
-        /// <summary>
-        /// Finalizes an instance of the <see cref="Connection"/> class.
-        /// </summary>
-        ~Connection()
+        public override void Dispose()
         {
-            this.Dispose(false);
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            this.Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        /// <summary>
-        /// free managed/native resources.
-        /// </summary>
-        /// <param name="disposing">true: free managed resources.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!this.disposed)
+            lock (this.channel.list)
             {
-                if (disposing)
+                if (this.Index != -1)
                 {
-                    // free managed resources.
+                    this.channel.list.Remove(this);
                 }
-
-                // free native resources here if there are any.
-                this.disposed = true;
             }
         }
-        #endregion
     }
 
     public TService Broker { get; } = default!;
+
+    private readonly FastList<Connection> list = new();
 
     public Channel()
     {
@@ -63,6 +43,6 @@ public class Channel<TService>
 
     public Connection Open(TService instance, object? weakReference)
     {
-        return new Connection(this);
+        return new Connection(this, weakReference);
     }
 }
