@@ -9,20 +9,20 @@ namespace CrossChannel;
 /// please use this structure for the return value.
 /// </summary>
 /// <typeparam name="T">The type of the message.</typeparam>
-public readonly struct HybridResult<T> : IEnumerable, IEnumerable<T>, IEquatable<HybridResult<T>>
+public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<RadioResult<T>>
 {
     private const ulong SingleResultValue = 0x0000_0000_0000_0001;
 
     private readonly T result;
     private readonly T[]? resultArray; // 0:Empty, 1:Single, >1:Valid array
 
-    public HybridResult(T result)
+    public RadioResult(T result)
     {
         this.result = result;
         Unsafe.As<T[]?, ulong>(ref this.resultArray) = SingleResultValue;
     }
 
-    public HybridResult(T[] resultArray)
+    public RadioResult(T[] resultArray)
     {
         if (resultArray.Length == 0)
         {
@@ -65,7 +65,7 @@ public readonly struct HybridResult<T> : IEnumerable, IEnumerable<T>, IEquatable
         }
     }
 
-    public bool Equals(HybridResult<T> other)
+    public bool Equals(RadioResult<T> other)
     {
         if (this.IsEmpty)
         {// 0: Empty
@@ -117,12 +117,12 @@ public readonly struct HybridResult<T> : IEnumerable, IEnumerable<T>, IEquatable
 
     public struct Enumerator : IEnumerator<T>, IEnumerator
     {
-        private HybridResult<T> result;
+        private RadioResult<T> result;
         private int index;
         private int total;
         private T? current;
 
-        internal Enumerator(HybridResult<T> result)
+        internal Enumerator(RadioResult<T> result)
         {
             this.result = result;
             this.index = 0;

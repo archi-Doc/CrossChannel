@@ -17,7 +17,8 @@ class Program
 {
     static void Main(string[] args)
     {
-        NewRadio.Open<ITestService>(default!);
+        var c = NewRadio.Open<ITestService>(default!);
+        c.Close();
         NewRadio.Send<ITestService>().Test();
 
         Console.WriteLine("Hello World!");
