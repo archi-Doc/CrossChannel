@@ -1,37 +1,14 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using BenchmarkDotNet.Attributes;
+namespace CrossChannel;
 
-namespace Benchmark;
-
-public readonly struct SingleResult<T>
-{
-    public readonly T Result;
-
-    public SingleResult(T result)
-    {
-        this.Result = result;
-    }
-}
-
-public readonly struct ArrayResult<T>
-{
-    public readonly T[] ResultArray;
-
-    public ArrayResult(T result)
-    {
-        this.ResultArray = [result];
-    }
-
-    public int NumberOfResults => this.ResultArray.Length;
-}
-
+/// <summary>
+/// A structure that represents the return value of a radio message.<br/>
+/// The return value on the receiving side (the processing side) is singular, <br/>
+/// but since the number of return values on the sending side can be zero or more, <br/>
+/// please use this structure for the return value.
+/// </summary>
+/// <typeparam name="T">The type of the message.</typeparam>
 public readonly struct HybridResult<T> : IEnumerable, IEnumerable<T>, IEquatable<HybridResult<T>>
 {
     private const ulong SingleResultValue = 0x0000_0000_0000_0001;
@@ -88,18 +65,6 @@ public readonly struct HybridResult<T> : IEnumerable, IEnumerable<T>, IEquatable
         }
     }
 
-#pragma warning disable CS9195 // Argument should be passed with the 'in' keyword
-    private bool HasSingleResult => Unsafe.As<T[]?, ulong>(ref Unsafe.AsRef(this.resultArray)) == SingleResultValue;
-#pragma warning restore CS9195 // Argument should be passed with the 'in' keyword
-
-    #region Enumerator
-
-    public Enumerator GetEnumerator() => new Enumerator(this);
-
-    IEnumerator<T> IEnumerable<T>.GetEnumerator() => new Enumerator(this);
-
-    IEnumerator IEnumerable.GetEnumerator() => new Enumerator(this);
-
     public bool Equals(HybridResult<T> other)
     {
         if (this.IsEmpty)
@@ -124,22 +89,6 @@ public readonly struct HybridResult<T> : IEnumerable, IEnumerable<T>, IEquatable
         }
         else if (this.HasSingleResult)
         {// 1: Single
-            return EqualityComparer<T>.Default.GetHashCode(this.result!); // this.result!.GetHashCode();
-        }
-        else
-        {// >1: Array
-            return this.resultArray!.Aggregate(0, (hash, item) => hash ^ EqualityComparer<T>.Default.GetHashCode(item!));
-        }
-    }
-
-    public int GetHashCodeB()
-    {
-        if (this.IsEmpty)
-        {// 0: Empty
-            return 0;
-        }
-        else if (this.HasSingleResult)
-        {// 1: Single
             return this.result!.GetHashCode();
         }
         else
@@ -153,6 +102,18 @@ public readonly struct HybridResult<T> : IEnumerable, IEnumerable<T>, IEquatable
             return hash;
         }
     }
+
+#pragma warning disable CS9195 // Argument should be passed with the 'in' keyword
+    private bool HasSingleResult => Unsafe.As<T[]?, ulong>(ref Unsafe.AsRef(this.resultArray)) == SingleResultValue;
+#pragma warning restore CS9195 // Argument should be passed with the 'in' keyword
+
+    #region Enumerator
+
+    public Enumerator GetEnumerator() => new Enumerator(this);
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => new Enumerator(this);
+
+    IEnumerator IEnumerable.GetEnumerator() => new Enumerator(this);
 
     public struct Enumerator : IEnumerator<T>, IEnumerator
     {
@@ -232,86 +193,4 @@ public readonly struct HybridResult<T> : IEnumerable, IEnumerable<T>, IEquatable
     }
 
     #endregion
-}
-
-public record class MessageResult(string Message);
-
-[Config(typeof(BenchmarkConfig))]
-public class RadioResultTest
-{
-    private HybridResult<int> hybridResult1 = new([1234,]);
-    private HybridResult<int> hybridResult1b = new([1234,]);
-    private HybridResult<int> hybridResult8 = new([1234, 45, 67, 1, 456787, 12, -333, 33,]);
-    private HybridResult<int> hybridResult8b = new([1234, 45, 67, 1, 456787, 12, -333, 33,]);
-
-    public RadioResultTest()
-    {
-        var result = default(HybridResult<int>);
-        var array = result.ToArray();
-        result = new HybridResult<int>(22);
-        array = result.ToArray();
-
-        var result2 = new HybridResult<int>([11,]);
-        var eq = result.Equals(result2);
-        result2 = new HybridResult<int>([22,]);
-        eq = result.Equals(result2);
-
-        result = new HybridResult<int>([11, 22,]);
-        array = result.ToArray();
-
-        result2 = new HybridResult<int>([11, 22,]);
-        eq = result.Equals(result2);
-        result2 = new HybridResult<int>([11, 22, 33,]);
-        eq = result.Equals(result2);
-
-        var messageResult = new HybridResult<MessageResult>([new MessageResult("Hello"), new MessageResult("World"),]);
-        var array2 = messageResult.ToArray();
-        var messageResult2 = new HybridResult<MessageResult>([new MessageResult("Hello"), new MessageResult("World"),]);
-        eq = messageResult.Equals(messageResult2);
-    }
-
-    [Benchmark]
-    public int Test_Direct() => this.DirectMethod(1, 2);
-
-    private int DirectMethod(int x, int y) => x + y;
-
-    [Benchmark]
-    public SingleResult<int> Test_Single() => this.SingleMethod(1, 2);
-
-    [Benchmark]
-    public int Test_Single2() => this.SingleMethod(1, 2).Result;
-
-    private SingleResult<int> SingleMethod(int x, int y) => new(x + y);
-
-    [Benchmark]
-    public ArrayResult<int> Test_Array() => this.ArrayMethod(1, 2);
-
-    [Benchmark]
-    public int Test_Array2() => this.ArrayMethod(1, 2).ResultArray[0];
-
-    private ArrayResult<int> ArrayMethod(int x, int y) => new(x + y);
-
-    [Benchmark]
-    public HybridResult<int> Test_Hybrid() => this.HybridMethod(1, 2);
-
-    [Benchmark]
-    public int Test_Hybrid2()
-    {
-        this.HybridMethod(1, 2).TryGetSingleResult(out var result);
-        return result;
-    }
-
-    private HybridResult<int> HybridMethod(int x, int y) => new(x + y);
-
-    [Benchmark]
-    public int Test_GetHashCode1() => this.hybridResult1.GetHashCode();
-
-    [Benchmark]
-    public int Test_GetHashCode1B() => this.hybridResult1.GetHashCodeB();
-
-    [Benchmark]
-    public int Test_GetHashCode8() => this.hybridResult8.GetHashCode();
-
-    [Benchmark]
-    public int Test_GetHashCode8B() => this.hybridResult8.GetHashCodeB();
 }
