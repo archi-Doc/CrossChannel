@@ -45,13 +45,14 @@ public class Channel<TService>
         }
     }
 
-    internal TService Broker { get; } = default!;
+    internal TService Broker { get; }
 
     private readonly SemaphoreLock semaphoreLock = new();
     private readonly FastList<Connection> list = new(); // this.semaphoreLock
 
     public Channel()
     {
+        this.Broker = (TService)RadioRegistry.Get<TService>().Broker;
     }
 
     public Connection Open(TService instance)

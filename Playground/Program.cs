@@ -24,7 +24,6 @@ public class TestService : ITestService
     }
 }
 
-
 public class TestServiceBroker : ITestService
 {
     private readonly Channel<ITestService> channel;

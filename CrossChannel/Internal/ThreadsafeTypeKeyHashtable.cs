@@ -20,6 +20,16 @@ internal class ThreadsafeTypeKeyHashtable<TValue>
         this.loadFactor = loadFactor;
     }
 
+    public bool TryAdd(Type key, TValue value)
+    {
+        return this.TryAdd(key, _ => value);
+    }
+
+    public bool TryAdd(Type key, Func<Type, TValue> valueFactory)
+    {
+        return this.TryAddInternal(key, valueFactory, out TValue _);
+    }
+
     private bool TryAddInternal(Type key, Func<Type, TValue> valueFactory, out TValue resultingValue)
     {
         lock (this.writerLock)
