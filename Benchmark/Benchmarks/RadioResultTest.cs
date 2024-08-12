@@ -33,7 +33,7 @@ public readonly struct ArrayResult<T>
     public int NumberOfResults => this.ResultArray.Length;
 }
 
-public readonly struct HybridResult<T> : System.Collections.IEnumerable, IEnumerable<T>
+public readonly struct HybridResult<T> : IEnumerable, IEnumerable<T>, IEquatable<HybridResult<T>>
 {
     private const ulong SingleResultValue = 0x0000_0000_0000_0001;
 
@@ -48,8 +48,21 @@ public readonly struct HybridResult<T> : System.Collections.IEnumerable, IEnumer
 
     public HybridResult(T[] resultArray)
     {
-        this.result = default!;
-        this.resultArray = resultArray;
+        if (resultArray.Length == 0)
+        {
+            this.result = default!;
+            this.resultArray = null;
+        }
+        else if (resultArray.Length == 1)
+        {
+            this.result = resultArray[0];
+            Unsafe.As<T[]?, ulong>(ref this.resultArray) = SingleResultValue;
+        }
+        else
+        {
+            this.result = default!;
+            this.resultArray = resultArray;
+        }
     }
 
     [MemberNotNullWhen(false, nameof(resultArray))]
@@ -87,6 +100,60 @@ public readonly struct HybridResult<T> : System.Collections.IEnumerable, IEnumer
     IEnumerator<T> IEnumerable<T>.GetEnumerator() => new Enumerator(this);
 
     IEnumerator IEnumerable.GetEnumerator() => new Enumerator(this);
+
+    public bool Equals(HybridResult<T> other)
+    {
+        if (this.IsEmpty)
+        {// 0: Empty
+            return other.IsEmpty;
+        }
+        else if (this.HasSingleResult)
+        {// 1: Single
+            return other.HasSingleResult && EqualityComparer<T>.Default.Equals(this.result, other.result);
+        }
+        else
+        {// >1: Array
+            return other.resultArray != null && this.resultArray!.SequenceEqual(other.resultArray!);
+        }
+    }
+
+    public override int GetHashCode()
+    {
+        if (this.IsEmpty)
+        {// 0: Empty
+            return 0;
+        }
+        else if (this.HasSingleResult)
+        {// 1: Single
+            return EqualityComparer<T>.Default.GetHashCode(this.result!); // this.result!.GetHashCode();
+        }
+        else
+        {// >1: Array
+            return this.resultArray!.Aggregate(0, (hash, item) => hash ^ EqualityComparer<T>.Default.GetHashCode(item!));
+        }
+    }
+
+    public int GetHashCodeB()
+    {
+        if (this.IsEmpty)
+        {// 0: Empty
+            return 0;
+        }
+        else if (this.HasSingleResult)
+        {// 1: Single
+            return this.result!.GetHashCode();
+        }
+        else
+        {// >1: Array
+            var hash = 0;
+            foreach (var item in this.resultArray!)
+            {
+                hash ^= item!.GetHashCode();
+            }
+
+            return hash;
+        }
+    }
 
     public struct Enumerator : IEnumerator<T>, IEnumerator
     {
@@ -168,17 +235,40 @@ public readonly struct HybridResult<T> : System.Collections.IEnumerable, IEnumer
     #endregion
 }
 
+public record class MessageResult(string Message);
+
 [Config(typeof(BenchmarkConfig))]
 public class RadioResultTest
 {
+    private HybridResult<int> hybridResult1 = new([1234,]);
+    private HybridResult<int> hybridResult1b = new([1234,]);
+    private HybridResult<int> hybridResult8 = new([1234, 45, 67, 1, 456787, 12, -333, 33,]);
+    private HybridResult<int> hybridResult8b = new([1234, 45, 67, 1, 456787, 12, -333, 33,]);
+
     public RadioResultTest()
     {
         var result = default(HybridResult<int>);
         var array = result.ToArray();
         result = new HybridResult<int>(22);
         array = result.ToArray();
-        result = new HybridResult<int>([11, 22]);
+
+        var result2 = new HybridResult<int>([11,]);
+        var eq = result.Equals(result2);
+        result2 = new HybridResult<int>([22,]);
+        eq = result.Equals(result2);
+
+        result = new HybridResult<int>([11, 22,]);
         array = result.ToArray();
+
+        result2 = new HybridResult<int>([11, 22,]);
+        eq = result.Equals(result2);
+        result2 = new HybridResult<int>([11, 22, 33,]);
+        eq = result.Equals(result2);
+
+        var messageResult = new HybridResult<MessageResult>([new MessageResult("Hello"), new MessageResult("World"),]);
+        var array2 = messageResult.ToArray();
+        var messageResult2 = new HybridResult<MessageResult>([new MessageResult("Hello"), new MessageResult("World"),]);
+        eq = messageResult.Equals(messageResult2);
     }
 
     [Benchmark]
@@ -213,4 +303,16 @@ public class RadioResultTest
     }
 
     private HybridResult<int> HybridMethod(int x, int y) => new(x + y);
+
+    [Benchmark]
+    public int Test_GetHashCode1() => this.hybridResult1.GetHashCode();
+
+    [Benchmark]
+    public int Test_GetHashCode1B() => this.hybridResult1.GetHashCodeB();
+
+    [Benchmark]
+    public int Test_GetHashCode8() => this.hybridResult8.GetHashCode();
+
+    [Benchmark]
+    public int Test_GetHashCode8B() => this.hybridResult8.GetHashCodeB();
 }
