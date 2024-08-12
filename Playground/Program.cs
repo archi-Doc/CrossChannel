@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Arc.WeakDelegate;
 using CrossChannel;
@@ -11,6 +13,88 @@ namespace Playground;
 public interface ITestService : IRadioService
 {
     RadioResult<int> Test();
+}
+
+public class TestService : ITestService
+{
+    RadioResult<int> ITestService.Test()
+    {
+        Console.WriteLine("TestServiceBroker");
+        return new(1);
+    }
+}
+
+
+public class TestServiceBroker : ITestService
+{
+    private readonly Channel<ITestService> channel;
+
+    public TestServiceBroker(Channel<ITestService> channel)
+    {
+        this.channel = channel;
+    }
+
+    public RadioResult<int> Test()
+    {
+        this.channel.EnterScope();
+        try
+        {
+            var list = this.channel.InternalGetList();
+            var array = list.GetValues();
+            if (list.Count == 1)
+            {
+                foreach (var x in array)
+                {
+                    if (x is not null)
+                    {
+                        if (x.TryGetInstance(out var instance))
+                        {
+                            return instance.Test();
+                        }
+                        else
+                        {
+                            x.InternalDispose();
+                        }
+                    }
+                }
+            }
+            else if (list.Count > 1)
+            {
+                var results = new int[list.Count];
+                var count = 0;
+                foreach (var x in array)
+                {
+                    if (x is not null)
+                    {
+                        if (x.TryGetInstance(out var instance))
+                        {
+                            if (instance.Test().TryGetSingleResult(out var r))
+                            {
+                                results[count++] = r;
+                            }
+                        }
+                        else
+                        {
+                            x.InternalDispose();
+                        }
+                    }
+                }
+
+                if (results.Length != count)
+                {
+                    Array.Resize(ref results, count);
+                }
+
+                return new(results);
+            }
+        }
+        finally
+        {
+            this.channel.ExitScope();
+        }
+
+        return default;
+    }
 }
 
 class Program

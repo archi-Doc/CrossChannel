@@ -22,29 +22,29 @@ public static class NewRadio
     {
     }
 
-    public static Channel<TService>.Connection Open<TService>(TService instance, object? weakReference = default)
-        where TService : IRadioService
+    public static Channel<TService>.Connection Open<TService>(TService instance)
+        where TService : class, IRadioService
     {
         var xchannel = ChannelCache<TService>.Channel;
-        return xchannel.Open(instance, weakReference);
+        return xchannel.Open(instance);
     }
 
-    public static Channel<TService>.Connection Open<TService, TKey>(TService instance, TKey key, object? weakReference = default)
-        where TService : IRadioService
+    public static Channel<TService>.Connection Open<TService, TKey>(TService instance, TKey key)
+        where TService : class, IRadioService
         where TKey : notnull
     {
         var xchannel = ChannelCache<TService, TKey>.Channel(key);
-        return xchannel.Open(instance, weakReference);
+        return xchannel.Open(instance);
     }
 
     public static TService Send<TService>()
-        where TService : IRadioService
+        where TService : class, IRadioService
     {
         return ChannelCache<TService>.Channel.Broker;
     }
 
     public static TService Send<TService, TKey>(TKey key)
-        where TService : IRadioService
+        where TService : class, IRadioService
         where TKey : notnull
     {
         return ChannelCache<TService, TKey>.Channel(key).Broker;
@@ -53,7 +53,7 @@ public static class NewRadio
     #region Cache
 
     internal static class ChannelCache<TService>
-        where TService : IRadioService
+        where TService : class, IRadioService
     {
         private static readonly Channel<TService> channel;
 
@@ -66,7 +66,7 @@ public static class NewRadio
     }
 
     internal static class ChannelCache<TService, TKey>
-        where TService : IRadioService
+        where TService : class, IRadioService
         where TKey : notnull
     {
         private static readonly ConcurrentDictionary<TKey, Channel<TService>> dictionary;

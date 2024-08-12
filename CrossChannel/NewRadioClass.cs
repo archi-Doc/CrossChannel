@@ -18,42 +18,42 @@ public class NewRadioClass
     {
     }
 
-    public Channel<TService>.Connection Open<TService>(TService instance, object? weakReference = default)
-        where TService : IRadioService
+    public Channel<TService>.Connection Open<TService>(TService instance)
+        where TService : class, IRadioService
     {
         var xchannel = this.GetChannel<TService>();
-        return xchannel.Open(instance, weakReference);
+        return xchannel.Open(instance);
     }
 
-    public Channel<TService>.Connection Open<TService, TKey>(TService instance, TKey key, object? weakReference = default)
-        where TService : IRadioService
+    public Channel<TService>.Connection Open<TService, TKey>(TService instance, TKey key)
+        where TService : class, IRadioService
         where TKey : notnull
     {
         var xchannel = this.GetChannel<TService, TKey>(key);
-        return xchannel.Open(instance, weakReference);
+        return xchannel.Open(instance);
     }
 
     public TService Send<TService>()
-        where TService : IRadioService
+        where TService : class, IRadioService
     {
         return this.GetChannel<TService>().Broker;
     }
 
     public TService Send<TService, TKey>(TKey key)
-        where TService : IRadioService
+        where TService : class, IRadioService
         where TKey : notnull
     {
         return this.GetChannel<TService, TKey>(key).Broker;
     }
 
     private Channel<TService> GetChannel<TService>()
-        where TService : IRadioService
+        where TService : class, IRadioService
     {
         return (Channel<TService>)this.typeToChannel.GetOrAdd(typeof(TService), x => new Channel<TService>());
     }
 
     private Channel<TService> GetChannel<TService, TKey>(TKey key)
-        where TService : IRadioService
+        where TService : class, IRadioService
         where TKey : notnull
     {
         var dictionary = (ConcurrentDictionary<TKey, Channel<TService>>)this.typeToDictionary.GetOrAdd(typeof(TService), x => new ConcurrentDictionary<TKey, Channel<TService>>());

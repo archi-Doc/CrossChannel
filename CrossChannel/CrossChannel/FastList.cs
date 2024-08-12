@@ -8,7 +8,7 @@ using System.Threading;
 namespace CrossChannel;
 
 // NOT thread safe, highly customized for XChannel.
-internal sealed class FastList<T> : IDisposable
+public sealed class FastList<T> : IDisposable
     where T : XChannel
 {
     private const int InitialCapacity = 4;
@@ -25,6 +25,8 @@ internal sealed class FastList<T> : IDisposable
         // this.objectToIndex = objectToIndex;
         this.Initialize();
     }
+
+    public int Count => this.count;
 
     internal int CleanupCount { get; set; } // no lock, not thread safe
 
