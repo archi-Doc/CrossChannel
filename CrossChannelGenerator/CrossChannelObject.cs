@@ -37,11 +37,7 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
     public CrossChannelObjectFlag ObjectFlag { get; private set; }
 
-    public NetServiceObjectAttributeMock? NetServiceObjectAttribute { get; private set; }
-
-    public NetServiceInterfaceAttributeMock? NetServiceInterfaceAttribute { get; private set; }
-
-    public int LoaderNumber { get; private set; } = -1;
+    public RadioServiceInterfaceAttributeMock? NetServiceInterfaceAttribute { get; private set; }
 
     public List<CrossChannelObject>? Children { get; private set; } // The opposite of ContainingObject
 
@@ -56,14 +52,6 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
     public CrossChannelObject? Implementation { get; private set; } // For NetServiceInterface; CrossChannelObject that implements this net service interface.
 
     public List<CrossChannelObject>? ServiceInterfaces { get; private set; } // For NetServiceObjectAttribute; Net service interfaces implemented by this net service object.
-
-    // public CrossChannelObject? NetServiceBase { get; private set; } // For NetServiceObjectAttribute; Net service base implemented by this net service object.
-
-    public ServiceFilterGroup? ClassFilters { get; private set; } // For NetServiceObjectAttribute; Service filters.
-
-    public Dictionary<string, ServiceFilterGroup>? MethodToFilter { get; private set; } // For NetServiceObjectAttribute; Method full name to Service filters.
-
-    public Dictionary<uint, ServiceMethod>? ServiceMethods { get; private set; } // For NetServiceInterface; Methods included in this net service interface.
 
     public string ClassName { get; set; } = string.Empty;
 
@@ -198,9 +186,6 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
                 return;
             }
 
-            this.ConfigureNetBase();
-            this.ConfigureServiceFilters();
-
             this.Body.Objects.Add(this);
         }
 
@@ -231,53 +216,6 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
             return false;
         }
-    }
-
-    public void ConfigureServiceFilters()
-    {
-        var classFilters = ServiceFilter.CreateFromObject(this) ?? new ServiceFilter();
-        classFilters.Sort();
-        this.ClassFilters = new ServiceFilterGroup(this, classFilters);
-        this.ClassFilters.CheckAndPrepare();
-
-        this.MethodToFilter ??= new();
-        foreach (var x in this.GetMembers(VisceralTarget.Method))
-        {
-            var methodFilters = ServiceFilter.CreateFromObject(x);
-            if (methodFilters != null)
-            {
-                methodFilters.Sort();
-                var filterGroup = new ServiceFilterGroup(this, methodFilters);
-                filterGroup.CheckAndPrepare();
-                this.MethodToFilter[x.FullName] = filterGroup;
-            }
-        }
-    }
-
-    public void ConfigureNetBase()
-    {
-        /*var baseObject = this.BaseObject;
-        while (baseObject != null)
-        {
-            if (baseObject.Generics_IsGeneric)
-            {// Generic
-                if (baseObject.OriginalDefinition?.FullName == CrossChannelBody.NetServiceBaseFullName2)
-                {
-                    this.NetServiceBase = baseObject;
-                    return;
-                }
-            }
-            else
-            {// Not generic
-                if (baseObject.FullName == CrossChannelBody.NetServiceBaseFullName)
-                {
-                    this.NetServiceBase = baseObject;
-                    return;
-                }
-            }
-
-            baseObject = baseObject.BaseObject;
-        }*/
     }
 
     public void ConfigureRelation()
@@ -343,17 +281,6 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
             cf.ConstructedObjects.Add(this);
             this.GenericsNumber = cf.ConstructedObjects.Count;
         }
-    }
-
-    public bool CheckKeyword(string keyword, Location? location = null)
-    {
-        if (!this.Identifier.Add(keyword))
-        {
-            this.Body.AddDiagnostic(CrossChannelBody.Error_KeywordUsed, location ?? Location.None, this.SimpleName, keyword);
-            return false;
-        }
-
-        return true;
     }
 
     public void Check()

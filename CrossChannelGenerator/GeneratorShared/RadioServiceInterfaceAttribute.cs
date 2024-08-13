@@ -2,14 +2,13 @@
 
 namespace CrossChannel;
 
-[AttributeUsage(AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
-public sealed class RadioServiceInterfaceMockAttribute : Attribute
+public sealed class RadioServiceInterfaceAttributeMock
 {
     public static readonly string SimpleName = "RadioServiceInterface";
     public static readonly string StandardName = SimpleName + "Attribute";
     public static readonly string FullName = "CrossChannel." + StandardName;
 
-    public RadioServiceInterfaceMockAttribute()
+    public RadioServiceInterfaceAttributeMock()
     {
     }
 

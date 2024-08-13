@@ -18,17 +18,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
     public const string FrontendClassName = "Frontend_"; // "__gen_frontend__";
     public const string BackendClassName = "Backend_";
     public const string ArgumentName = "a";
-    public const string NetResultFullName = "CrossChannel.NetResult";
-    // public const string NetServiceBaseFullName = "CrossChannel.NetServiceBase";
-    // public const string NetServiceBaseFullName2 = "CrossChannel.NetServiceBase<TServerContext>";
-    public const string ServiceFilterSyncFullName = "CrossChannel.IServiceFilterSync";
-    public const string ServiceFilterSyncFullName2 = "CrossChannel.IServiceFilterSync<TCallContext>";
-    public const string ServiceFilterAsyncFullName = "CrossChannel.IServiceFilter";
-    public const string ServiceFilterAsyncFullName2 = "CrossChannel.IServiceFilter<TCallContext>";
-    public const string ServiceFilterBaseName = "IServiceFilterBase";
-    public const string ServiceFilterInvokeName = "Invoke";
-    public const string ServiceFilterSetArgumentsName = "SetArguments";
-    public const string IClientConnectionInternalName = "CrossChannel.Internal.IClientConnectionInternal";
+    public const string RadioResultFullName = "CrossChannel.RadioResult";
 
     public static readonly DiagnosticDescriptor Error_AttributePropertyError = new DiagnosticDescriptor(
         id: "NSG001", title: "Attribute property type error", messageFormat: "The argument specified does not match the type of the property",
@@ -95,111 +85,11 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
     public void GenerateLoader(IGeneratorInformation generator, string assemblyId)
     {
         ScopingStringBuilder ssb = new();
-
-        var array = this.IdToNetInterface.Values.ToArray();
-
-        this.GenerateHeader(ssb);
-        ssb.AppendLine($"namespace CrossChannel.Generated;");
-        ssb.AppendLine();
-
-        using (var scopeClass = ssb.ScopeBrace("internal static class Frontend" + assemblyId))
-        {
-            ssb.AppendLine("private static bool Initialized;");
-            ssb.AppendLine();
-            ssb.AppendLine("[ModuleInitializer]");
-
-            using (var scopeMethod = ssb.ScopeBrace("public static void Initialize()"))
-            {
-                ssb.AppendLine("if (Initialized) return;");
-                ssb.AppendLine("Initialized = true;");
-                ssb.AppendLine();
-
-                foreach (var y in array.Where(a => a.ObjectFlag.HasFlag(CrossChannelObjectFlag.NetServiceInterface)))
-                {
-                    ssb.AppendLine($"StaticNetService.SetFrontendDelegate<{y.FullName}>(static x => new {y.ClassName}(x));");
-                }
-            }
-
-            foreach (var y in array)
-            {
-                if (y.ObjectFlag.HasFlag(CrossChannelObjectFlag.NetServiceInterface))
-                {// NetServiceInterface (Frontend)
-                    ssb.AppendLine();
-                    y.GenerateFrontend(ssb, info);
-                }
-            }
-
-            var result = ssb.Finalize();
-            if (generator.GenerateToFile && generator.TargetFolder != null && Directory.Exists(generator.TargetFolder))
-            {
-                this.StringToFile(result, Path.Combine(generator.TargetFolder, $"gen.CrossChannel.Frontend.cs"));
-            }
-            else
-            {
-                this.Context?.AddSource($"gen.CrossChannel.Frontend", SourceText.From(result, Encoding.UTF8));
-                this.Context2?.AddSource($"gen.CrossChannel.Frontend", SourceText.From(result, Encoding.UTF8));
-            }
-        }
-
-        this.FlushDiagnostic();
     }
 
     public void GenerateBroker(IGeneratorInformation generator, string assemblyId)
     {
         ScopingStringBuilder ssb = new();
-
-        var array = this.Objects.ToArray();
-
-        this.GenerateHeader(ssb);
-        ssb.AppendLine($"namespace CrossChannel.Generated;");
-        ssb.AppendLine();
-
-        using (var scopeClass = ssb.ScopeBrace("internal static class Backend" + assemblyId))
-        {
-            ssb.AppendLine("private static bool Initialized;");
-            ssb.AppendLine();
-            ssb.AppendLine("[ModuleInitializer]");
-
-            using (var scopeMethod = ssb.ScopeBrace("public static void Initialize()"))
-            {
-                ssb.AppendLine("if (Initialized) return;");
-                ssb.AppendLine("Initialized = true;");
-                ssb.AppendLine();
-
-                foreach (var y in array.Where(a => a.ObjectFlag.HasFlag(CrossChannelObjectFlag.NetServiceObject)))
-                {
-                    if (y.ServiceInterfaces != null)
-                    {
-                        foreach (var z in y.ServiceInterfaces)
-                        {
-                            ssb.AppendLine($"StaticNetService.SetServiceInfo({y.ClassName}.ServiceInfo_{z.NetServiceInterfaceAttribute!.ServiceId.ToString("x")}());");
-                        }
-                    }
-                }
-            }
-
-            foreach (var y in array)
-            {
-                if (y.ObjectFlag.HasFlag(CrossChannelObjectFlag.NetServiceObject))
-                {// NetServiceObject (Backend)
-                    ssb.AppendLine();
-                    y.GenerateBackend(ssb, info);
-                }
-            }
-
-            var result = ssb.Finalize();
-            if (generator.GenerateToFile && generator.TargetFolder != null && Directory.Exists(generator.TargetFolder))
-            {
-                this.StringToFile(result, Path.Combine(generator.TargetFolder, $"gen.CrossChannel.Backend.cs"));
-            }
-            else
-            {
-                this.Context?.AddSource($"gen.CrossChannel.Backend", SourceText.From(result, Encoding.UTF8));
-                this.Context2?.AddSource($"gen.CrossChannel.Backend", SourceText.From(result, Encoding.UTF8));
-            }
-        }
-
-        this.FlushDiagnostic();
     }
 
     private void GenerateHeader(ScopingStringBuilder ssb)

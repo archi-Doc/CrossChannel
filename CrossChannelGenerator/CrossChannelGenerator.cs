@@ -89,7 +89,7 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
             return;
         }
 
-        var radioServiceInterface = compilation.GetTypeByMetadataName(RadioServiceInterfaceMockAttribute.FullName);
+        var radioServiceInterface = compilation.GetTypeByMetadataName(RadioServiceInterfaceAttribute.FullName);
         if (radioServiceInterface == null)
         {
             return;
@@ -137,7 +137,7 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                     }
                     else if (SymbolEqualityComparer.Default.Equals(y.AttributeClass, radioServiceInterface))
                     {// [RadioServiceInterface]
-                        if (symbol.AllInterfaces.Any(z => true))
+                        if (symbol.AllInterfaces.Any(z => SymbolEqualityComparer.Default.Equals(z, iRadioService)))
                         {// IRadioService
                             body.Add(symbol);
                         }

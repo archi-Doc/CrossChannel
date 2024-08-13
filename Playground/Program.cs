@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using CrossChannel;
 using MessagePipe;
@@ -19,11 +20,32 @@ public interface ITestService : IRadioService
     Task<RadioResult<int>> Test4();
 }
 
-public class TestService : ITestService
+public static class Loader
 {
+    [ModuleInitializer]
+    public static void __InitializeCC__()
+    {
+        TestService.__InitializeCC__();
+        
+    }
+}
+
+    public class TestService : ITestService
+{
+    [ModuleInitializer]
+    public static void __InitializeCC__()
+    {
+        RadioRegistry.Register(new(typeof(TestService.ABC), x => new TestService.ABCBroker()));
+    }
+
     [RadioServiceInterface]
     private interface ABC : IRadioService
     {
+    }
+
+    public class ABCBroker : ABC
+    {
+
     }
 
     void ITestService.Test1()
