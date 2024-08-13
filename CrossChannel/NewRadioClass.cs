@@ -18,14 +18,14 @@ public class NewRadioClass
     {
     }
 
-    public Channel<TService>.Connection Open<TService>(TService instance)
+    public Channel<TService>.Link Open<TService>(TService instance)
         where TService : class, IRadioService
     {
         var xchannel = this.GetChannel<TService>();
         return xchannel.Open(instance);
     }
 
-    public Channel<TService>.Connection Open<TService, TKey>(TService instance, TKey key)
+    public Channel<TService>.Link Open<TService, TKey>(TService instance, TKey key)
         where TService : class, IRadioService
         where TKey : notnull
     {

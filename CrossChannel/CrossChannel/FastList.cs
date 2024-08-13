@@ -26,11 +26,13 @@ public sealed class FastList<T> : IDisposable
         this.Initialize();
     }
 
-    public int Count => this.count;
+    // public int Count => this.count; // Deprecated because it may lead to inconsistent results between 'count' and 'values'.
 
     internal int CleanupCount { get; set; } // no lock, not thread safe
 
     public T?[] GetValues() => this.values; // no lock, safe for iterate
+
+    public (T?[] Array, int CountHint) GetValuesAndCountHint() => (this.values, this.count); // no lock, safe for iterate
 
     public bool IsDisposed => this.freeIndex == null;
 

@@ -22,14 +22,14 @@ public static class NewRadio
     {
     }
 
-    public static Channel<TService>.Connection Open<TService>(TService instance)
+    public static Channel<TService>.Link Open<TService>(TService instance)
         where TService : class, IRadioService
     {
         var xchannel = ChannelCache<TService>.Channel;
         return xchannel.Open(instance);
     }
 
-    public static Channel<TService>.Connection Open<TService, TKey>(TService instance, TKey key)
+    public static Channel<TService>.Link Open<TService, TKey>(TService instance, TKey key)
         where TService : class, IRadioService
         where TKey : notnull
     {

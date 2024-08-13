@@ -5,12 +5,12 @@ namespace CrossChannel;
 public class Channel<TService>
     where TService : class
 {
-    public class Connection : XChannel //opt
+    public class Link : XChannel //opt
     {
         private readonly Channel<TService> channel;
         private readonly WeakReference<TService> weakReference;
 
-        public Connection(Channel<TService> channel, TService instance)
+        public Link(Channel<TService> channel, TService instance)
         {
             this.channel = channel;
             this.weakReference = new(instance);
@@ -42,17 +42,17 @@ public class Channel<TService>
     internal TService Broker { get; }
 
     private readonly object syncObject = new();
-    private readonly FastList<Connection> list = new(); // this.semaphoreLock
+    private readonly FastList<Link> list = new(); // this.semaphoreLock
 
     public Channel()
     {
         this.Broker = (TService)RadioRegistry.Get<TService>().Constructor(this);
     }
 
-    public Connection Open(TService instance)
+    public Link Open(TService instance)
     {
-        return new Connection(this, instance);
+        return new Link(this, instance);
     }
 
-    public FastList<Connection> InternalGetList() => this.list;
+    public FastList<Link> InternalGetList() => this.list;
 }

@@ -2,7 +2,7 @@
 
 namespace Netsphere;
 
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
+/*[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
 public sealed class RadioServiceInterfaceAttribute : Attribute
 {
     public RadioServiceInterfaceAttribute()
@@ -10,4 +10,4 @@ public sealed class RadioServiceInterfaceAttribute : Attribute
     }
 
     public bool RequireUiThread { get; set; }
-}
+}*/

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CrossChannel;
 using MessagePipe;
 using Microsoft.Extensions.DependencyInjection;
+using static FastExpressionCompiler.ExpressionCompiler;
 
 namespace Playground;
 
@@ -49,130 +50,85 @@ public class TestServiceBroker : ITestService
 
     public RadioResult<int> Test()
     {
-        var list = this.channel.InternalGetList();
-        var array = list.GetValues();
-        if (list.Count == 1)
+        (var array, var countHint) = this.channel.InternalGetList().GetValuesAndCountHint();
+        int firstResult = default;
+        int[]? results = default;
+        var count = 0;
+        foreach (var x in array)
         {
-            foreach (var x in array)
+            if (x is null) continue;
+            if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }
+
+            try
             {
-                if (x is not null)
+                if (instance.Test().TryGetSingleResult(out var r))
                 {
-                    if (x.TryGetInstance(out var instance))
+                    if (count == 0)
                     {
-                        return instance.Test();
+                        count = 1;
+                        firstResult = r;
                     }
                     else
-                    {
-                        x.Dispose();
-                    }
-                }
-            }
-        }
-        else if (list.Count > 1)
-        {
-            var results = new int[list.Count];
-            var count = 0;
-            foreach (var x in array)
-            {
-                if (x is not null)
-                {
-                    if (x.TryGetInstance(out var instance))
-                    {
-                        try
-                        {
-                            if (instance.Test().TryGetSingleResult(out var r))
-                            {
-                                results[count++] = r;
-                            }
+                    {// count >= 1
+                        if (results is null)
+                        {// count == 1
+                            results = new int[countHint];
+                            results[0] = firstResult;
                         }
-                        catch { }
-                    }
-                    else
-                    {
-                        x.Dispose();
+
+                        if (countHint < count) results[count++] = r;
+                        else break;
                     }
                 }
             }
-
-            if (results.Length != count)
-            {
-                Array.Resize(ref results, count);
-            }
-
-            return new(results);
+            catch { }
         }
 
-        return default;
+        if (count == 0) return default;
+        else if (count == 1) return new(firstResult);
+        else if (countHint != count) Array.Resize(ref results, count);
+        return new(results!);
     }
 
     public void Test2()
     {
-        var array = this.channel.InternalGetList().GetValues();
+        (var array, var countHint) = this.channel.InternalGetList().GetValuesAndCountHint();
         foreach (var x in array)
         {
-            if (x is not null)
+            if (x is null) continue;
+            if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }
+
+            try
             {
-                if (x.TryGetInstance(out var instance))
-                {
-                    try { instance.Test2(); }
-                    catch { }
-                }
-                else x.Dispose();
+                instance.Test2();
             }
+            catch { }
         }
     }
 
     public async Task<RadioResult<int>> Test3()
     {
-        var list = this.channel.InternalGetList();
-        var array = list.GetValues();
-        if (list.Count == 1)
+        (var array, var countHint) = this.channel.InternalGetList().GetValuesAndCountHint();
+        var tasks = new Task<RadioResult<int>>[countHint];
+        var count = 0;
+        foreach (var x in array)
         {
-            foreach (var x in array)
-            {
-                if (x is not null)
-                {
-                    if (x.TryGetInstance(out var instance))
-                    {
-                        try
-                        {
-                            return await instance.Test3().ConfigureAwait(false);
-                        }
-                        catch { }
-                    }
-                    else x.Dispose();
-                }
-            }
-        }
-        else if (list.Count > 1)
-        {
-            var results = new int[list.Count];
-            var count = 0;
-            foreach (var x in array)
-            {
-                if (x is not null)
-                {
-                    if (x.TryGetInstance(out var instance))
-                    {
-                        try
-                        {
-                            if ((await instance.Test3().ConfigureAwait(false)).TryGetSingleResult(out var r)) results[count++] = r;
-                        }
-                        catch { }
-                    }
-                    else x.Dispose();
-                }
-            }
-
-            if (results.Length != count)
-            {
-                Array.Resize(ref results, count);
-            }
-
-            return new(results);
+            if (x is null) continue;
+            if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }
+            tasks[count++] = instance.Test3();
         }
 
-        return default;
+        if (countHint != count) Array.Resize(ref tasks, count);
+        var radioResults = await Task.WhenAll(tasks);
+        var results = new int[radioResults.Length];
+        for (var i = 0; i < radioResults.Length; i++)
+        {
+            if (radioResults[i].TryGetSingleResult(out var r))
+            {
+                results[i] = r;
+            }
+        }
+        return new(results);
     }
 }
 
