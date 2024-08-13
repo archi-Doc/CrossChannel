@@ -89,7 +89,7 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
             return;
         }
 
-        var radioServiceInterface = compilation.GetTypeByMetadataName(RadioServiceInterfaceAttribute.FullName);
+        var radioServiceInterface = compilation.GetTypeByMetadataName(RadioServiceInterfaceAttributeMock.FullName);
         if (radioServiceInterface == null)
         {
             return;

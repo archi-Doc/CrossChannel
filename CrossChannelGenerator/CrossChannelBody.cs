@@ -15,8 +15,8 @@ namespace CrossChannel.Generator;
 public class CrossChannelBody : VisceralBody<CrossChannelObject>
 {
     public const string GeneratorName = "CrossChannelGenerator";
-    public const string FrontendClassName = "Frontend_"; // "__gen_frontend__";
-    public const string BackendClassName = "Backend_";
+    public const string InitializerName = "__InitializeCC__";
+    public const string BrokerName = "__Broker__";
     public const string ArgumentName = "a";
     public const string RadioResultFullName = "CrossChannel.RadioResult";
 
@@ -79,7 +79,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         }
 
         this.GenerateLoader(generator, assemblyId);
-        this.GenerateBroker(generator, assemblyId);
+        this.GenerateMain(generator, assemblyId);
     }
 
     public void GenerateLoader(IGeneratorInformation generator, string assemblyId)
@@ -87,7 +87,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         ScopingStringBuilder ssb = new();
     }
 
-    public void GenerateBroker(IGeneratorInformation generator, string assemblyId)
+    public void GenerateMain(IGeneratorInformation generator, string assemblyId)
     {
         ScopingStringBuilder ssb = new();
     }
@@ -106,48 +106,5 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         ssb.AppendLine("#pragma warning disable CS1591", false);
         ssb.AppendLine("#pragma warning disable CS1998", false);
         ssb.AppendLine();
-    }
-
-    private void GenerateInitializer(IGeneratorInformation generator, ScopingStringBuilder ssb)
-    {
-        // Namespace
-        var ns = "CrossChannel";
-        var assemblyId = string.Empty; // Assembly ID
-        if (!string.IsNullOrEmpty(generator.CustomNamespace))
-        {// Custom namespace.
-            ns = generator.CustomNamespace;
-        }
-        else
-        {// Other (Apps)
-         // assemblyId = "_" + generator.AssemblyId.ToString("x");
-            if (!string.IsNullOrEmpty(generator.AssemblyName))
-            {
-                assemblyId = VisceralHelper.AssemblyNameToIdentifier("_" + generator.AssemblyName);
-            }
-        }
-
-        info.ModuleInitializerClass.Add("CrossChannel.Generator.Generated");
-
-        ssb.AppendLine();
-        using (var scopeCrossLink = ssb.ScopeNamespace(ns!))
-        using (var scopeClass = ssb.ScopeBrace("public static class CrossChannelModule" + assemblyId))
-        {
-            ssb.AppendLine("private static bool Initialized;");
-            ssb.AppendLine();
-            ssb.AppendLine("[ModuleInitializer]");
-
-            using (var scopeMethod = ssb.ScopeBrace("public static void Initialize()"))
-            {
-                ssb.AppendLine("if (Initialized) return;");
-                ssb.AppendLine("Initialized = true;");
-                ssb.AppendLine();
-
-                foreach (var x in info.ModuleInitializerClass)
-                {
-                    ssb.Append(x, true);
-                    ssb.AppendLine(".RegisterBM();", false);
-                }
-            }
-        }
     }
 }
