@@ -24,9 +24,7 @@ public enum CrossChannelObjectFlag
     RelationConfigured = 1 << 1,
     Checked = 1 << 2,
 
-    NetServiceInterface = 1 << 10, // NetServiceInterface
-    NetServiceObject = 1 << 11, // NetServiceObject
-    HasDefaultConstructor = 1 << 12, // Has default constructor
+    RadioServiceInterface = 1 << 10, // RadioServiceInterface
 }
 
 public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
@@ -203,7 +201,7 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
             this.ConfigureNetBase();
             this.ConfigureServiceFilters();
 
-            this.Body.NetObjects.Add(this);
+            this.Body.Objects.Add(this);
         }
 
         static bool TryGetNetServiceInterfaceAttribute(CrossChannelObject obj)

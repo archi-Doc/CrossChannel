@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Playground;
 
+[RadioServiceInterface]
 public interface ITestService : IRadioService
 {
     void Test1();

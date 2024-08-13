@@ -29,7 +29,7 @@ public static class AttributeHelper
     }
 }
 
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false, Inherited = true)]
+[AttributeUsage(AttributeTargets.Interface, AllowMultiple = false, Inherited = true)]
 public sealed class CrossChannelGeneratorOptionAttributeMock : Attribute
 {
     public static readonly string SimpleName = "CrossChannelGeneratorOption";

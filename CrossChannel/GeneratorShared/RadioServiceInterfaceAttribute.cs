@@ -1,13 +1,13 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
-namespace Netsphere;
+namespace CrossChannel;
 
-/*[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
+[AttributeUsage(AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
 public sealed class RadioServiceInterfaceAttribute : Attribute
 {
     public RadioServiceInterfaceAttribute()
     {
     }
 
-    public bool RequireUiThread { get; set; }
-}*/
+    // public bool RequireUiThread { get; set; }
+}
