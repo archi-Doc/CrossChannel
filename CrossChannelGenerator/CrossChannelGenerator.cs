@@ -1,6 +1,5 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
-using System;
 using System.Collections.Immutable;
 using Arc.Visceral;
 using Microsoft.CodeAnalysis;
@@ -74,7 +73,7 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
         context.RegisterImplementationSourceOutput(provider, this.Emit);
     }
 
-    private void Emit(SourceProductionContext context, (Compilation Compilation, ImmutableArray<TypeDeclarationSyntax?> Types) source)
+    private void Emit(SourceProductionContext context, (Compilation Compilation, ImmutableArray<InterfaceDeclarationSyntax?> Types) source)
     {
         var compilation = source.Compilation;
 
@@ -84,8 +83,14 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
             return;
         }
 
-        var radioServiceSymbol = compilation.GetTypeByMetadataName(IRadioService.FullName);
-        if (radioServiceSymbol == null)
+        var iRadioService = compilation.GetTypeByMetadataName(IRadioService.FullName);
+        if (iRadioService == null)
+        {
+            return;
+        }
+
+        var radioServiceInterface = compilation.GetTypeByMetadataName(RadioServiceInterfaceMockAttribute.FullName);
+        if (radioServiceInterface == null)
         {
             return;
         }
@@ -129,6 +134,13 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                         this.GenerateToFile = generatorOption.GenerateToFile;
                         this.CustomNamespace = generatorOption.CustomNamespace;
                         this.TargetFolder = Path.Combine(Path.GetDirectoryName(x.SyntaxTree.FilePath), "Generated");
+                    }
+                    else if (SymbolEqualityComparer.Default.Equals(y.AttributeClass, radioServiceInterface))
+                    {// [RadioServiceInterface]
+                        if (symbol.AllInterfaces.Any(z => true))
+                        {// IRadioService
+                            body.Add(symbol);
+                        }
                     }
                 }
             }

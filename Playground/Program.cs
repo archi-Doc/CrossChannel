@@ -21,6 +21,11 @@ public interface ITestService : IRadioService
 
 public class TestService : ITestService
 {
+    [RadioServiceInterface]
+    private interface ABC : IRadioService
+    {
+    }
+
     void ITestService.Test1()
     {
         Console.WriteLine("Test1");

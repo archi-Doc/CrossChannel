@@ -34,56 +34,8 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         id: "NSG001", title: "Attribute property type error", messageFormat: "The argument specified does not match the type of the property",
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
-    public static readonly DiagnosticDescriptor Error_KeywordUsed = new DiagnosticDescriptor(
-        id: "NSG002", title: "Keyword used", messageFormat: "The type '{0}' already contains a definition for '{1}'",
-        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Error_GenericType = new DiagnosticDescriptor(
-        id: "NSG003", title: "Generic type", messageFormat: "Generic type is not supported",
-        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Error_INetService = new DiagnosticDescriptor(
-        id: "NSG004", title: "INetService", messageFormat: "NetServiceObject or NetServiceInterface must be derived from INetService",
-        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Error_Accessibility = new DiagnosticDescriptor(
-        id: "NSG005", title: "Accessibility", messageFormat: "Access modifier of NetServiceObject must be public or internal",
-        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Error_DuplicateServiceId = new DiagnosticDescriptor(
-        id: "NSG006", title: "Duplicate Service Id", messageFormat: "Duplicate Service Id {0} is found",
-        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Error_DuplicateServiceObject = new DiagnosticDescriptor(
-        id: "NSG007", title: "Duplicate Service Object", messageFormat: "Multiple service objects implement service interface {0}",
-        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Error_MethodReturnType = new DiagnosticDescriptor(
-        id: "NSG008", title: "Method return type", messageFormat: "The return type of service method must be NetTask or NetTask<T>",
-        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Error_DuplicateServiceMethod = new DiagnosticDescriptor(
-        id: "NSG009", title: "Duplicate Service Method", messageFormat: "Duplicate Service Method {0} is found",
-        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Warning_NullableReferenceType = new DiagnosticDescriptor(
-        id: "NSG010", title: "Nullable not annotated", messageFormat: "The return type should be nullable '{0}?' for the reference type",
-        category: GeneratorName, DiagnosticSeverity.Warning, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Error_NoFilterType = new DiagnosticDescriptor(
-        id: "NSG011", title: "No FilterType", messageFormat: "Could not get the filtertype from the specified string",
-        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Error_FilterTypeConflicted = new DiagnosticDescriptor(
-        id: "NSG012", title: "FilterType conflict", messageFormat: "Service filters of the same type has been detected",
-        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Error_FilterTypeNotDerived = new DiagnosticDescriptor(
-        id: "NSG013", title: "FilterType not derived", messageFormat: "Service filter must implement 'IServiceFilter' or 'IServiceFilterAsync'",
-        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
-
-    public static readonly DiagnosticDescriptor Error_SendStreamParam = new DiagnosticDescriptor(
-        id: "NSG014", title: "SendStream param", messageFormat: "Method that returns SendStream type must be declared as 'Method(long maxLength)''",
+    public static readonly DiagnosticDescriptor Error_IRadioService = new DiagnosticDescriptor(
+        id: "NSG002", title: "IRadioService", messageFormat: "RadioServiceInterface must be derived from IRadioService",
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
     public CrossChannelBody(SourceProductionContext context)
@@ -91,11 +43,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
     {
     }
 
-    internal Dictionary<uint, CrossChannelObject> IdToNetInterface = new();
-
     internal List<CrossChannelObject> Objects = new();
-
-    internal Dictionary<uint, CrossChannelObject> IdToNetObject = new();
 
     internal Dictionary<string, List<CrossChannelObject>> Namespaces = new();
 
@@ -114,7 +62,6 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
             return;
         }
 
-        array = this.IdToNetInterface.Values.Concat(this.Objects).ToArray();
         foreach (var x in array)
         {
             x.ConfigureRelation();
@@ -141,11 +88,11 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
             assemblyId = VisceralHelper.AssemblyNameToIdentifier("_" + generator.AssemblyName);
         }
 
-        this.GenerateFrontend(generator, assemblyId);
-        this.GenerateBackend(generator, assemblyId);
+        this.GenerateLoader(generator, assemblyId);
+        this.GenerateBroker(generator, assemblyId);
     }
 
-    public void GenerateFrontend(IGeneratorInformation generator, string assemblyId)
+    public void GenerateLoader(IGeneratorInformation generator, string assemblyId)
     {
         ScopingStringBuilder ssb = new();
 
@@ -197,7 +144,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         this.FlushDiagnostic();
     }
 
-    public void GenerateBackend(IGeneratorInformation generator, string assemblyId)
+    public void GenerateBroker(IGeneratorInformation generator, string assemblyId)
     {
         ScopingStringBuilder ssb = new();
 
@@ -262,7 +209,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         ssb.AddUsing("System.Collections.Generic");
         ssb.AddUsing("System.Diagnostics.CodeAnalysis");
         ssb.AddUsing("System.Runtime.CompilerServices");
-        ssb.AddUsing("Arc.Collections");
+        // ssb.AddUsing("Arc.Collections");
         ssb.AddUsing("CrossChannel");
 
         ssb.AppendLine("#nullable enable", false);
