@@ -14,15 +14,12 @@ public sealed class FastList<T> : IDisposable
     private const int InitialCapacity = 4;
     private const int MinShrinkStart = 8;
 
-    // public delegate ref int ObjectToIndexDelegete(T obj);
-
     private T?[] values = default!;
     private int count;
     private FastIntQueue freeIndex = default!;
 
     public FastList()
     {
-        // this.objectToIndex = objectToIndex;
         this.Initialize();
     }
 
@@ -66,7 +63,6 @@ public sealed class FastList<T> : IDisposable
             }
 
             var index = this.freeIndex.Dequeue();
-            // this.objectToIndex(value) = index;
             value.Index = index;
             newValues[this.values.Length] = value;
             this.count++;
@@ -101,7 +97,7 @@ public sealed class FastList<T> : IDisposable
     /// Shrink the list when there are too many unused objects.
     /// </summary>
     /// <returns>true if the list is empty.</returns>
-    public bool Shrink()
+    public bool TryShrink()
     {
         if (this.count == 0)
         {// Empty
@@ -169,8 +165,6 @@ public sealed class FastList<T> : IDisposable
         this.values = Array.Empty<T?>();
         this.count = 0;
     }
-
-    // private ObjectToIndexDelegete objectToIndex;
 
     private void Initialize()
     {

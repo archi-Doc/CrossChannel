@@ -1,40 +1,44 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CrossChannel;
 using MessagePipe;
 using Microsoft.Extensions.DependencyInjection;
-using static FastExpressionCompiler.ExpressionCompiler;
 
 namespace Playground;
 
 public interface ITestService : IRadioService
 {
-    RadioResult<int> Test();
+    void Test1();
 
-    void Test2();
+    RadioResult<int> Test2();
 
-    Task<RadioResult<int>> Test3();
+    Task Test3();
+
+    Task<RadioResult<int>> Test4();
 }
 
 public class TestService : ITestService
 {
-    RadioResult<int> ITestService.Test()
+    void ITestService.Test1()
     {
-        Console.WriteLine("Test");
+        Console.WriteLine("Test1");
+    }
+
+    RadioResult<int> ITestService.Test2()
+    {
+        Console.WriteLine("Test2");
         return new(1);
     }
 
-    void ITestService.Test2()
-    {
-        Console.WriteLine("Test2");
-    }
-
-    async Task<RadioResult<int>> ITestService.Test3()
+    async Task ITestService.Test3()
     {
         await Console.Out.WriteLineAsync("Test3");
+    }
+
+    async Task<RadioResult<int>> ITestService.Test4()
+    {
+        await Console.Out.WriteLineAsync("Test4");
         return new(3);
     }
 }
@@ -48,7 +52,18 @@ public class TestServiceBroker : ITestService
         this.channel = (Channel<ITestService>)channel;
     }
 
-    public RadioResult<int> Test()
+    public void Test1()
+    {
+        (var array, var countHint) = this.channel.InternalGetList().GetValuesAndCountHint();
+        foreach (var x in array)
+        {
+            if (x is null) continue;
+            if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }
+            instance.Test1();
+        }
+    }
+
+    public RadioResult<int> Test2()
     {
         (var array, var countHint) = this.channel.InternalGetList().GetValuesAndCountHint();
         int firstResult = default;
@@ -59,29 +74,25 @@ public class TestServiceBroker : ITestService
             if (x is null) continue;
             if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }
 
-            try
+            if (instance.Test2().TryGetSingleResult(out var r))
             {
-                if (instance.Test().TryGetSingleResult(out var r))
+                if (count == 0)
                 {
-                    if (count == 0)
-                    {
-                        count = 1;
-                        firstResult = r;
+                    count = 1;
+                    firstResult = r;
+                }
+                else
+                {// count >= 1
+                    if (results is null)
+                    {// count == 1
+                        results = new int[countHint];
+                        results[0] = firstResult;
                     }
-                    else
-                    {// count >= 1
-                        if (results is null)
-                        {// count == 1
-                            results = new int[countHint];
-                            results[0] = firstResult;
-                        }
 
-                        if (countHint < count) results[count++] = r;
-                        else break;
-                    }
+                    if (countHint < count) results[count++] = r;
+                    else break;
                 }
             }
-            catch { }
         }
 
         if (count == 0) return default;
@@ -90,23 +101,26 @@ public class TestServiceBroker : ITestService
         return new(results!);
     }
 
-    public void Test2()
+    public async Task Test3()
     {
         (var array, var countHint) = this.channel.InternalGetList().GetValuesAndCountHint();
+        var tasks = new Task[countHint];
+        var count = 0;
         foreach (var x in array)
         {
             if (x is null) continue;
             if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }
-
-            try
-            {
-                instance.Test2();
-            }
-            catch { }
+            if (countHint < count) tasks[count++] = instance.Test3();
+            else break;
         }
+
+        if (countHint != count) Array.Resize(ref tasks, count);
+        if (count == 0) return;
+        else if (count == 1) await tasks[0];
+        else await Task.WhenAll(tasks);
     }
 
-    public async Task<RadioResult<int>> Test3()
+    public async Task<RadioResult<int>> Test4()
     {
         (var array, var countHint) = this.channel.InternalGetList().GetValuesAndCountHint();
         var tasks = new Task<RadioResult<int>>[countHint];
@@ -115,20 +129,14 @@ public class TestServiceBroker : ITestService
         {
             if (x is null) continue;
             if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }
-            tasks[count++] = instance.Test3();
+            if (countHint < count) tasks[count++] = instance.Test4();
+            else break;
         }
 
         if (countHint != count) Array.Resize(ref tasks, count);
-        var radioResults = await Task.WhenAll(tasks);
-        var results = new int[radioResults.Length];
-        for (var i = 0; i < radioResults.Length; i++)
-        {
-            if (radioResults[i].TryGetSingleResult(out var r))
-            {
-                results[i] = r;
-            }
-        }
-        return new(results);
+        if (count == 0) return default;
+        else if (count == 1) return await tasks[0];
+        else return new((await Task.WhenAll(tasks)).Select(x => x.TryGetSingleResult(out var r) ? r : default).ToArray());
     }
 }
 
@@ -138,7 +146,7 @@ class Program
     {
         var c = NewRadio.Open<ITestService>(default!);
         c.Close();
-        NewRadio.Send<ITestService>().Test();
+        NewRadio.Send<ITestService>().Test2();
 
         Console.WriteLine("Hello World!");
 
