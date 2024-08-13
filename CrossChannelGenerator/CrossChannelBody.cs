@@ -16,16 +16,16 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 {
     public const string GeneratorName = "CrossChannelGenerator";
     public const string InitializerName = "__InitializeCC__";
-    public const string BrokerName = "__Broker__";
+    public const string BrokerName = "__Broker__"; // Class + BrokerName
     public const string ArgumentName = "a";
     public const string RadioResultFullName = "CrossChannel.RadioResult";
 
-    public static readonly DiagnosticDescriptor Error_AttributePropertyError = new DiagnosticDescriptor(
-        id: "NSG001", title: "Attribute property type error", messageFormat: "The argument specified does not match the type of the property",
+    public static readonly DiagnosticDescriptor Error_NotPartialParent = new DiagnosticDescriptor(
+        id: "CCG001", title: "Partial class/struct", messageFormat: "Parent type '{0}' is not a partial class/struct",
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
     public static readonly DiagnosticDescriptor Error_IRadioService = new DiagnosticDescriptor(
-        id: "NSG002", title: "IRadioService", messageFormat: "RadioServiceInterface must be derived from IRadioService",
+        id: "CCG002", title: "IRadioService", messageFormat: "Types with the RadioServiceInterface attribute must derive from IRadioService",
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
     public CrossChannelBody(SourceProductionContext context)

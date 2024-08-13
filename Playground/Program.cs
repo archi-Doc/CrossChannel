@@ -26,11 +26,11 @@ public static class Loader
     public static void __InitializeCC__()
     {
         TestService.__InitializeCC__();
-        
+
     }
 }
 
-    public class TestService : ITestService
+public partial class TestService : ITestService
 {
     [ModuleInitializer]
     public static void __InitializeCC__()

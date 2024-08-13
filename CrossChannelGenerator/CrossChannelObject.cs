@@ -95,15 +95,8 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
         {
             if (x.FullName == RadioServiceInterfaceAttributeMock.FullName)
             {// [RadioServiceInterface]
-                try
-                {
-                    this.RadioServiceInterfaceAttribute = RadioServiceInterfaceAttributeMock.FromArray(x.Location, x.ConstructorArguments, x.NamedArguments);
-                    this.ObjectFlag |= CrossChannelObjectFlag.RadioServiceInterface;
-                }
-                catch (InvalidCastException)
-                {
-                    this.Body.AddDiagnostic(CrossChannelBody.Error_AttributePropertyError, x.Location);
-                }
+                this.RadioServiceInterfaceAttribute = RadioServiceInterfaceAttributeMock.FromArray(x.Location, x.ConstructorArguments, x.NamedArguments);
+                this.ObjectFlag |= CrossChannelObjectFlag.RadioServiceInterface;
             }
         }
 
@@ -113,13 +106,6 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
             this.Body.AddDiagnostic(CrossChannelBody.Error_GenericType, this.Location);
             return;
         }*/
-
-        // Must be derived from INetService
-        if (!this.AllInterfaces.Any(x => x == IRadioService.FullName))
-        {
-            this.Body.AddDiagnostic(CrossChannelBody.Error_IRadioService, this.Location);
-            return;
-        }
 
         // Used keywords
         // this.Identifier = new VisceralIdentifier("__gen_cc_identifier__");
@@ -200,9 +186,26 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
         this.ObjectFlag |= CrossChannelObjectFlag.Checked;
 
-        if (this.RadioServiceInterfaceAttribute is not null)
-        {// [RadioServiceInterfaceAttribute]
-            // this.Body.AddDiagnostic(CrossChannelBody.Error_DuplicateServiceObject, obj.Location, serviceInterface);
+        if (this.ObjectFlag.HasFlag(CrossChannelObjectFlag.RadioServiceInterface))
+        {// [RadioServiceInterface]
+            // Must be derived from IRadioService
+            if (!this.AllInterfaces.Any(x => x == IRadioService.FullName))
+            {
+                this.Body.AddDiagnostic(CrossChannelBody.Error_IRadioService, this.Location);
+                return;
+            }
+
+            // Parent class also needs to be a partial class.
+            var parent = this.ContainingObject;
+            while (parent != null)
+            {
+                if (!parent.IsPartial)
+                {
+                    this.Body.ReportDiagnostic(CrossChannelBody.Error_NotPartialParent, parent.Location, parent.FullName);
+                }
+
+                parent = parent.ContainingObject;
+            }
 
             this.ClassName = this.SimpleName + CrossChannelBody.BrokerName;
 

@@ -47,14 +47,19 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                                 var name = attribute.Name.ToString();
                                 if (name.EndsWith(CrossChannelGeneratorOptionAttributeMock.StandardName) ||
                                     name.EndsWith(CrossChannelGeneratorOptionAttributeMock.SimpleName))
-                                {
+                                {// [CrossChannelGeneratorOptionAttribute]
+                                    return syntax;
+                                }
+                                else if (name.EndsWith(RadioServiceInterfaceAttributeMock.StandardName) ||
+                                    name.EndsWith(RadioServiceInterfaceAttributeMock.SimpleName))
+                                {// [RadioServiceInterfaceAttribute]
                                     return syntax;
                                 }
                             }
                         }
 
-                        if (syntax.BaseList is not null)
-                        {
+                        /*if (syntax.BaseList is not null)
+                        {// IRadioService (check later)
                             foreach (var baseType in syntax.BaseList.Types)
                             {
                                 var name = baseType.ToString();
@@ -63,7 +68,7 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                                     return syntax;
                                 }
                             }
-                        }
+                        }*/
                     }
 
                     return null;
@@ -137,10 +142,8 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                     }
                     else if (SymbolEqualityComparer.Default.Equals(y.AttributeClass, radioServiceInterface))
                     {// [RadioServiceInterface]
-                        if (symbol.AllInterfaces.Any(z => SymbolEqualityComparer.Default.Equals(z, iRadioService)))
-                        {// IRadioService
-                            body.Add(symbol);
-                        }
+                        body.Add(symbol);
+                        // if (symbol.AllInterfaces.Any(z => SymbolEqualityComparer.Default.Equals(z, iRadioService))) // IRadioService (check later)
                     }
                 }
             }
