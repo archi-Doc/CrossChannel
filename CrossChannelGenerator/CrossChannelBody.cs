@@ -28,6 +28,10 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         id: "CCG002", title: "IRadioService", messageFormat: "Types with the RadioServiceInterface attribute must derive from IRadioService",
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
+    public static readonly DiagnosticDescriptor Error_MethodReturnType = new DiagnosticDescriptor(
+        id: "CCG003", title: "Method return type", messageFormat: "The return type of the method must be void, Task, RadioResult<T>, Task<RadioResult<T>>",
+        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
+
     public CrossChannelBody(SourceProductionContext context)
         : base(context)
     {

@@ -47,6 +47,8 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
     public string ClassName { get; set; } = string.Empty;
 
+    public List<ServiceMethod>? Methods { get; private set; }
+
     public Arc.Visceral.NullableAnnotation NullableAnnotationIfReferenceType
     {
         get
@@ -207,7 +209,7 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
                 parent = parent.ContainingObject;
             }
 
-            this.ClassName = this.SimpleName + CrossChannelBody.BrokerName;
+            this.ClassName = $"__{this.SimpleName}_Broker_{(uint)FarmHash.Hash64(this.FullName):x8}__";
 
             foreach (var x in this.GetMembers(VisceralTarget.Method))
             {
@@ -225,23 +227,14 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
         static void AddMethod(CrossChannelObject obj, CrossChannelObject method)
         {
-            /*var serviceMethod = ServiceMethod.Create(obj, method);
+            var serviceMethod = ServiceMethod.Create(obj, method);
             if (serviceMethod == null)
             {
                 return;
             }
 
-            // Add
-            obj.ServiceMethods ??= new();
-            if (obj.ServiceMethods.TryGetValue(serviceMethod.MethodId, out var s))
-            {// Duplicated
-                obj.Body.AddDiagnostic(CrossChannelBody.Error_DuplicateServiceMethod, s.Location, serviceMethod.MethodId);
-                obj.Body.AddDiagnostic(CrossChannelBody.Error_DuplicateServiceMethod, serviceMethod.Location, serviceMethod.MethodId);
-            }
-            else
-            {
-                obj.ServiceMethods.Add(serviceMethod.MethodId, serviceMethod);
-            }*/
+            obj.Methods ??= new();
+            obj.Methods.Add(serviceMethod);
         }
     }
 

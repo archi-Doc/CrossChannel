@@ -1,33 +1,8 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
-using Microsoft.CodeAnalysis;
+using Arc.Visceral;
 
 namespace CrossChannel.Generator;
-
-public static class AttributeHelper
-{
-    public static object? GetValue(int constructorIndex, string? name, object?[] constructorArguments, KeyValuePair<string, object?>[] namedArguments)
-    {
-        if (constructorIndex >= 0 && constructorIndex < constructorArguments.Length)
-        {// Constructor Argument.
-            return constructorArguments[constructorIndex];
-        }
-        else if (name != null)
-        {// Named Argument.
-            var pair = namedArguments.FirstOrDefault(x => x.Key == name);
-            if (pair.Equals(default(KeyValuePair<string, object?>)))
-            {
-                return null;
-            }
-
-            return pair.Value;
-        }
-        else
-        {
-            return null;
-        }
-    }
-}
 
 [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false, Inherited = true)]
 public sealed class CrossChannelGeneratorOptionAttributeMock : Attribute
@@ -53,25 +28,25 @@ public sealed class CrossChannelGeneratorOptionAttributeMock : Attribute
         var attribute = new CrossChannelGeneratorOptionAttributeMock();
         object? val;
 
-        val = AttributeHelper.GetValue(-1, nameof(AttachDebugger), constructorArguments, namedArguments);
+        val = VisceralHelper.GetValue(-1, nameof(AttachDebugger), constructorArguments, namedArguments);
         if (val != null)
         {
             attribute.AttachDebugger = (bool)val;
         }
 
-        val = AttributeHelper.GetValue(-1, nameof(GenerateToFile), constructorArguments, namedArguments);
+        val = VisceralHelper.GetValue(-1, nameof(GenerateToFile), constructorArguments, namedArguments);
         if (val != null)
         {
             attribute.GenerateToFile = (bool)val;
         }
 
-        val = AttributeHelper.GetValue(-1, nameof(CustomNamespace), constructorArguments, namedArguments);
+        val = VisceralHelper.GetValue(-1, nameof(CustomNamespace), constructorArguments, namedArguments);
         if (val != null)
         {
             attribute.CustomNamespace = (string)val;
         }
 
-        val = AttributeHelper.GetValue(-1, nameof(UseModuleInitializer), constructorArguments, namedArguments);
+        val = VisceralHelper.GetValue(-1, nameof(UseModuleInitializer), constructorArguments, namedArguments);
         if (val != null)
         {
             attribute.UseModuleInitializer = (bool)val;
