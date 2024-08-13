@@ -128,10 +128,7 @@ public class TestServiceBroker : ITestService
                         try { instance.Test2(); }
                         catch { }
                     }
-                    else
-                    {
-                        x.InternalDispose();
-                    }
+                    else x.InternalDispose();
                 }
             }
         }
@@ -139,6 +136,64 @@ public class TestServiceBroker : ITestService
         {
             this.channel.ExitScope();
         }
+    }
+
+    public async Task<RadioResult<int>> Test3()
+    {
+        this.channel.EnterScope();
+        try
+        {
+            var list = this.channel.InternalGetList();
+            var array = list.GetValues();
+            if (list.Count == 1)
+            {
+                foreach (var x in array)
+                {
+                    if (x is not null)
+                    {
+                        if (x.TryGetInstance(out var instance))
+                        {
+                            try
+                            {
+                                return await instance.Test3().ConfigureAwait(false);
+                            }
+                            catch { }
+                        }
+                        else x.InternalDispose();
+                    }
+                }
+            }
+            else if (list.Count > 1)
+            {
+                var results = new int[list.Count];
+                var count = 0;
+                foreach (var x in array)
+                {
+                    if (x is not null)
+                    {
+                        if (x.TryGetInstance(out var instance))
+                        {
+                            try
+                            {
+                                if ((await instance.Test3().ConfigureAwait(false)).TryGetSingleResult(out var r)) results[count++] = r;
+                            }
+                            catch { }
+                        }
+                        else x.InternalDispose();
+                    }
+                }
+
+                if (results.Length != count)
+                {
+                    Array.Resize(ref results, count);
+                }
+
+                return new(results);
+            }
+        }
+        finally { this.channel.ExitScope(); }
+
+        return default;
     }
 }
 
