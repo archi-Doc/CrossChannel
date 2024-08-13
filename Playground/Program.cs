@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Arc.WeakDelegate;
 using CrossChannel;
 using MessagePipe;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,14 +12,29 @@ namespace Playground;
 public interface ITestService : IRadioService
 {
     RadioResult<int> Test();
+
+    void Test2();
+
+    Task<RadioResult<int>> Test3();
 }
 
 public class TestService : ITestService
 {
     RadioResult<int> ITestService.Test()
     {
-        Console.WriteLine("TestServiceBroker");
+        Console.WriteLine("Test");
         return new(1);
+    }
+
+    void ITestService.Test2()
+    {
+        Console.WriteLine("Test2");
+    }
+
+    async Task<RadioResult<int>> ITestService.Test3()
+    {
+        await Console.Out.WriteLineAsync("Test3");
+        return new(3);
     }
 }
 
@@ -28,9 +42,9 @@ public class TestServiceBroker : ITestService
 {
     private readonly Channel<ITestService> channel;
 
-    public TestServiceBroker(Channel<ITestService> channel)
+    public TestServiceBroker(object channel)
     {
-        this.channel = channel;
+        this.channel = (Channel<ITestService>)channel;
     }
 
     public RadioResult<int> Test()
@@ -67,10 +81,14 @@ public class TestServiceBroker : ITestService
                     {
                         if (x.TryGetInstance(out var instance))
                         {
-                            if (instance.Test().TryGetSingleResult(out var r))
+                            try
                             {
-                                results[count++] = r;
+                                if (instance.Test().TryGetSingleResult(out var r))
+                                {
+                                    results[count++] = r;
+                                }
                             }
+                            catch { }
                         }
                         else
                         {
@@ -93,6 +111,34 @@ public class TestServiceBroker : ITestService
         }
 
         return default;
+    }
+
+    public void Test2()
+    {
+        this.channel.EnterScope();
+        try
+        {
+            var array = this.channel.InternalGetList().GetValues();
+            foreach (var x in array)
+            {
+                if (x is not null)
+                {
+                    if (x.TryGetInstance(out var instance))
+                    {
+                        try { instance.Test2(); }
+                        catch { }
+                    }
+                    else
+                    {
+                        x.InternalDispose();
+                    }
+                }
+            }
+        }
+        finally
+        {
+            this.channel.ExitScope();
+        }
     }
 }
 

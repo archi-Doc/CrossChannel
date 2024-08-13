@@ -2,9 +2,4 @@
 
 namespace CrossChannel;
 
-public record ChannelInformation(Type ServiceType, Func<object> Constructor)
-{
-    public object Broker => this.broker ??= this.Constructor.Invoke();
-
-    private object? broker;
-}
+public record ChannelInformation(Type ServiceType, Func<object, object> Constructor);

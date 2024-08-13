@@ -52,7 +52,7 @@ public class Channel<TService>
 
     public Channel()
     {
-        this.Broker = (TService)RadioRegistry.Get<TService>().Broker;
+        this.Broker = (TService)RadioRegistry.Get<TService>().Constructor(this);
     }
 
     public Connection Open(TService instance)
