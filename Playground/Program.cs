@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using CrossChannel;
 using MessagePipe;
@@ -6,51 +8,61 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Playground;
 
+[RadioServiceInterface]
+public interface ITestService : IRadioService
+{
+    void Test1();
+
+    RadioResult<int> Test2(int x);
+
+    Task Test3();
+
+    Task<RadioResult<int>> Test4();
+}
+
+public partial class TestService : ITestService
+{
+    private partial class NestedClass
+    {
+        [RadioServiceInterface]
+        interface INestedService : IRadioService
+        {
+            Task Message(string t);
+        }
+    }
+
+    void ITestService.Test1()
+    {
+        Console.WriteLine("Test1");
+    }
+
+    RadioResult<int> ITestService.Test2(int x)
+    {
+        Console.WriteLine("Test2");
+        return new(2);
+    }
+
+    async Task ITestService.Test3()
+    {
+        await Console.Out.WriteLineAsync("Test3");
+    }
+
+    async Task<RadioResult<int>> ITestService.Test4()
+    {
+        await Console.Out.WriteLineAsync("Test4");
+        return new(3);
+    }
+}
+
 class Program
 {
     static void Main(string[] args)
     {
-        Console.WriteLine("Hello World!");
+        var c = NewRadio.Open<ITestService>(new TestService());
+        
+        var result = NewRadio.Send<ITestService>().Test2(2);
+        c.Close();
 
-        var sc = new ServiceCollection();
-        sc.AddMessagePipe();
-        var provider = sc.BuildServiceProvider();
-
-        var channel = Radio.Open<int>(x => Console.WriteLine($"CrossChannel: {x}"));
-
-        var sub = provider.GetService<ISubscriber<int>>()!;
-        var pub = provider.GetService<IPublisher<int>>()!;
-        var subscribe = sub.Subscribe(x => Console.WriteLine($"MessagePipe: {x}"));
-
-        var taskCrossChannel = Task.Run(async () =>
-        {
-            for (var i = 0; i < 10; i++)
-            {
-                Radio.Send<int>(i);
-                pub.Publish(i);
-                await Task.Delay(1000);
-            }
-        });
-
-        Task.Delay(1000).Wait();
-
-        var taskAdd = Task.Run(async () =>
-        {
-            for (var i = 0; i < 10; i++)
-            {
-                Radio.Open<int>(x => Console.WriteLine($"CC{i}: {x}"));
-                sub.Subscribe(x => Console.WriteLine($"MP{i}: {x}"));
-                await Task.Delay(1000);
-            }
-            /*using (var c = Radio.Open<int>(x => Console.WriteLine($"CC: {x}")))
-            using (var s = sub.Subscribe(x => Console.WriteLine($"MP: {x}")))
-            {
-                await Task.Delay(3000);
-            }*/
-        });
-
-        taskCrossChannel.Wait();
-        subscribe.Dispose();
-        channel.Dispose();
+        result = NewRadio.Send<ITestService>().Test2(2);
     }
 }

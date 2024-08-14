@@ -15,11 +15,12 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        DebugRun<CrossChannelBenchmark2>();
+        DebugRun<H2HBenchmark>();
 
         // var summary = BenchmarkRunner.Run<ReconstructTest>();
         var switcher = new BenchmarkSwitcher(new[]
         {
+            typeof(RadioResultTest),
             typeof(H2HBenchmark),
             typeof(CrossChannelBenchmark),
             typeof(CrossChannelBenchmark2),

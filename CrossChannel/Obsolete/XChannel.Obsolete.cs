@@ -10,7 +10,7 @@ using Arc.WeakDelegate;
 
 namespace CrossChannel;
 
-internal class XChannel_Key<TKey, TMessage> : XChannel
+/*internal class XChannel_Key<TKey, TMessage> : XChannel
     where TKey : notnull
 {
     public XChannel_Key(Dictionary<TKey, FastList<XChannel_Key<TKey, TMessage>>> map, TKey key, object? weakReference, Action<TMessage> method)
@@ -140,15 +140,6 @@ internal class XChannel_Key2<TKey, TMessage> : XChannel
                     }
                 }
             }
-
-            /*lock (this.Map)
-            {
-                var empty = this.List.Remove(this.Index);
-                if (empty)
-                {
-                    this.Map.TryRemove(this.Key, out _);
-                }
-            }*/
 
             this.Index = -1;
             this.WeakDelegate?.MarkForDeletion();
@@ -305,4 +296,4 @@ internal static partial class CrossChannelExtensions
 
         return numberReceived;
     }
-}
+}*/

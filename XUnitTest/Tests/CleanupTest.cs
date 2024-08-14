@@ -21,7 +21,7 @@ public class CleanupTest
 
         radio.SendTwoWay<int, int>(1).Length.Is(0);
 
-        for (var i = 0; i < CrossChannelConst.CleanupListThreshold; i++)
+        for (var i = 0; i < CrossChannelConstants.CleanupListThreshold; i++)
         {
             CreateChannel();
         }
@@ -29,10 +29,10 @@ public class CleanupTest
         GC.Collect(); // Empty list
         radio.SendTwoWay<int, int>(1).Length.Is(0);
 
-        var objects = Enumerable.Repeat(new object(), CrossChannelConst.CleanupListThreshold).ToArray();
+        var objects = Enumerable.Repeat(new object(), CrossChannelConstants.CleanupListThreshold).ToArray();
         var number = 0;
 
-        for (var i = 0; i < CrossChannelConst.CleanupListThreshold; i++)
+        for (var i = 0; i < CrossChannelConstants.CleanupListThreshold; i++)
         {
             if (i % 3 == 0)
             {

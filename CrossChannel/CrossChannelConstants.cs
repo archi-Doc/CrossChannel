@@ -2,7 +2,7 @@
 
 namespace CrossChannel;
 
-public static class CrossChannelConst
+public static class CrossChannelConstants
 {
     public const int CleanupListThreshold = 32;
     public const int CleanupDictionaryThreshold = 128;

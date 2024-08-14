@@ -8,13 +8,11 @@ using System.Threading;
 namespace CrossChannel;
 
 // NOT thread safe, highly customized for XChannel.
-internal sealed class FastList<T> : IDisposable
+public sealed class FastList<T> : IDisposable
     where T : XChannel
 {
     private const int InitialCapacity = 4;
     private const int MinShrinkStart = 8;
-
-    // public delegate ref int ObjectToIndexDelegete(T obj);
 
     private T?[] values = default!;
     private int count;
@@ -22,13 +20,16 @@ internal sealed class FastList<T> : IDisposable
 
     public FastList()
     {
-        // this.objectToIndex = objectToIndex;
         this.Initialize();
     }
+
+    // public int Count => this.count; // Deprecated because it may lead to inconsistent results between 'count' and 'values'.
 
     internal int CleanupCount { get; set; } // no lock, not thread safe
 
     public T?[] GetValues() => this.values; // no lock, safe for iterate
+
+    public (T?[] Array, int CountHint) GetValuesAndCountHint() => (this.values, this.count); // no lock, safe for iterate
 
     public bool IsDisposed => this.freeIndex == null;
 
@@ -62,7 +63,6 @@ internal sealed class FastList<T> : IDisposable
             }
 
             var index = this.freeIndex.Dequeue();
-            // this.objectToIndex(value) = index;
             value.Index = index;
             newValues[this.values.Length] = value;
             this.count++;
@@ -97,7 +97,7 @@ internal sealed class FastList<T> : IDisposable
     /// Shrink the list when there are too many unused objects.
     /// </summary>
     /// <returns>true if the list is empty.</returns>
-    public bool Shrink()
+    public bool TryShrink()
     {
         if (this.count == 0)
         {// Empty
@@ -165,8 +165,6 @@ internal sealed class FastList<T> : IDisposable
         this.values = Array.Empty<T?>();
         this.count = 0;
     }
-
-    // private ObjectToIndexDelegete objectToIndex;
 
     private void Initialize()
     {

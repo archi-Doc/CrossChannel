@@ -1,8 +1,5 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
-using System;
-using System.Threading.Tasks;
-
 namespace CrossChannel;
 
 /// <summary>
@@ -26,7 +23,7 @@ public static class Radio // CrossChannel by Romeo
     public static XChannel Open<TMessage>(Action<TMessage> method, object? weakReference = null)
     {
         var list = Cache_Message<TMessage>.List;
-        if (list.CleanupCount++ >= CrossChannelConst.CleanupListThreshold)
+        if (list.CleanupCount++ >= CrossChannelConstants.CleanupListThreshold)
         {
             lock (list)
             {
@@ -82,7 +79,7 @@ public static class Radio // CrossChannel by Romeo
         where TKey : notnull
     {
         var collection = Cache_KeyMessage<TKey, TMessage>.Collection;
-        if (collection.CleanupCount++ >= CrossChannelConst.CleanupDictionaryThreshold)
+        if (collection.CleanupCount++ >= CrossChannelConstants.CleanupDictionaryThreshold)
         {
             lock (collection)
             {
@@ -109,7 +106,7 @@ public static class Radio // CrossChannel by Romeo
     public static XChannel OpenTwoWay<TMessage, TResult>(Func<TMessage, TResult> method, object? weakReference = null)
     {
         var list = Cache_MessageResult<TMessage, TResult>.List;
-        if (list.CleanupCount++ >= CrossChannelConst.CleanupListThreshold)
+        if (list.CleanupCount++ >= CrossChannelConstants.CleanupListThreshold)
         {
             lock (list)
             {
@@ -168,7 +165,7 @@ public static class Radio // CrossChannel by Romeo
         where TKey : notnull
     {
         var collection = Cache_KeyMessageResult<TKey, TMessage, TResult>.Collection;
-        if (collection.CleanupCount++ >= CrossChannelConst.CleanupDictionaryThreshold)
+        if (collection.CleanupCount++ >= CrossChannelConstants.CleanupDictionaryThreshold)
         {
             lock (collection)
             {

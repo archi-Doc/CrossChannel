@@ -30,7 +30,7 @@ public class RadioClass
             typeof(TMessage),
             x => new FastList<XChannel_Message<TMessage>>());
 
-        if (list.CleanupCount++ >= CrossChannelConst.CleanupListThreshold)
+        if (list.CleanupCount++ >= CrossChannelConstants.CleanupListThreshold)
         {
             lock (list)
             {
@@ -89,7 +89,7 @@ public class RadioClass
             new Identifier_KeyMessage(typeof(TKey), typeof(TMessage)),
             x => new XCollection_KeyMessage<TKey, TMessage>());
 
-        if (collection.CleanupCount++ >= CrossChannelConst.CleanupDictionaryThreshold)
+        if (collection.CleanupCount++ >= CrossChannelConstants.CleanupDictionaryThreshold)
         {
             lock (collection)
             {
@@ -119,7 +119,7 @@ public class RadioClass
             new Identifier_MessageResult(typeof(TMessage), typeof(TResult)),
             x => new FastList<XChannel_MessageResult<TMessage, TResult>>());
 
-        if (list.CleanupCount++ >= CrossChannelConst.CleanupListThreshold)
+        if (list.CleanupCount++ >= CrossChannelConstants.CleanupListThreshold)
         {
             lock (list)
             {
@@ -181,7 +181,7 @@ public class RadioClass
             new Identifier_KeyMessageResult(typeof(TKey), typeof(TMessage), typeof(TResult)),
             x => new XCollection_KeyMessageResult<TKey, TMessage, TResult>());
 
-        if(collection.CleanupCount++ >= CrossChannelConst.CleanupDictionaryThreshold)
+        if(collection.CleanupCount++ >= CrossChannelConstants.CleanupDictionaryThreshold)
         {
             lock (collection)
             {

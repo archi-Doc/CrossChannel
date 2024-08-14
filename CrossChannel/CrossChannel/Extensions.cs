@@ -303,7 +303,7 @@ internal static partial class Extensions
             }
         }
 
-        return list.Shrink();
+        return list.TryShrink();
     }
 
     internal static bool Cleanup<TMessage, TResult>(this FastList<XChannel_MessageResult<TMessage, TResult>> list)
@@ -320,7 +320,7 @@ internal static partial class Extensions
             }
         }
 
-        return list.Shrink();
+        return list.TryShrink();
     }
 
     internal static bool Cleanup<TKey, TMessage>(this XCollection_KeyMessage<TKey, TMessage> collection)
@@ -341,7 +341,7 @@ internal static partial class Extensions
                 }
             }
 
-            if (list.Shrink() && collection.Count >= CrossChannelConst.HoldDictionaryThreshold)
+            if (list.TryShrink() && collection.Count >= CrossChannelConstants.HoldDictionaryThreshold)
             {
                 collection.Dictionary.TryRemove(x.Key, out _);
                 collection.Count--;
@@ -370,7 +370,7 @@ internal static partial class Extensions
                 }
             }
 
-            if (list.Shrink() && collection.Count >= CrossChannelConst.HoldDictionaryThreshold)
+            if (list.TryShrink() && collection.Count >= CrossChannelConstants.HoldDictionaryThreshold)
             {
                 collection.Dictionary.TryRemove(x.Key, out _);
                 collection.Count--;

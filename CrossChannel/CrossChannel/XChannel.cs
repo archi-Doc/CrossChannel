@@ -165,7 +165,7 @@ internal class XChannel_KeyMessage<TKey, TMessage> : XChannel
                 var empty = this.List.Remove(this);
                 this.WeakDelegate?.MarkForDeletion();
 
-                if (empty && this.Collection.Count >= CrossChannelConst.HoldDictionaryThreshold)
+                if (empty && this.Collection.Count >= CrossChannelConstants.HoldDictionaryThreshold)
                 {
                     this.Collection.Dictionary.TryRemove(this.Key, out _);
                     this.Collection.Count--;
@@ -238,7 +238,7 @@ internal class XChannel_KeyMessageResult<TKey, TMessage, TResult> : XChannel
                 var empty = this.List.Remove(this);
                 this.WeakDelegate?.MarkForDeletion();
 
-                if (empty && this.Collection.Count >= CrossChannelConst.HoldDictionaryThreshold)
+                if (empty && this.Collection.Count >= CrossChannelConstants.HoldDictionaryThreshold)
                 {
                     this.Collection.Dictionary.TryRemove(this.Key, out _);
                     this.Collection.Count--;

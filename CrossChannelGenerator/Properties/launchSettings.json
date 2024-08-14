@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CrossChannelGenerator": {
+      "commandName": "DebugRoslynComponent",
+      "targetProject": "..\\Playground\\Playground.csproj"
+    }
+  }
+}
