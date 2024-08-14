@@ -12,14 +12,14 @@ public class CleanupTest
     [Fact]
     public void WeakReference()
     {
-        var radio = new ObsoleteRadioClass();
+        var radio = new RadioClass();
 
         void CreateChannel()
         {
-            radio.OpenTwoWay<int, int>(x => x * 2, new object());
+            radio.Open<ITestService>(new TestService(), true);
         }
 
-        radio.SendTwoWay<int, int>(1).Length.Is(0);
+        radio.Send<ITestService>().Double(1).Count.Is(0);
 
         for (var i = 0; i < RadioConstants.CleanupListThreshold; i++)
         {
@@ -27,16 +27,16 @@ public class CleanupTest
         }
 
         GC.Collect(); // Empty list
-        radio.SendTwoWay<int, int>(1).Length.Is(0);
+        radio.Send<ITestService>().Double(1).Count.Is(0);
 
-        var objects = Enumerable.Repeat(new object(), RadioConstants.CleanupListThreshold).ToArray();
+        var objects = Enumerable.Repeat(new TestService(), RadioConstants.CleanupListThreshold).ToArray();
         var number = 0;
 
         for (var i = 0; i < RadioConstants.CleanupListThreshold; i++)
         {
             if (i % 3 == 0)
             {
-                radio.OpenTwoWay<int, int>(x => x * 2, objects[i]);
+                radio.Open<ITestService>(objects[i], true);
                 number++;
             }
             else
@@ -46,10 +46,10 @@ public class CleanupTest
         }
 
         GC.Collect();
-        radio.SendTwoWay<int, int>(1).Length.Is(number);
+        radio.Send<ITestService>().Double(1).Count.Is(number);
 
-        radio.OpenTwoWay<int, int>(x => x * 2, new object());
-        radio.SendTwoWay<int, int>(1).Length.Is(number + 1);
+        radio.Open<ITestService>(new TestService(), true);
+        radio.Send<ITestService>().Double(1).Count.Is(number + 1);
 
         GC.KeepAlive(objects);
     }
