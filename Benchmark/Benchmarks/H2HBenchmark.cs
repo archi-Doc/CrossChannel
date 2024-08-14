@@ -43,46 +43,6 @@ public class SimpleServiceB : ISimpleServiceB
     }
 }
 
-public class MpHandler1 : IRequestHandler<int, int>
-{
-    public int Invoke(int request) => request * 1;
-}
-
-public class MpHandler2 : IRequestHandler<int, int>
-{
-    public int Invoke(int request) => request * 2;
-}
-
-public class MpHandler3 : IRequestHandler<int, int>
-{
-    public int Invoke(int request) => request * 3;
-}
-
-public class MpHandler4 : IRequestHandler<int, int>
-{
-    public int Invoke(int request) => request * 4;
-}
-
-public class MpHandler5 : IRequestHandler<int, int>
-{
-    public int Invoke(int request) => request * 5;
-}
-
-public class MpHandler6 : IRequestHandler<int, int>
-{
-    public int Invoke(int request) => request * 6;
-}
-
-public class MpHandler7 : IRequestHandler<int, int>
-{
-    public int Invoke(int request) => request * 7;
-}
-
-public class MpHandler8 : IRequestHandler<int, int>
-{
-    public int Invoke(int request) => request * 8;
-}
-
 [Config(typeof(BenchmarkConfig))]
 public class H2HBenchmark
 {
@@ -118,7 +78,7 @@ public class H2HBenchmark
     {
     }
 
-    // [Benchmark]
+    [Benchmark]
     public void CC_OpenSend()
     {
         using (ObsoleteRadio.Open<int>(x => { }))
@@ -129,7 +89,7 @@ public class H2HBenchmark
         return;
     }
 
-    // [Benchmark]
+    [Benchmark]
     public void CC_OpenSend8()
     {
         using (ObsoleteRadio.Open<int>(x => { }))
@@ -172,7 +132,7 @@ public class H2HBenchmark
         return;
     }
 
-    // [Benchmark]
+    [Benchmark]
     public void CC2_OpenSend()
     {
         using (Radio.Open(this.simpleService1))
@@ -183,7 +143,7 @@ public class H2HBenchmark
         return;
     }
 
-    // [Benchmark]
+    [Benchmark]
     public void CC2_OpenSend8()
     {
         using (Radio.Open(this.simpleService1))
@@ -226,7 +186,7 @@ public class H2HBenchmark
         return;
     }
 
-    // [Benchmark]
+    [Benchmark]
     public void MP_OpenSend()
     {
         var sub = this.Provider.GetService<ISubscriber<int>>()!;
@@ -239,7 +199,7 @@ public class H2HBenchmark
         return;
     }
 
-    // [Benchmark]
+    [Benchmark]
     public void MP_OpenSend8()
     {
         var sub = this.Provider.GetService<ISubscriber<int>>()!;

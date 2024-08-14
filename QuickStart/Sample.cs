@@ -75,42 +75,56 @@ internal static class Sample
     public static async Task Other()
     {
         // Open a channel with the key which limits the delivery of messages.
-        using (var channelKey = ObsoleteRadio.OpenKey<int, string>(1, x => Console.WriteLine(x)))
+        using (Radio.Open<IMessageService, int>(new MessageService("Key: "), 1))
         {// Channel with Key 1
-            ObsoleteRadio.SendKey(0, "Key 0"); // Message is not received.
-            ObsoleteRadio.SendKey(1, "Key 1"); // Message is received.
+            Radio.Send<IMessageService, int>(0).Message("0"); // Message is not received.
+            Radio.Send<IMessageService, int>(1).Message("1"); // Message is received.
         }
 
         Console.WriteLine();
 
-        // Open a two-way (bidirectional) channel which receives a message and sends back a result.
-        using (var channelTwoWay = ObsoleteRadio.OpenTwoWay<int, int>(x =>
+        using (Radio.Open<ITestService>(new TestService()))
         {
-            Console.WriteLine($"TwoWay: {x} -> {x * 2}");
-            return x * 2;
-        }))
-        {
-            ObsoleteRadio.SendTwoWay<int, int>(2); // TwoWay: 2 -> 4
+            var result = Radio.Send<ITestService>().Double(2);
+            Console.WriteLine($"Double: {result.ToString()}");
 
-            using (var channelTwoWay2 = ObsoleteRadio.OpenTwoWay<int, int>(x => x * 3))
+            using (Radio.Open<ITestService>(new TestService()))
             {
-                // The result is an array of TResult.
-                var result = ObsoleteRadio.SendTwoWay<int, int>(3); // TwoWay: 3 -> 6
-                Console.WriteLine($"Results: {string.Join(", ", result)}"); // Results: 6, 9
+                result = Radio.Send<ITestService>().Double(3);
+                Console.WriteLine($"Double: {result.ToString()}");
             }
-        }
 
-        Console.WriteLine();
-
-        // Open a channel which receives a message asynchronously.
-        using (var channelAsync = ObsoleteRadio.OpenAsync<string>(async x =>
-        {
-            Console.WriteLine($"Received: {x}");
-            await Task.Delay(1000);
-            Console.WriteLine($"Done.");
-        }))
-        {
-            await ObsoleteRadio.SendAsync("Test async");
+            await Radio.Send<ITestService>().AsyncMethod(1000);
         }
+    }
+}
+
+
+[RadioServiceInterface]
+public interface ITestService : IRadioService
+{
+    RadioResult<int> Double(int x); // Define a function with a return value. To share the return value on the receiving side as well, the type must be either void, Task, RadioResult<T>, or Task<RadioResult<T>>.
+
+    Task AsyncMethod(int delay);
+}
+
+public class TestService : ITestService
+{// Implement the interface.
+    public TestService()
+    {
+    }
+
+    RadioResult<int> ITestService.Double(int x)
+        => new(x * 2);
+
+    async Task ITestService.AsyncMethod(int delay)
+    {
+        await Task.Delay(delay);
+
+        Console.WriteLine("Start");
+
+        await Task.Delay(delay);
+
+        Console.WriteLine("End");
     }
 }

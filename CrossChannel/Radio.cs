@@ -11,6 +11,7 @@ global using System.Runtime.CompilerServices;
 global using System.Threading.Tasks;
 
 using System.Collections.Concurrent;
+using System.Threading.Channels;
 
 namespace CrossChannel;
 
@@ -33,7 +34,7 @@ public static class Radio
         where TService : class, IRadioService
         where TKey : notnull
     {
-        var channel = ChannelCache<TService, TKey>.Channel(key);
+        var channel = ChannelCache<TService, TKey>.GetOrAdd(key);
         return channel.Open(instance, weakReference);
     }
 
@@ -47,7 +48,7 @@ public static class Radio
         where TService : class, IRadioService
         where TKey : notnull
     {
-        return ChannelCache<TService, TKey>.Channel(key).Broker;
+        return ChannelCache<TService, TKey>.GetOrEmpty(key).Broker;
     }
 
     #region Cache
@@ -70,13 +71,17 @@ public static class Radio
         where TKey : notnull
     {
         private static readonly ConcurrentDictionary<TKey, Channel<TService>> dictionary;
+        private static readonly Channel<TService> empty;
 
         static ChannelCache()
         {
             dictionary = new();
+            empty = new();
         }
 
-        public static Channel<TService> Channel(TKey key) => dictionary.GetOrAdd(key, x => new());
+        public static Channel<TService> GetOrAdd(TKey key) => dictionary.GetOrAdd(key, x => new());
+
+        public static Channel<TService> GetOrEmpty(TKey key) => dictionary.TryGetValue(key, out var channel) ? channel : empty;
     }
 
     #endregion

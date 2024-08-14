@@ -341,7 +341,7 @@ internal static partial class Extensions
                 }
             }
 
-            if (list.TryShrink() && collection.Count >= CrossChannelConstants.HoldDictionaryThreshold)
+            if (list.TryShrink() && collection.Count >= RadioConstants.HoldDictionaryThreshold)
             {
                 collection.Dictionary.TryRemove(x.Key, out _);
                 collection.Count--;
@@ -370,7 +370,7 @@ internal static partial class Extensions
                 }
             }
 
-            if (list.TryShrink() && collection.Count >= CrossChannelConstants.HoldDictionaryThreshold)
+            if (list.TryShrink() && collection.Count >= RadioConstants.HoldDictionaryThreshold)
             {
                 collection.Dictionary.TryRemove(x.Key, out _);
                 collection.Count--;
