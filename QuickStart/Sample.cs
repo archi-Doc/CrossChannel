@@ -4,75 +4,72 @@ using CrossChannel;
 
 namespace QuickStart;
 
+// First, define a common interface to be used by both the receiver and the sender.
+[RadioServiceInterface] // Add the RadioServiceInterface attribute.
+public interface IMessageService : IRadioService
+{// The target interface must derive from IRadioService.
+    void Message(string message);
+}
+
+public class MessageService : IMessageService
+{// Implement the interface.
+    private readonly string prefix;
+
+    public MessageService(string prefix)
+    {
+        this.prefix = prefix;
+    }
+
+    public void Message(string message)
+    {
+        Console.WriteLine(this.prefix + message);
+    }
+}
+
 internal static class Sample
 {
     public static void QuickStart()
     {
         // Test 1: CrossChannel.Radio is a public static class.
         // Open a channel which simply outputs the received message to the console.
-        using (var channel = CrossChannel.ObsoleteRadio.Open<string>(x => { Console.WriteLine("Test " + x); }))
+        using (var channel = Radio.Open<IMessageService>(new MessageService("Test: ")))
         {
-            // Send a message. The result is "Test message."
-            CrossChannel.ObsoleteRadio.Send<string>("message.");
+            // Send a message. The result is "Test: message"
+            Radio.Send<IMessageService>().Message("message");
         }
 
         // This message will not be displayed because the channel is closed.
-        CrossChannel.ObsoleteRadio.Send<string>("Message not received.");
+        Radio.Send<IMessageService>().Message("message not received");
 
 
-        // Test2: Open a channel which has a weak reference to an object.
+        // Test2: Open a channel which has a weak reference to the object.
         OpenWithWeakReference();
         static void OpenWithWeakReference()
         {
-            CrossChannel.ObsoleteRadio.Open<string>(x => { Console.WriteLine("Weak " + x); }, new object());
-
-            var c = new TestClass();
-            var c2 = new TestClass2();
-            CrossChannel.ObsoleteRadio.Open<string>(TestClass2.Message, c2);
+            Radio.Open<IMessageService>(new MessageService("Test: "), true);
         }
 
-        // Send a message. The result is "Weak message." and "TestClass: message."
-        CrossChannel.ObsoleteRadio.Send<string>("message.");
+        // Send a message. The result is "Test: weak message"
+        Radio.Send<IMessageService>().Message("weak message");
 
         // The object is garbage collected.
         GC.Collect();
 
         // This message will not be displayed because the channel is automatically closed.
-        CrossChannel.ObsoleteRadio.Send<string>("Message not received.");
+        Radio.Send<IMessageService>().Message("message not received");
 
 
-        // Test 3: Don't forget to close the channel when you did not specify a weak reference, since this will cause memory leaks.
-        CrossChannel.ObsoleteRadio.Open<string>(x => { Console.WriteLine("Leak " + x); });
-        CrossChannel.ObsoleteRadio.Send<string>("message.");
-
+        // Test 3: Don't forget to close the channel when you did not specify the weak reference, since this will cause memory leaks.
+        _ = Radio.Open<IMessageService>(new MessageService("Leak: "));
+        Radio.Send<IMessageService>().Message("message");
 
         // Test 4: You can create a local radio class.
-        var radio = new CrossChannel.ObsoleteRadioClass();
-        using (radio.Open<string>(x => { Console.WriteLine("Local " + x); }))
+        var radio = new RadioClass();
+        using (radio.Open<IMessageService>(new MessageService("Local: ")))
         {
-            // Send a message. The result is "Local message."
-            radio.Send<string>("message.");
+            // Send a message. The result is "Local: message"
+            radio.Send<IMessageService>().Message("message");
         }
-    }
-
-    public static void WeakReference()
-    {
-        CreateChannel();
-        void CreateChannel()
-        {
-            var obj = new object(); // Target object
-
-            // Open a channel with a weak reference.
-            ObsoleteRadio.Open<int>(x => System.Console.WriteLine(x), obj);
-
-            ObsoleteRadio.Send(1); // The result "1"
-        }
-
-        GC.Collect(); // The channel will be closed when the object is garbage collected.
-        ObsoleteRadio.Send(2); // The result ""
-
-        var channel = ObsoleteRadio.Open<int>(x => System.Console.WriteLine(x), new object());
-        channel.Dispose(); // Of course, you can close the channel manually.
     }
 
     public static async Task Other()
@@ -114,27 +111,6 @@ internal static class Sample
         }))
         {
             await ObsoleteRadio.SendAsync("Test async");
-        }
-    }
-
-    private class TestClass
-    {
-        public TestClass()
-        {
-            CrossChannel.ObsoleteRadio.Open<string>(Message, this);
-        }
-
-        public void Message(string message)
-        {
-            Console.WriteLine($"TestClass: {message}");
-        }
-    }
-
-    private class TestClass2
-    {
-        public static void Message(string message)
-        {
-            Console.WriteLine($"TestClass2: {message}");
         }
     }
 }

@@ -3,7 +3,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using CrossChannel;
-using MessagePipe;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Playground;
