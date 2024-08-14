@@ -11,7 +11,6 @@ global using System.Runtime.CompilerServices;
 global using System.Threading.Tasks;
 
 using System.Collections.Concurrent;
-using System.Threading.Channels;
 
 namespace CrossChannel;
 
