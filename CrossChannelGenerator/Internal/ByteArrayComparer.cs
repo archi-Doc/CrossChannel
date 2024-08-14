@@ -19,7 +19,7 @@ internal class ByteArrayComparer : EqualityComparer<byte[]>
             return false;
         }
 
-        return first.SequenceEqual(second);
+        return first.AsSpan().SequenceEqual(second.AsSpan());
     }
 
     public override int GetHashCode(byte[] obj)

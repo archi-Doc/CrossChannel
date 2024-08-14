@@ -33,14 +33,23 @@ public static class Loader
 public partial class TestService : ITestService
 {
     [ModuleInitializer]
-    public static void __InitializeCC__()
+    internal static void __InitializeCC__()
     {
         RadioRegistry.Register(new(typeof(TestService.ABC), x => new TestService.ABCBroker()));
+        // RadioRegistry.Register(new(typeof(TestService.ABC.ABC2), x => new TestService.ABCBroker()));
     }
 
     [RadioServiceInterface]
     private interface ABC : IRadioService
     {
+        internal static void __InitializeCC__()
+        {
+        }
+
+            [RadioServiceInterface]
+        private interface ABC2 : IRadioService
+        {
+        }
     }
 
     public class ABCBroker : ABC

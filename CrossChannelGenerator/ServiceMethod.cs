@@ -100,7 +100,7 @@ public class ServiceMethod
 
     private CrossChannelObject method;
 
-    public string GetParameters()
+    /*public string GetParameters()
     {// int a1, string a2
         var sb = new StringBuilder();
         for (var i = 0; i < this.method.Method_Parameters.Length; i++)
@@ -117,7 +117,7 @@ public class ServiceMethod
         }
 
         return sb.ToString();
-    }
+    }*/
 
     public string GetParameterNames(string name, int decrement)
     {// string.Empty, a1, (a1, a2)

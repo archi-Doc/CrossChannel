@@ -3,9 +3,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-#pragma warning disable SA1307 // Accessible fields should begin with upper-case letter
-#pragma warning disable SA1310 // Field names should not contain underscore
-
 namespace CrossChannel.Generator;
 
 /// <summary>

@@ -33,7 +33,7 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
             context.SyntaxProvider
             .CreateSyntaxProvider(
                 static (node, _) =>
-                {
+                {// Interface declaration with one or more attributes.
                     return node is InterfaceDeclarationSyntax syntax && syntax.AttributeLists.Count > 0;
                 },
                 static (context, _) =>
@@ -130,7 +130,7 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                 {
                     if (!generatorOptionIsSet &&
                         SymbolEqualityComparer.Default.Equals(y.AttributeClass, generatorOptionAttributeSymbol))
-                    {// GeneratorOption
+                    {// [CrossChannelGeneratorOption]
                         generatorOptionIsSet = true;
                         var attribute = new VisceralAttribute(CrossChannelGeneratorOptionAttributeMock.FullName, y);
                         var generatorOption = CrossChannelGeneratorOptionAttributeMock.FromArray(attribute.ConstructorArguments, attribute.NamedArguments);

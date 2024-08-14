@@ -1,9 +1,7 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
-using System.Text;
 using Arc.Visceral;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Text;
 
 #pragma warning disable RS2008
 #pragma warning disable SA1310 // Field names should not contain underscore
@@ -16,9 +14,6 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 {
     public const string GeneratorName = "CrossChannelGenerator";
     public const string InitializerName = "__InitializeCC__";
-    public const string BrokerName = "__Broker__"; // Class + BrokerName
-    public const string ArgumentName = "a";
-    public const string RadioResultFullName = "CrossChannel.RadioResult";
 
     public static readonly DiagnosticDescriptor Error_NotPartialParent = new DiagnosticDescriptor(
         id: "CCG001", title: "Partial class/struct", messageFormat: "Parent type '{0}' is not a partial class/struct",
@@ -82,13 +77,14 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
             assemblyId = VisceralHelper.AssemblyNameToIdentifier("_" + generator.AssemblyName);
         }
 
-        this.GenerateLoader(generator, assemblyId);
         this.GenerateMain(generator, assemblyId);
+        this.GenerateLoader(generator, assemblyId);
     }
 
     public void GenerateLoader(IGeneratorInformation generator, string assemblyId)
     {
-        ScopingStringBuilder ssb = new();
+        var ssb = new ScopingStringBuilder();
+        this.GenerateHeader(ssb);
     }
 
     public void GenerateMain(IGeneratorInformation generator, string assemblyId)
@@ -103,7 +99,6 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         ssb.AddUsing("System.Collections.Generic");
         ssb.AddUsing("System.Diagnostics.CodeAnalysis");
         ssb.AddUsing("System.Runtime.CompilerServices");
-        // ssb.AddUsing("Arc.Collections");
         ssb.AddUsing("CrossChannel");
 
         ssb.AppendLine("#nullable enable", false);
