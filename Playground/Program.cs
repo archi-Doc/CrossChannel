@@ -25,15 +25,14 @@ public static class Loader
     [ModuleInitializer]
     public static void __InitializeCC__()
     {
-        TestService.__InitializeCC__();
+        TestService.__InitializeCC__2();
 
     }
 }
 
 public partial class TestService : ITestService
 {
-    [ModuleInitializer]
-    internal static void __InitializeCC__()
+    internal static void __InitializeCC__2()
     {
         RadioRegistry.Register(new(typeof(TestService.ABC), x => new TestService.ABCBroker()));
         // RadioRegistry.Register(new(typeof(TestService.ABC.ABC2), x => new TestService.ABCBroker()));
@@ -42,11 +41,11 @@ public partial class TestService : ITestService
     [RadioServiceInterface]
     private partial interface ABC : IRadioService
     {
-        internal static void __InitializeCC__()
+        internal static void __InitializeCC__2()
         {
         }
 
-            [RadioServiceInterface]
+        [RadioServiceInterface]
         private interface ABC2 : IRadioService
         {
         }

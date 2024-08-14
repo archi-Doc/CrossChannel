@@ -1,10 +1,8 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
-using System.Text;
 using Arc.Visceral;
 using Microsoft.CodeAnalysis;
 
-#pragma warning disable SA1202 // Elements should be ordered by access
 #pragma warning disable SA1204 // Static elements should appear before instance elements
 #pragma warning disable SA1602 // Enumeration items should be documented
 #pragma warning disable SA1611
@@ -29,7 +27,7 @@ public enum CrossChannelObjectFlag
     RadioServiceInterface = 1 << 10, // RadioServiceInterface
 }
 
-public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
+public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 {
     public CrossChannelObject()
     {
@@ -334,6 +332,10 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
     /// </summary>
     internal void GenerateOutObject(ScopingStringBuilder ssb)
     {
+        if (this.RadioServiceInterfaceAttribute is not null)
+        {
+            this.GenerateBrokerClass(ssb);
+        }
     }
 
     /// <summary>
@@ -359,7 +361,7 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
         ScopingStringBuilder.IScope? scope = generateMethod ? ssb.ScopeBrace($"public static void {CrossChannelBody.InitializerName}()") : null;
 
-        ssb.AppendLine("// test");
+        ssb.AppendLine($"// Register {this.ClassName}");
 
         // ssb.AppendLine($"MachineRegistry.Register(new({machineType}, {constructor}, {serializable}, {identifierType}, {numberOfTasks}));");
 

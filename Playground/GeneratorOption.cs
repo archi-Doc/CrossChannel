@@ -4,7 +4,7 @@ using CrossChannel;
 
 namespace Playground;
 
-[CrossChannelGeneratorOption(AttachDebugger = false, GenerateToFile = true)]
+[CrossChannelGeneratorOption(AttachDebugger = false, GenerateToFile = false)]
 internal interface GeneratorOption
 {
 }
