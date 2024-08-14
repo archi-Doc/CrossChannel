@@ -11,7 +11,7 @@ public class WeakReferenceTest
     [Fact]
     public void WeakDelegate_Lambda()
     {
-        var radio = new RadioClass();
+        var radio = new ObsoleteRadioClass();
 
         void CreateChannel()
         {
@@ -30,7 +30,7 @@ public class WeakReferenceTest
     [Fact]
     public void WeakDelegate_Method()
     {
-        var radio = new RadioClass();
+        var radio = new ObsoleteRadioClass();
 
         radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { });
 
@@ -42,7 +42,7 @@ public class WeakReferenceTest
 
     private class InternalClass
     {
-        public InternalClass(RadioClass radio)
+        public InternalClass(ObsoleteRadioClass radio)
         {
             radio.OpenTwoWay<int, int>(this.Function, new object());
             radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { 2 });
@@ -54,7 +54,7 @@ public class WeakReferenceTest
     [Fact]
     public void WeakDelegate_Static()
     {
-        var radio = new RadioClass();
+        var radio = new ObsoleteRadioClass();
 
         void CreateChannel()
         {

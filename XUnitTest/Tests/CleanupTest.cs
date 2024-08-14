@@ -12,7 +12,7 @@ public class CleanupTest
     [Fact]
     public void WeakReference()
     {
-        var radio = new RadioClass();
+        var radio = new ObsoleteRadioClass();
 
         void CreateChannel()
         {

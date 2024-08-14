@@ -16,9 +16,9 @@ namespace CrossChannel;
 
 #pragma warning disable SA1311 // Static readonly fields should begin with upper-case letter
 
-public static class NewRadio
-{
-    static NewRadio()
+public static class Radio
+{// CrossChannel by Romeo
+    static Radio()
     {
     }
 

@@ -58,11 +58,11 @@ class Program
 {
     static void Main(string[] args)
     {
-        var c = NewRadio.Open<ITestService>(new TestService());
+        var c = Radio.Open<ITestService>(new TestService());
         
-        var result = NewRadio.Send<ITestService>().Test2(2);
+        var result = Radio.Send<ITestService>().Test2(2);
         c.Close();
 
-        result = NewRadio.Send<ITestService>().Test2(2);
+        result = Radio.Send<ITestService>().Test2(2);
     }
 }

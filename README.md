@@ -238,5 +238,5 @@ Here is a benchmark for each feature.
 
 
 
-> CrossChannel.Radio.Send(new Taichi(3055952910, "生きている人、いますか？"));
+> CrossChannel.Radio.Send<ITaichi>().Message(3055952910, "生きている人、いますか？");
 

@@ -121,9 +121,9 @@ public class H2HBenchmark
     // [Benchmark]
     public void CC_OpenSend()
     {
-        using (Radio.Open<int>(x => { }))
+        using (ObsoleteRadio.Open<int>(x => { }))
         {
-            Radio.Send<int>(1);
+            ObsoleteRadio.Send<int>(1);
         }
 
         return;
@@ -132,16 +132,16 @@ public class H2HBenchmark
     // [Benchmark]
     public void CC_OpenSend8()
     {
-        using (Radio.Open<int>(x => { }))
+        using (ObsoleteRadio.Open<int>(x => { }))
         {
-            Radio.Send<int>(1);
-            Radio.Send<int>(2);
-            Radio.Send<int>(3);
-            Radio.Send<int>(4);
-            Radio.Send<int>(5);
-            Radio.Send<int>(6);
-            Radio.Send<int>(7);
-            Radio.Send<int>(8);
+            ObsoleteRadio.Send<int>(1);
+            ObsoleteRadio.Send<int>(2);
+            ObsoleteRadio.Send<int>(3);
+            ObsoleteRadio.Send<int>(4);
+            ObsoleteRadio.Send<int>(5);
+            ObsoleteRadio.Send<int>(6);
+            ObsoleteRadio.Send<int>(7);
+            ObsoleteRadio.Send<int>(8);
         }
 
         return;
@@ -150,23 +150,23 @@ public class H2HBenchmark
     [Benchmark]
     public void CC_OpenSend88()
     {
-        using (Radio.Open<int>(x => { }))
-        using (Radio.Open<int>(x => { }))
-        using (Radio.Open<int>(x => { }))
-        using (Radio.Open<int>(x => { }))
-        using (Radio.Open<int>(x => { }))
-        using (Radio.Open<int>(x => { }))
-        using (Radio.Open<int>(x => { }))
-        using (Radio.Open<int>(x => { }))
+        using (ObsoleteRadio.Open<int>(x => { }))
+        using (ObsoleteRadio.Open<int>(x => { }))
+        using (ObsoleteRadio.Open<int>(x => { }))
+        using (ObsoleteRadio.Open<int>(x => { }))
+        using (ObsoleteRadio.Open<int>(x => { }))
+        using (ObsoleteRadio.Open<int>(x => { }))
+        using (ObsoleteRadio.Open<int>(x => { }))
+        using (ObsoleteRadio.Open<int>(x => { }))
         {
-            Radio.Send<int>(1);
-            Radio.Send<int>(2);
-            Radio.Send<int>(3);
-            Radio.Send<int>(4);
-            Radio.Send<int>(5);
-            Radio.Send<int>(6);
-            Radio.Send<int>(7);
-            Radio.Send<int>(8);
+            ObsoleteRadio.Send<int>(1);
+            ObsoleteRadio.Send<int>(2);
+            ObsoleteRadio.Send<int>(3);
+            ObsoleteRadio.Send<int>(4);
+            ObsoleteRadio.Send<int>(5);
+            ObsoleteRadio.Send<int>(6);
+            ObsoleteRadio.Send<int>(7);
+            ObsoleteRadio.Send<int>(8);
         }
 
         return;
@@ -175,9 +175,9 @@ public class H2HBenchmark
     // [Benchmark]
     public void CC2_OpenSend()
     {
-        using (NewRadio.Open(this.simpleService1))
+        using (Radio.Open(this.simpleService1))
         {
-            NewRadio.Send<ISimpleService>().Test(1);
+            Radio.Send<ISimpleService>().Test(1);
         }
 
         return;
@@ -186,16 +186,16 @@ public class H2HBenchmark
     // [Benchmark]
     public void CC2_OpenSend8()
     {
-        using (NewRadio.Open(this.simpleService1))
+        using (Radio.Open(this.simpleService1))
         {
-            NewRadio.Send<ISimpleService>().Test(1);
-            NewRadio.Send<ISimpleService>().Test(2);
-            NewRadio.Send<ISimpleService>().Test(3);
-            NewRadio.Send<ISimpleService>().Test(4);
-            NewRadio.Send<ISimpleService>().Test(5);
-            NewRadio.Send<ISimpleService>().Test(6);
-            NewRadio.Send<ISimpleService>().Test(7);
-            NewRadio.Send<ISimpleService>().Test(8);
+            Radio.Send<ISimpleService>().Test(1);
+            Radio.Send<ISimpleService>().Test(2);
+            Radio.Send<ISimpleService>().Test(3);
+            Radio.Send<ISimpleService>().Test(4);
+            Radio.Send<ISimpleService>().Test(5);
+            Radio.Send<ISimpleService>().Test(6);
+            Radio.Send<ISimpleService>().Test(7);
+            Radio.Send<ISimpleService>().Test(8);
         }
 
         return;
@@ -204,23 +204,23 @@ public class H2HBenchmark
     [Benchmark]
     public void CC2_OpenSend88()
     {
-        using (NewRadio.Open(this.simpleService1))
-        using (NewRadio.Open(this.simpleService2))
-        using (NewRadio.Open(this.simpleService3))
-        using (NewRadio.Open(this.simpleService4))
-        using (NewRadio.Open(this.simpleService5))
-        using (NewRadio.Open(this.simpleService6))
-        using (NewRadio.Open(this.simpleService7))
-        using (NewRadio.Open(this.simpleService8))
+        using (Radio.Open(this.simpleService1))
+        using (Radio.Open(this.simpleService2))
+        using (Radio.Open(this.simpleService3))
+        using (Radio.Open(this.simpleService4))
+        using (Radio.Open(this.simpleService5))
+        using (Radio.Open(this.simpleService6))
+        using (Radio.Open(this.simpleService7))
+        using (Radio.Open(this.simpleService8))
         {
-            NewRadio.Send<ISimpleService>().Test(1);
-            NewRadio.Send<ISimpleService>().Test(2);
-            NewRadio.Send<ISimpleService>().Test(3);
-            NewRadio.Send<ISimpleService>().Test(4);
-            NewRadio.Send<ISimpleService>().Test(5);
-            NewRadio.Send<ISimpleService>().Test(6);
-            NewRadio.Send<ISimpleService>().Test(7);
-            NewRadio.Send<ISimpleService>().Test(8);
+            Radio.Send<ISimpleService>().Test(1);
+            Radio.Send<ISimpleService>().Test(2);
+            Radio.Send<ISimpleService>().Test(3);
+            Radio.Send<ISimpleService>().Test(4);
+            Radio.Send<ISimpleService>().Test(5);
+            Radio.Send<ISimpleService>().Test(6);
+            Radio.Send<ISimpleService>().Test(7);
+            Radio.Send<ISimpleService>().Test(8);
         }
 
         return;

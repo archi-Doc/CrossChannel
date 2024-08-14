@@ -9,12 +9,12 @@ namespace CrossChannel;
 
 #pragma warning disable SA1311 // Static readonly fields should begin with upper-case letter
 
-public class NewRadioClass
+public class RadioClass
 {
     private readonly ThreadsafeTypeKeyHashtable<object> typeToChannel = new(); // Type -> Channel<TService>
     private readonly ThreadsafeTypeKeyHashtable<object> typeToDictionary = new(); // Type -> ConcurrentDictionary<TKey, Channel<TService>>
 
-    public NewRadioClass()
+    public RadioClass()
     {
     }
 

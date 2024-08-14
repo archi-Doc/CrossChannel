@@ -12,7 +12,7 @@ namespace CrossChannel;
 /// </summary>
 /// <typeparam name="T">The type of the message.</typeparam>
 public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<RadioResult<T>>
-{
+{// It feels a bit forced, but I like this structure.
     private const ulong SingleResultValue = 0x0000_0000_0000_0001;
 
     private readonly T result;

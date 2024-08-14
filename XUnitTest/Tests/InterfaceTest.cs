@@ -11,7 +11,7 @@ public class WeakInterfaceTest
     [Fact]
     public void WeakInterface_Test()
     {
-        var radio = new RadioClass();
+        var radio = new ObsoleteRadioClass();
 
         void CreateChannel()
         {
@@ -35,7 +35,7 @@ public class WeakInterfaceTest
     [Fact]
     public void WeakInterface_Test2()
     {
-        var radio = new RadioClass();
+        var radio = new ObsoleteRadioClass();
 
         void CreateChannel()
         {
@@ -60,7 +60,7 @@ public class WeakInterfaceTest
     {
         int Multi(int x);
 
-        void Register(RadioClass radio)
+        void Register(ObsoleteRadioClass radio)
         {
             radio.OpenTwoWay<int, int>(a => this.Multi(a), this);
         }
@@ -70,7 +70,7 @@ public class WeakInterfaceTest
     {
         public int Multi(int x) => x * 1;
 
-        public void Register2(RadioClass radio)
+        public void Register2(ObsoleteRadioClass radio)
         {
             radio.OpenTwoWay<int, int>(a => this.Multi(a), this);
         }
@@ -80,7 +80,7 @@ public class WeakInterfaceTest
     {
         public int Multi(int x) => x * 2;
 
-        public void Register2(RadioClass radio)
+        public void Register2(ObsoleteRadioClass radio)
         {
             radio.OpenTwoWay<int, int>(a => this.Multi(a), this);
         }

@@ -13,41 +13,41 @@ public class StaticTest
     [Fact]
     public void Static_TwoWay()
     {
-        using (var c = Radio.OpenTwoWay<int, int>(x => x * 2))
+        using (var c = ObsoleteRadio.OpenTwoWay<int, int>(x => x * 2))
         {
-            Radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { 2 });
-            Radio.SendTwoWay<int, int>(2).IsStructuralEqual(new int[] { 4 });
+            ObsoleteRadio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { 2 });
+            ObsoleteRadio.SendTwoWay<int, int>(2).IsStructuralEqual(new int[] { 4 });
 
-            using (var d = Radio.OpenTwoWay<int, int>(x => x * 2))
+            using (var d = ObsoleteRadio.OpenTwoWay<int, int>(x => x * 2))
             {
-                Radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { 2, 2 });
-                Radio.SendTwoWay<int, int>(2).IsStructuralEqual(new int[] { 4, 4 });
+                ObsoleteRadio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { 2, 2 });
+                ObsoleteRadio.SendTwoWay<int, int>(2).IsStructuralEqual(new int[] { 4, 4 });
             }
 
-            Radio.SendTwoWay<int, int>(3).IsStructuralEqual(new int[] { 6 });
+            ObsoleteRadio.SendTwoWay<int, int>(3).IsStructuralEqual(new int[] { 6 });
         }
 
-        Radio.SendTwoWay<int, int>(4).IsStructuralEqual(new int[] { });
+        ObsoleteRadio.SendTwoWay<int, int>(4).IsStructuralEqual(new int[] { });
     }
 
     [Fact]
     public void Static_TwoWayKey()
     {
-        using (var c = Radio.OpenTwoWayKey<int, int, int>(1, x => x * 2))
+        using (var c = ObsoleteRadio.OpenTwoWayKey<int, int, int>(1, x => x * 2))
         {
-            Radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { });
-            Radio.SendTwoWayKey<int, int, int>(0, 2).IsStructuralEqual(new int[] { });
-            Radio.SendTwoWayKey<int, int, int>(1, 2).IsStructuralEqual(new int[] { 4 });
+            ObsoleteRadio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { });
+            ObsoleteRadio.SendTwoWayKey<int, int, int>(0, 2).IsStructuralEqual(new int[] { });
+            ObsoleteRadio.SendTwoWayKey<int, int, int>(1, 2).IsStructuralEqual(new int[] { 4 });
 
-            using (var d = Radio.OpenTwoWayKey<int, int, int>(2, x => x * 3))
+            using (var d = ObsoleteRadio.OpenTwoWayKey<int, int, int>(2, x => x * 3))
             {
-                Radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { });
-                Radio.SendTwoWayKey<int, int, int>(0, 2).IsStructuralEqual(new int[] { });
-                Radio.SendTwoWayKey<int, int, int>(1, 2).IsStructuralEqual(new int[] { 4 });
-                Radio.SendTwoWayKey<int, int, int>(2, 2).IsStructuralEqual(new int[] { 6 });
+                ObsoleteRadio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { });
+                ObsoleteRadio.SendTwoWayKey<int, int, int>(0, 2).IsStructuralEqual(new int[] { });
+                ObsoleteRadio.SendTwoWayKey<int, int, int>(1, 2).IsStructuralEqual(new int[] { 4 });
+                ObsoleteRadio.SendTwoWayKey<int, int, int>(2, 2).IsStructuralEqual(new int[] { 6 });
             }
         }
 
-        Radio.SendTwoWay<int, int>(4).IsStructuralEqual(new int[] { });
+        ObsoleteRadio.SendTwoWay<int, int>(4).IsStructuralEqual(new int[] { });
     }
 }
