@@ -22,19 +22,19 @@ public static class NewRadio
     {
     }
 
-    public static Channel<TService>.Link Open<TService>(TService instance)
+    public static Channel<TService>.Link Open<TService>(TService instance, bool weakReference = false)
         where TService : class, IRadioService
     {
         var channel = ChannelCache<TService>.Channel;
-        return channel.Open(instance);
+        return channel.Open(instance, weakReference);
     }
 
-    public static Channel<TService>.Link Open<TService, TKey>(TService instance, TKey key)
+    public static Channel<TService>.Link Open<TService, TKey>(TService instance, TKey key, bool weakReference = false)
         where TService : class, IRadioService
         where TKey : notnull
     {
         var channel = ChannelCache<TService, TKey>.Channel(key);
-        return channel.Open(instance);
+        return channel.Open(instance, weakReference);
     }
 
     public static TService Send<TService>()

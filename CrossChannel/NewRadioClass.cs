@@ -18,19 +18,19 @@ public class NewRadioClass
     {
     }
 
-    public Channel<TService>.Link Open<TService>(TService instance)
+    public Channel<TService>.Link Open<TService>(TService instance, bool weakReference = false)
         where TService : class, IRadioService
     {
         var xchannel = this.GetChannel<TService>();
-        return xchannel.Open(instance);
+        return xchannel.Open(instance, weakReference);
     }
 
-    public Channel<TService>.Link Open<TService, TKey>(TService instance, TKey key)
+    public Channel<TService>.Link Open<TService, TKey>(TService instance, TKey key, bool weakReference = false)
         where TService : class, IRadioService
         where TKey : notnull
     {
         var xchannel = this.GetChannel<TService, TKey>(key);
-        return xchannel.Open(instance);
+        return xchannel.Open(instance, weakReference);
     }
 
     public TService Send<TService>()

@@ -8,14 +8,20 @@ public class Channel<TService>
     public class Link : XChannel //opt
     {
         private readonly Channel<TService> channel;
-        // private readonly WeakReference<TService> weakReference;
-        private readonly TService instance;
+        private readonly WeakReference<TService>? weakReference;
+        private readonly TService? strongReference;
 
-        public Link(Channel<TService> channel, TService instance)
+        public Link(Channel<TService> channel, TService instance, bool weakReference)
         {
             this.channel = channel;
-            // this.weakReference = new(instance);
-            this.instance = instance;
+            if (weakReference)
+            {
+                this.weakReference = new(instance);
+            }
+            else
+            {
+                this.strongReference = instance;
+            }
 
             lock (this.channel.syncObject)
             {
@@ -23,10 +29,18 @@ public class Channel<TService>
             }
         }
 
-        // public bool TryGetInstance([MaybeNullWhen(false)] out TService instance)
-        //    => this.weakReference.TryGetTarget(out instance);
-
-        public TService Instance => this.instance;//
+        public bool TryGetInstance([MaybeNullWhen(false)] out TService instance)
+        {
+            if (this.strongReference is not null)
+            {
+                instance = this.strongReference;
+                return true;
+            }
+            else
+            {
+                return this.weakReference!.TryGetTarget(out instance);
+            }
+        }
 
         public void Close()
             => this.Dispose();
@@ -53,9 +67,9 @@ public class Channel<TService>
         this.Broker = (TService)RadioRegistry.Get<TService>().Constructor(this);
     }
 
-    public Link Open(TService instance)
+    public Link Open(TService instance, bool weakReference)
     {
-        return new Link(this, instance);
+        return new Link(this, instance, weakReference);
     }
 
     public FastList<Link> InternalGetList() => this.list;
