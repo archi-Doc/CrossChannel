@@ -41,8 +41,8 @@ public class Channel<TService>
 
     internal TService Broker { get; }
 
-    private readonly object syncObject = new();
-    private readonly FastList<Link> list = new(); // this.semaphoreLock
+    private readonly object syncObject = new(); // -> Lock
+    private readonly FastList<Link> list = new();
 
     public Channel()
     {

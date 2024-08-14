@@ -13,55 +13,21 @@ public interface ITestService : IRadioService
 {
     void Test1();
 
-    RadioResult<int> Test2();
+    RadioResult<int> Test2(int x);
 
     Task Test3();
 
     Task<RadioResult<int>> Test4();
 }
 
-public static class Loader
-{
-    [ModuleInitializer]
-    public static void __InitializeCC__()
-    {
-        TestService.__InitializeCC__2();
-
-    }
-}
-
 public partial class TestService : ITestService
 {
-    internal static void __InitializeCC__2()
-    {
-        RadioRegistry.Register(new(typeof(TestService.ABC), x => new TestService.ABCBroker()));
-        // RadioRegistry.Register(new(typeof(TestService.ABC.ABC2), x => new TestService.ABCBroker()));
-    }
-
-    [RadioServiceInterface]
-    private partial interface ABC : IRadioService
-    {
-        internal static void __InitializeCC__2()
-        {
-        }
-
-        [RadioServiceInterface]
-        private interface ABC2 : IRadioService
-        {
-        }
-    }
-
-    public class ABCBroker : ABC
-    {
-
-    }
-
     void ITestService.Test1()
     {
         Console.WriteLine("Test1");
     }
 
-    RadioResult<int> ITestService.Test2()
+    RadioResult<int> ITestService.Test2(int x)
     {
         Console.WriteLine("Test2");
         return new(1);
@@ -99,7 +65,7 @@ public class TestServiceBroker : ITestService
         }
     }
 
-    public RadioResult<int> Test2()
+    public RadioResult<int> Test2(int a0)
     {
         (var array, var countHint) = this.channel.InternalGetList().GetValuesAndCountHint();
         int firstResult = default;
@@ -110,7 +76,7 @@ public class TestServiceBroker : ITestService
             if (x is null) continue;
             if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }
 
-            if (instance.Test2().TryGetSingleResult(out var r))
+            if (instance.Test2(a0).TryGetSingleResult(out var r))
             {
                 if (count == 0)
                 {
@@ -182,7 +148,7 @@ class Program
     {
         var c = NewRadio.Open<ITestService>(default!);
         c.Close();
-        NewRadio.Send<ITestService>().Test2();
+        NewRadio.Send<ITestService>().Test2(2);
 
         Console.WriteLine("Hello World!");
 

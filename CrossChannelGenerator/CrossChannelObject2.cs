@@ -15,6 +15,21 @@ public partial class CrossChannelObject
         var accessModifier = this.ContainingObject is null ? "internal" : "private";
         using (ssb.ScopeBrace($"{accessModifier} class {this.ClassName}"))
         {
+            ssb.AppendLine($"private readonly Channel<{this.LocalName}> channel;");
+            using (ssb.ScopeBrace($"public {this.ClassName}(object channel)"))
+            {
+                ssb.AppendLine($"this.channel = (Channel<{this.LocalName}>)channel;");
+            }
+
+            if (this.Methods is not null)
+            {
+                foreach (var x in this.Methods)
+                {
+                    if (x.ReturnType == ServiceMethod.Type.Void)
+                    {
+                    }
+                }
+            }
         }
     }
 }
