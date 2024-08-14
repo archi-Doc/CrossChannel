@@ -1,5 +1,6 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
+using System.Linq;
 using BenchmarkDotNet.Attributes;
 using CrossChannel;
 using MessagePipe;
@@ -21,12 +22,82 @@ public class SimpleService : ISimpleService
     }
 }
 
+[RadioServiceInterface]
+public interface ISimpleServiceB : IRadioService
+{
+    RadioResult<int> Test(int x);
+}
+
+public class SimpleServiceB : ISimpleServiceB
+{
+    private readonly int m;
+
+    public SimpleServiceB(int m)
+    {
+        this.m = m;
+    }
+
+    public RadioResult<int> Test(int x)
+    {
+        return new(x * this.m);
+    }
+}
+
+public class MpHandler1 : IRequestHandler<int, int>
+{
+    public int Invoke(int request) => request * 1;
+}
+
+public class MpHandler2 : IRequestHandler<int, int>
+{
+    public int Invoke(int request) => request * 2;
+}
+
+public class MpHandler3 : IRequestHandler<int, int>
+{
+    public int Invoke(int request) => request * 3;
+}
+
+public class MpHandler4 : IRequestHandler<int, int>
+{
+    public int Invoke(int request) => request * 4;
+}
+
+public class MpHandler5 : IRequestHandler<int, int>
+{
+    public int Invoke(int request) => request * 5;
+}
+
+public class MpHandler6 : IRequestHandler<int, int>
+{
+    public int Invoke(int request) => request * 6;
+}
+
+public class MpHandler7 : IRequestHandler<int, int>
+{
+    public int Invoke(int request) => request * 7;
+}
+
+public class MpHandler8 : IRequestHandler<int, int>
+{
+    public int Invoke(int request) => request * 8;
+}
+
 [Config(typeof(BenchmarkConfig))]
 public class H2HBenchmark
 {
     public ServiceProvider Provider { get; }
 
     private ISimpleService simpleService = new SimpleService();
+
+    private ISimpleServiceB simpleServiceB1 = new SimpleServiceB(1);
+    private ISimpleServiceB simpleServiceB2 = new SimpleServiceB(2);
+    private ISimpleServiceB simpleServiceB3 = new SimpleServiceB(3);
+    private ISimpleServiceB simpleServiceB4 = new SimpleServiceB(4);
+    private ISimpleServiceB simpleServiceB5 = new SimpleServiceB(5);
+    private ISimpleServiceB simpleServiceB6 = new SimpleServiceB(6);
+    private ISimpleServiceB simpleServiceB7 = new SimpleServiceB(7);
+    private ISimpleServiceB simpleServiceB8 = new SimpleServiceB(8);
 
     public H2HBenchmark()
     {
@@ -70,6 +141,32 @@ public class H2HBenchmark
     }
 
     [Benchmark]
+    public int CC_Complex()
+    {
+        int total = 0;
+        using (Radio.OpenTwoWay<int, int>(x => x * 1))
+        using (Radio.OpenTwoWay<int, int>(x => x * 2))
+        using (Radio.OpenTwoWay<int, int>(x => x * 3))
+        using (Radio.OpenTwoWay<int, int>(x => x * 4))
+        using (Radio.OpenTwoWay<int, int>(x => x * 5))
+        using (Radio.OpenTwoWay<int, int>(x => x * 6))
+        using (Radio.OpenTwoWay<int, int>(x => x * 7))
+        using (Radio.OpenTwoWay<int, int>(x => x * 8))
+        {
+            total += Radio.SendTwoWay<int, int>(1).Sum();
+            total += Radio.SendTwoWay<int, int>(2).Sum();
+            total += Radio.SendTwoWay<int, int>(3).Sum();
+            total += Radio.SendTwoWay<int, int>(4).Sum();
+            total += Radio.SendTwoWay<int, int>(5).Sum();
+            total += Radio.SendTwoWay<int, int>(6).Sum();
+            total += Radio.SendTwoWay<int, int>(7).Sum();
+            total += Radio.SendTwoWay<int, int>(8).Sum();
+        }
+
+        return total;
+    }
+
+    [Benchmark]
     public void CC2_OpenSend()
     {
         using (NewRadio.Open(this.simpleService))
@@ -96,6 +193,32 @@ public class H2HBenchmark
         }
 
         return;
+    }
+
+    [Benchmark]
+    public int CC2_Complex()
+    {
+        int total = 0;
+        using (NewRadio.Open(this.simpleServiceB1))
+        using (NewRadio.Open(this.simpleServiceB2))
+        using (NewRadio.Open(this.simpleServiceB3))
+        using (NewRadio.Open(this.simpleServiceB4))
+        using (NewRadio.Open(this.simpleServiceB5))
+        using (NewRadio.Open(this.simpleServiceB6))
+        using (NewRadio.Open(this.simpleServiceB7))
+        using (NewRadio.Open(this.simpleServiceB8))
+        {
+            total += NewRadio.Send<ISimpleServiceB>().Test(1).Sum();
+            total += NewRadio.Send<ISimpleServiceB>().Test(2).Sum();
+            total += NewRadio.Send<ISimpleServiceB>().Test(3).Sum();
+            total += NewRadio.Send<ISimpleServiceB>().Test(4).Sum();
+            total += NewRadio.Send<ISimpleServiceB>().Test(5).Sum();
+            total += NewRadio.Send<ISimpleServiceB>().Test(6).Sum();
+            total += NewRadio.Send<ISimpleServiceB>().Test(7).Sum();
+            total += NewRadio.Send<ISimpleServiceB>().Test(8).Sum();
+        }
+
+        return total;
     }
 
     [Benchmark]
@@ -129,6 +252,33 @@ public class H2HBenchmark
         }
 
         return;
+    }
+
+    [Benchmark]
+    public int MP_Complex()
+    {
+        int total = 0;
+        this.Provider.GetService<MpHandler1>();
+        this.Provider.GetService<MpHandler2>();
+        this.Provider.GetService<MpHandler3>();
+        this.Provider.GetService<MpHandler4>();
+        this.Provider.GetService<MpHandler5>();
+        this.Provider.GetService<MpHandler6>();
+        this.Provider.GetService<MpHandler7>();
+        this.Provider.GetService<MpHandler8>();
+        var handler = this.Provider.GetService<IRequestAllHandler<int, int>>()!;
+        {
+            total += handler.InvokeAll(1).Sum();
+            total += handler.InvokeAll(2).Sum();
+            total += handler.InvokeAll(3).Sum();
+            total += handler.InvokeAll(4).Sum();
+            total += handler.InvokeAll(5).Sum();
+            total += handler.InvokeAll(6).Sum();
+            total += handler.InvokeAll(7).Sum();
+            total += handler.InvokeAll(8).Sum();
+        }
+
+        return total;
     }
 
     /*[Benchmark]

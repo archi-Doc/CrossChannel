@@ -89,7 +89,7 @@ public partial class CrossChannelObject
                     ssb.AppendLine("results[0] = firstResult;");
                 }
 
-                ssb.AppendLine("if (countHint < count) results[count++] = r;");
+                ssb.AppendLine("if (count < countHint) results[count++] = r;");
                 ssb.AppendLine("else break;");
             }
         }
@@ -109,7 +109,7 @@ public partial class CrossChannelObject
         ssb.AppendLine("var count = 0;");
 
         var forScope = this.Generate_ForEach(ssb);
-        ssb.AppendLine($"if (countHint < count) tasks[count++] = instance.{method.SimpleName}({method.GetParameterNames()});");
+        ssb.AppendLine($"if (count < countHint) tasks[count++] = instance.{method.SimpleName}({method.GetParameterNames()});");
         ssb.AppendLine("else break;");
 
         forScope.Dispose();
@@ -127,7 +127,7 @@ public partial class CrossChannelObject
         ssb.AppendLine("var count = 0;");
 
         var forScope = this.Generate_ForEach(ssb);
-        ssb.AppendLine($"if (countHint < count) tasks[count++] = instance.{method.SimpleName}({method.GetParameterNames()});");
+        ssb.AppendLine($"if (count < countHint) tasks[count++] = instance.{method.SimpleName}({method.GetParameterNames()});");
         ssb.AppendLine("else break;");
 
         forScope.Dispose();

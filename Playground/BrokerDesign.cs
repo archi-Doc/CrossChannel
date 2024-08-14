@@ -51,7 +51,7 @@ namespace Playground;
                         results[0] = firstResult;
                     }
 
-                    if (countHint < count) results[count++] = r;
+                    if (count < countHint) results[count++] = r;
                     else break;
                 }
             }
@@ -72,7 +72,7 @@ namespace Playground;
         {
             if (x is null) continue;
             if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }
-            if (countHint < count) tasks[count++] = instance.Test3();
+            if (count < countHint) tasks[count++] = instance.Test3();
             else break;
         }
 
@@ -91,7 +91,7 @@ namespace Playground;
         {
             if (x is null) continue;
             if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }
-            if (countHint < count) tasks[count++] = instance.Test4();
+            if (count < countHint) tasks[count++] = instance.Test4();
             else break;
         }
 
