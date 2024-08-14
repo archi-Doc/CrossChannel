@@ -139,7 +139,7 @@ public partial class CrossChannelObject
     }
 
     private void Generate_GetList(ScopingStringBuilder ssb)
-        => ssb.AppendLine("(var array, var countHint) = this.channel.InternalGetList().GetValuesAndCountHint();");
+        => ssb.AppendLine("(var array, var countHint) = this.channel.InternalGetList();");
 
     private ScopingStringBuilder.IScope Generate_ForEach(ScopingStringBuilder ssb)
     {
