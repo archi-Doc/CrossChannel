@@ -145,7 +145,8 @@ public partial class CrossChannelObject
     {
         var scope = ssb.ScopeBrace("foreach (var x in array)");
         ssb.AppendLine("if (x is null) continue;");
-        ssb.AppendLine("if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }");
+        // ssb.AppendLine("if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }");
+        ssb.AppendLine("var instance = x.Instance;");
 
         return scope;
     }

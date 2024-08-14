@@ -131,7 +131,7 @@ public class H2HBenchmark
         return;
     }
 
-    [Benchmark]
+    /*[Benchmark]
     public void PS_OpenSend()
     {
         Hub.Default.Subscribe<int>(x => { });
@@ -156,7 +156,7 @@ public class H2HBenchmark
         Hub.Default.Unsubscribe<int>();
 
         return;
-    }
+    }*/
 
     /*[Benchmark]
     public void CC_OpenSend_Key()

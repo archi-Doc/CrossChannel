@@ -5,7 +5,7 @@ using CrossChannel;
 
 namespace Playground;
 
-public class TestServiceBroker : ITestService
+/*public class TestServiceBroker : ITestService
 {
     private readonly Channel<ITestService> channel;
 
@@ -100,4 +100,4 @@ public class TestServiceBroker : ITestService
         else if (count == 1) return await tasks[0].ConfigureAwait(false);
         else return new((await Task.WhenAll(tasks).ConfigureAwait(false)).Select(x => x.TryGetSingleResult(out var r) ? r : default).ToArray());
     }
-}
+}*/

@@ -8,12 +8,14 @@ public class Channel<TService>
     public class Link : XChannel //opt
     {
         private readonly Channel<TService> channel;
-        private readonly WeakReference<TService> weakReference;
+        // private readonly WeakReference<TService> weakReference;
+        private readonly TService instance;
 
         public Link(Channel<TService> channel, TService instance)
         {
             this.channel = channel;
-            this.weakReference = new(instance);
+            // this.weakReference = new(instance);
+            this.instance = instance;
 
             lock (this.channel.syncObject)
             {
@@ -21,8 +23,10 @@ public class Channel<TService>
             }
         }
 
-        public bool TryGetInstance([MaybeNullWhen(false)] out TService instance)
-            => this.weakReference.TryGetTarget(out instance);
+        // public bool TryGetInstance([MaybeNullWhen(false)] out TService instance)
+        //    => this.weakReference.TryGetTarget(out instance);
+
+        public TService Instance => this.instance;//
 
         public void Close()
             => this.Dispose();
