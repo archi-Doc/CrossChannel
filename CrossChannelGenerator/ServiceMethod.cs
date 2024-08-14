@@ -72,16 +72,16 @@ public class ServiceMethod
             return null;
         }
 
-        var serviceMethod = new ServiceMethod(method);
-        serviceMethod.ReturnType = returnType;
-        serviceMethod.ResultObject = resultObject;
-
+        var serviceMethod = new ServiceMethod(method, returnObject, returnType, resultObject);
         return serviceMethod;
     }
 
-    public ServiceMethod(CrossChannelObject method)
+    public ServiceMethod(CrossChannelObject method, CrossChannelObject returnObject, Type returnType, CrossChannelObject? resultObject)
     {
         this.method = method;
+        this.ReturnObject = returnObject;
+        this.ReturnType = returnType;
+        this.ResultObject = resultObject;
     }
 
     public Location Location => this.method.Location;
@@ -94,13 +94,17 @@ public class ServiceMethod
 
     public string ParameterType { get; private set; } = string.Empty;
 
+    public CrossChannelObject ReturnObject { get; private set; }
+
     public Type ReturnType { get; private set; }
 
     public CrossChannelObject? ResultObject { get; private set; }
 
+    public string ResultName => this.ResultObject?.FullName ?? string.Empty;
+
     private CrossChannelObject method;
 
-    /*public string GetParameters()
+    public string GetParameters()
     {// int a1, string a2
         var sb = new StringBuilder();
         for (var i = 0; i < this.method.Method_Parameters.Length; i++)
@@ -111,43 +115,34 @@ public class ServiceMethod
             }
 
             sb.Append(this.method.Method_Parameters[i]);
-            sb.Append(" ");
-            sb.Append(CrossChannelBody.ArgumentName);
+            sb.Append(" a");
             sb.Append(i + 1);
         }
 
         return sb.ToString();
-    }*/
+    }
 
-    public string GetParameterNames(string name, int decrement)
-    {// string.Empty, a1, (a1, a2)
+    public string GetParameterNames()
+    {// a1, a2
         var parameters = this.method.Method_Parameters;
-        var length = parameters.Length - decrement;
-        if (length <= 0)
+        var length = parameters.Length;
+        if (length == 0)
         {
             return string.Empty;
         }
-        else if (length == 1)
-        {
-            return name + "1";
-        }
-        else
-        {
-            var sb = new StringBuilder();
-            sb.Append("(");
-            for (var i = 0; i < length; i++)
-            {
-                if (i != 0)
-                {
-                    sb.Append(", ");
-                }
 
-                sb.Append(name);
-                sb.Append(i + 1);
+        var sb = new StringBuilder();
+        for (var i = 0; i < length; i++)
+        {
+            if (i != 0)
+            {
+                sb.Append(", ");
             }
 
-            sb.Append(")");
-            return sb.ToString();
+            sb.Append('a');
+            sb.Append(i + 1);
         }
+
+        return sb.ToString();
     }
 }

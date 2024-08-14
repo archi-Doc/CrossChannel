@@ -192,7 +192,9 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         ssb.AddUsing("System");
         ssb.AddUsing("System.Collections.Generic");
         ssb.AddUsing("System.Diagnostics.CodeAnalysis");
+        ssb.AddUsing("System.Linq");
         ssb.AddUsing("System.Runtime.CompilerServices");
+        ssb.AddUsing("System.Threading.Tasks");
         ssb.AddUsing("CrossChannel");
 
         ssb.AppendLine("#nullable enable", false);
