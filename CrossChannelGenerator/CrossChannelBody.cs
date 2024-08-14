@@ -1,7 +1,10 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
+using System.Text;
+using System.Threading;
 using Arc.Visceral;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 
 #pragma warning disable RS2008
 #pragma warning disable SA1310 // Field names should not contain underscore
@@ -12,6 +15,7 @@ namespace CrossChannel.Generator;
 
 public class CrossChannelBody : VisceralBody<CrossChannelObject>
 {
+    public const string Name = "CrossChannel";
     public const string GeneratorName = "CrossChannelGenerator";
     public const string InitializerName = "__InitializeCC__";
 
@@ -71,25 +75,114 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 
     public void Generate(IGeneratorInformation generator, CancellationToken cancellationToken)
     {
-        var assemblyId = string.Empty; // Assembly ID
-        if (!string.IsNullOrEmpty(generator.AssemblyName))
-        {
-            assemblyId = VisceralHelper.AssemblyNameToIdentifier("_" + generator.AssemblyName);
-        }
-
-        this.GenerateMain(generator, assemblyId);
-        this.GenerateLoader(generator, assemblyId);
+        var rootObject = this.GenerateMain(generator, cancellationToken);
+        this.GenerateInitializer(generator, rootObject, cancellationToken);
     }
 
-    public void GenerateLoader(IGeneratorInformation generator, string assemblyId)
+    public List<CrossChannelObject> GenerateMain(IGeneratorInformation generator, CancellationToken cancellationToken)
+    {
+        ScopingStringBuilder ssb = new();
+        List<CrossChannelObject> rootObjects = new();
+
+        // Namespace
+        foreach (var x in this.Namespaces)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            this.GenerateHeader(ssb);
+            ssb.AppendLine($"namespace {x.Key};");
+
+            rootObjects.AddRange(x.Value); // For loader generation
+
+            var firstFlag = true;
+            foreach (var y in x.Value)
+            {
+                if (firstFlag)
+                {
+                    firstFlag = false;
+                }
+                else
+                {
+                    ssb.AppendLine();
+                }
+
+                y.Generate(ssb); // Primary objects
+            }
+
+            var result = ssb.Finalize();
+
+            if (generator.GenerateToFile && generator.TargetFolder != null && Directory.Exists(generator.TargetFolder))
+            {
+                this.StringToFile(result, Path.Combine(generator.TargetFolder, $"gen.{Name}.{x.Key}.cs"));
+            }
+            else
+            {
+                this.Context?.AddSource($"gen.{Name}.{x.Key}", SourceText.From(result, Encoding.UTF8));
+                this.Context2?.AddSource($"gen.{Name}.{x.Key}", SourceText.From(result, Encoding.UTF8));
+            }
+        }
+
+        return rootObjects;
+    }
+
+    public void GenerateInitializer(IGeneratorInformation generator, List<CrossChannelObject> rootObjects, CancellationToken cancellationToken)
     {
         var ssb = new ScopingStringBuilder();
         this.GenerateHeader(ssb);
-    }
 
-    public void GenerateMain(IGeneratorInformation generator, string assemblyId)
-    {
-        ScopingStringBuilder ssb = new();
+        using (var scopeFormatter = ssb.ScopeNamespace($"{Name}.Generated"))
+        {
+            using (var methods = ssb.ScopeBrace("internal static class Root"))
+            {
+                CrossChannelObject.GenerateInitializer(ssb, null, rootObjects);
+            }
+        }
+
+        // Namespace
+        var @namespace = Name;
+        var assemblyId = string.Empty; // Assembly ID
+        if (!string.IsNullOrEmpty(generator.CustomNamespace))
+        {// Custom namespace.
+            @namespace = generator.CustomNamespace;
+        }
+        else
+        {// Other (Apps)
+            // assemblyId = "_" + generator.AssemblyId.ToString("x");
+            if (!string.IsNullOrEmpty(generator.AssemblyName))
+            {
+                assemblyId = VisceralHelper.AssemblyNameToIdentifier("_" + generator.AssemblyName);
+            }
+        }
+
+        ssb.AppendLine();
+        using (var scopeCrossLink = ssb.ScopeNamespace(@namespace!))
+        {
+            using (var scopeClass = ssb.ScopeBrace($"public static class {Name}Module" + assemblyId))
+            {
+                ssb.AppendLine("private static bool Initialized;");
+                ssb.AppendLine();
+                ssb.AppendLine("[ModuleInitializer]");
+
+                using (var scopeMethod = ssb.ScopeBrace("public static void Initialize()"))
+                {
+                    ssb.AppendLine("if (Initialized) return;");
+                    ssb.AppendLine("Initialized = true;");
+
+                    ssb.AppendLine($"{Name}.Generated.Root.{CrossChannelBody.InitializerName}();");
+                }
+            }
+        }
+
+        var result = ssb.Finalize();
+
+        if (generator.GenerateToFile && generator.TargetFolder != null && Directory.Exists(generator.TargetFolder))
+        {
+            this.StringToFile(result, Path.Combine(generator.TargetFolder, $"gen.{Name}.cs"));
+        }
+        else
+        {
+            this.Context?.AddSource($"gen.{Name}", SourceText.From(result, Encoding.UTF8));
+            this.Context2?.AddSource($"gen.{Name}", SourceText.From(result, Encoding.UTF8));
+        }
     }
 
     private void GenerateHeader(ScopingStringBuilder ssb)

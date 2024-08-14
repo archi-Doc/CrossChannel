@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis;
 #pragma warning disable SA1202 // Elements should be ordered by access
 #pragma warning disable SA1204 // Static elements should appear before instance elements
 #pragma warning disable SA1602 // Enumeration items should be documented
+#pragma warning disable SA1611
 
 namespace CrossChannel.Generator;
 
@@ -23,6 +24,7 @@ public enum CrossChannelObjectFlag
     Configured = 1 << 0,
     RelationConfigured = 1 << 1,
     Checked = 1 << 2,
+    InitializerGenerated = 1 << 3,
 
     RadioServiceInterface = 1 << 10, // RadioServiceInterface
 }
@@ -238,10 +240,129 @@ public class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
         }
     }
 
-    internal void GenerateFrontend(ScopingStringBuilder ssb)
+    public static void GenerateInitializer(ScopingStringBuilder ssb, CrossChannelObject? parent, List<CrossChannelObject> list)
     {
-        using (var cls = ssb.ScopeBrace($"private class {this.ClassName} : {this.FullName}")) // {this.AccessibilityName}
+        if (parent?.Generics_Kind == VisceralGenericsKind.OpenGeneric)
         {
+            return;
         }
+
+        var list2 = list.SelectMany(x => x.ConstructedObjects).Where(x => x.RadioServiceInterfaceAttribute != null).ToArray();
+
+        if (parent != null)
+        {
+            parent.ObjectFlag |= CrossChannelObjectFlag.InitializerGenerated;
+        }
+
+        using (var m = ssb.ScopeBrace($"internal static void {CrossChannelBody.InitializerName}()"))
+        {
+            foreach (var x in list2)
+            {
+                if (x.RadioServiceInterfaceAttribute == null)
+                {
+                    continue;
+                }
+
+                if (x.Generics_Kind != VisceralGenericsKind.OpenGeneric)
+                {// Register fixed types.
+                    x.GenerateRegister(ssb, false);
+                }
+            }
+
+            foreach (var x in list.Where(a => a.ObjectFlag.HasFlag(CrossChannelObjectFlag.InitializerGenerated)))
+            {// Children
+                ssb.AppendLine($"{x.FullName}.{CrossChannelBody.InitializerName}();");
+            }
+        }
+    }
+
+    /// <summary>
+    /// The main code generation process for the target object include<br/>
+    /// 1. Generating specific code with GenerateOutObject() and GenerateInObject().<br/>
+    /// 2. Processing child objects.<br/>
+    /// 3. Generating an initializer with GenerateInitializer().
+    /// </summary>
+    internal void Generate(ScopingStringBuilder ssb)
+    {
+        if (this.ConstructedObjects == null)
+        {
+            return;
+        }
+
+        /*else if (this.IsAbstractOrInterface)
+        {
+            return;
+        }*/
+
+        this.GenerateOutObject(ssb);
+        if (!this.IsPartial)
+        {
+            return;
+        }
+
+        using (var cls = ssb.ScopeBrace($"{this.AccessibilityName} partial {this.KindName} {this.LocalName}"))
+        {
+            if (this.RadioServiceInterfaceAttribute is not null)
+            {
+                this.GenerateInObject(ssb);
+            }
+
+            if (this.Children?.Count > 0)
+            {// Generate children and loader.
+                var isFirst = true;
+                foreach (var x in this.Children)
+                {
+                    if (isFirst)
+                    {
+                        isFirst = false;
+                    }
+                    else
+                    {
+                        ssb.AppendLine();
+                    }
+
+                    x.Generate(ssb);
+                }
+
+                GenerateInitializer(ssb, this, this.Children);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Out-object code generation.
+    /// </summary>
+    internal void GenerateOutObject(ScopingStringBuilder ssb)
+    {
+    }
+
+    /// <summary>
+    /// In-object code generation.
+    /// </summary>
+    internal void GenerateInObject(ScopingStringBuilder ssb)
+    {
+        if (this.Generics_Kind == VisceralGenericsKind.OpenGeneric)
+        {
+            this.GenerateRegister(ssb, true);
+        }
+    }
+
+    /// <summary>
+    /// Generate the registration code.
+    /// </summary>
+    internal void GenerateRegister(ScopingStringBuilder ssb, bool generateMethod)
+    {
+        if (this.RadioServiceInterfaceAttribute is null)
+        {
+            return;
+        }
+
+        ScopingStringBuilder.IScope? scope = generateMethod ? ssb.ScopeBrace($"public static void {CrossChannelBody.InitializerName}()") : null;
+
+        ssb.AppendLine("// test");
+
+        // ssb.AppendLine($"MachineRegistry.Register(new({machineType}, {constructor}, {serializable}, {identifierType}, {numberOfTasks}));");
+
+        scope?.Dispose();
     }
 }

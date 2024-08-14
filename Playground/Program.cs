@@ -40,7 +40,7 @@ public partial class TestService : ITestService
     }
 
     [RadioServiceInterface]
-    private interface ABC : IRadioService
+    private partial interface ABC : IRadioService
     {
         internal static void __InitializeCC__()
         {
