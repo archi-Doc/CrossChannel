@@ -3,7 +3,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace CrossChannel;
+namespace CrossChannel.Obsolete;
 
 internal static partial class Extensions
 {

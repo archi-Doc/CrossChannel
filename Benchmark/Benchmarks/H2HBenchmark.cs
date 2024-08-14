@@ -3,6 +3,7 @@
 using System.Linq;
 using BenchmarkDotNet.Attributes;
 using CrossChannel;
+using CrossChannel.Obsolete;
 using MessagePipe;
 using Microsoft.Extensions.DependencyInjection;
 using PubSub;

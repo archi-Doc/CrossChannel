@@ -4,7 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using Arc.WeakDelegate;
 
-namespace CrossChannel;
+namespace CrossChannel.Obsolete;
 
 /// <summary>
 /// Channel class to receive a message.<br/>

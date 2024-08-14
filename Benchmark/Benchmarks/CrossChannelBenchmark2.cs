@@ -2,7 +2,7 @@
 
 using System.Collections.Generic;
 using BenchmarkDotNet.Attributes;
-using CrossChannel;
+using CrossChannel.Obsolete;
 
 namespace Benchmark;
 

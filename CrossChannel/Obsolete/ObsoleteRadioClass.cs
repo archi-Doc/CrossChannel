@@ -4,7 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
-namespace CrossChannel;
+namespace CrossChannel.Obsolete;
 
 /// <summary>
 /// RadioClass is a non-static version of <see cref="ObsoleteRadio"/>.<br/>

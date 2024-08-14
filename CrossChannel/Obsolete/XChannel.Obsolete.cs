@@ -8,7 +8,7 @@ using System.Linq;
 using System.Threading;
 using Arc.WeakDelegate;
 
-namespace CrossChannel;
+namespace CrossChannel.Obsolete;
 
 /*internal class XChannel_Key<TKey, TMessage> : XChannel
     where TKey : notnull
