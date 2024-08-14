@@ -361,10 +361,10 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
         ScopingStringBuilder.IScope? scope = generateMethod ? ssb.ScopeBrace($"public static void {CrossChannelBody.InitializerName}()") : null;
 
-        // RadioRegistry.Register(new(typeof(TestService.ABC), x => new TestService.ABCBroker(x)));
-        ssb.AppendLine($"// Register {this.ClassName}");
+        // ssb.AppendLine($"// Register {this.ClassName}");
 
-        // ssb.AppendLine($"MachineRegistry.Register(new({machineType}, {constructor}, {serializable}, {identifierType}, {numberOfTasks}));");
+        var @namespace = this.ContainingObject is null ? this.Namespace : this.ContainingObject.FullName;
+        ssb.AppendLine($"RadioRegistry.Register(new(typeof({this.FullName}), x => new {@namespace}.{this.ClassName}(x)));");
 
         scope?.Dispose();
     }

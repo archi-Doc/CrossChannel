@@ -1,5 +1,7 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
+using System.Text;
+
 namespace CrossChannel;
 
 /// <summary>
@@ -100,6 +102,30 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
             }
 
             return hash;
+        }
+    }
+
+    public override string ToString()
+    {
+        if (this.IsEmpty)
+        {// 0: Empty
+            return "[]";
+        }
+        else if (this.HasSingleResult)
+        {// 1: Single
+            return $"[{this.result!.ToString()}]";
+        }
+        else
+        {// >1: Array
+            var sb = new StringBuilder();
+            sb.Append('[');
+            foreach (var item in this.resultArray!)
+            {
+                sb.Append($"{item?.ToString()}, ");
+            }
+
+            sb.Append(']');
+            return sb.ToString();
         }
     }
 

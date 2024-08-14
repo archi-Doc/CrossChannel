@@ -25,16 +25,16 @@ public static class NewRadio
     public static Channel<TService>.Link Open<TService>(TService instance)
         where TService : class, IRadioService
     {
-        var xchannel = ChannelCache<TService>.Channel;
-        return xchannel.Open(instance);
+        var channel = ChannelCache<TService>.Channel;
+        return channel.Open(instance);
     }
 
     public static Channel<TService>.Link Open<TService, TKey>(TService instance, TKey key)
         where TService : class, IRadioService
         where TKey : notnull
     {
-        var xchannel = ChannelCache<TService, TKey>.Channel(key);
-        return xchannel.Open(instance);
+        var channel = ChannelCache<TService, TKey>.Channel(key);
+        return channel.Open(instance);
     }
 
     public static TService Send<TService>()

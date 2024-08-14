@@ -73,7 +73,6 @@ public partial class CrossChannelObject
         ssb.AppendLine("var count = 0;");
 
         var forScope = this.Generate_ForEach(ssb);
-        ssb.AppendLine($"instance.{method.SimpleName}({method.GetParameterNames()});");
         using (ssb.ScopeBrace($"if (instance.{method.SimpleName}({method.GetParameterNames()}).TryGetSingleResult(out var r))"))
         {
             using (ssb.ScopeBrace("if (count == 0)"))
@@ -117,8 +116,8 @@ public partial class CrossChannelObject
 
         ssb.AppendLine("if (countHint != count) Array.Resize(ref tasks, count);");
         ssb.AppendLine("if (count == 0) return;");
-        ssb.AppendLine("else if (count == 1) await tasks[0];");
-        ssb.AppendLine("else await Task.WhenAll(tasks);");
+        ssb.AppendLine("else if (count == 1) await tasks[0].ConfigureAwait(false);");
+        ssb.AppendLine("else await Task.WhenAll(tasks).ConfigureAwait(false);");
     }
 
     private void GenerateBrokerMethod_TaskRadioResult(ScopingStringBuilder ssb, ServiceMethod method)
@@ -135,8 +134,8 @@ public partial class CrossChannelObject
 
         ssb.AppendLine("if (countHint != count) Array.Resize(ref tasks, count);");
         ssb.AppendLine("if (count == 0) return default;");
-        ssb.AppendLine("else if (count == 1) return await tasks[0];");
-        ssb.AppendLine("else return new((await Task.WhenAll(tasks)).Select(x => x.TryGetSingleResult(out var r) ? r : default).ToArray());");
+        ssb.AppendLine("else if (count == 1) return await tasks[0].ConfigureAwait(false);");
+        ssb.AppendLine("else return new((await Task.WhenAll(tasks).ConfigureAwait(false)).Select(x => x.TryGetSingleResult(out var r) ? r : default).ToArray());");
     }
 
     private void Generate_GetList(ScopingStringBuilder ssb)
