@@ -26,6 +26,8 @@ public class H2HBenchmark
 {
     public ServiceProvider Provider { get; }
 
+    private ISimpleService simpleService = new SimpleService();
+
     public H2HBenchmark()
     {
         var sc = new ServiceCollection();
@@ -70,7 +72,7 @@ public class H2HBenchmark
     [Benchmark]
     public void CC2_OpenSend()
     {
-        using (NewRadio.Open<ISimpleService>(new SimpleService()))
+        using (NewRadio.Open(this.simpleService))
         {
             NewRadio.Send<ISimpleService>().Test(1);
         }
@@ -81,7 +83,7 @@ public class H2HBenchmark
     [Benchmark]
     public void CC2_OpenSend8()
     {
-        using (NewRadio.Open<ISimpleService>(new SimpleService()))
+        using (NewRadio.Open(this.simpleService))
         {
             NewRadio.Send<ISimpleService>().Test(1);
             NewRadio.Send<ISimpleService>().Test(2);
