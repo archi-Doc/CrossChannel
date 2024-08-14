@@ -15,7 +15,7 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        DebugRun<RadioResultTest>();
+        DebugRun<H2HBenchmark>();
 
         // var summary = BenchmarkRunner.Run<ReconstructTest>();
         var switcher = new BenchmarkSwitcher(new[]

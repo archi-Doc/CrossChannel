@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CrossChannel\CrossChannel.csproj" />
+    <ProjectReference Include="..\CrossChannelGenerator\CrossChannelGenerator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
   </ItemGroup>
 
   <ItemGroup>

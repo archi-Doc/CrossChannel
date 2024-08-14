@@ -8,6 +8,19 @@ using PubSub;
 
 namespace Benchmark;
 
+[RadioServiceInterface]
+public interface ISimpleService : IRadioService
+{
+    void Test(int x);
+}
+
+public class SimpleService : ISimpleService
+{
+    public void Test(int x)
+    {
+    }
+}
+
 [Config(typeof(BenchmarkConfig))]
 public class H2HBenchmark
 {
@@ -49,6 +62,35 @@ public class H2HBenchmark
             Radio.Send<int>(6);
             Radio.Send<int>(7);
             Radio.Send<int>(8);
+        }
+
+        return;
+    }
+
+    [Benchmark]
+    public void CC2_OpenSend()
+    {
+        using (NewRadio.Open<ISimpleService>(new SimpleService()))
+        {
+            NewRadio.Send<ISimpleService>().Test(1);
+        }
+
+        return;
+    }
+
+    [Benchmark]
+    public void CC2_OpenSend8()
+    {
+        using (NewRadio.Open<ISimpleService>(new SimpleService()))
+        {
+            NewRadio.Send<ISimpleService>().Test(1);
+            NewRadio.Send<ISimpleService>().Test(2);
+            NewRadio.Send<ISimpleService>().Test(3);
+            NewRadio.Send<ISimpleService>().Test(4);
+            NewRadio.Send<ISimpleService>().Test(5);
+            NewRadio.Send<ISimpleService>().Test(6);
+            NewRadio.Send<ISimpleService>().Test(7);
+            NewRadio.Send<ISimpleService>().Test(8);
         }
 
         return;
@@ -114,7 +156,7 @@ public class H2HBenchmark
         return;
     }
 
-    [Benchmark]
+    /*[Benchmark]
     public void CC_OpenSend_Key()
     {
         using (var d = Radio.OpenKey<int, int>(3, x => { }))
@@ -174,5 +216,5 @@ public class H2HBenchmark
         }
 
         return;
-    }
+    }*/
 }
