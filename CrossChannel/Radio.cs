@@ -51,6 +51,15 @@ public static class Radio
         return ChannelCache<TService, TKey>.GetOrEmpty(key).Broker;
     }
 
+    public static Channel<TService> GetChannel<TService>()
+        where TService : class, IRadioService
+        => ChannelCache<TService>.Channel;
+
+    public static bool TryGetChannel<TService, TKey>(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
+        where TService : class, IRadioService
+        where TKey : notnull
+        => ChannelCache<TService, TKey>.TryGet(key, out channel);
+
     #region Cache
 
     internal static class ChannelCache<TService>
@@ -82,6 +91,8 @@ public static class Radio
         public static Channel<TService> GetOrAdd(TKey key) => dictionary.GetOrAdd(key, x => new());
 
         public static Channel<TService> GetOrEmpty(TKey key) => dictionary.TryGetValue(key, out var channel) ? channel : empty;
+
+        public static bool TryGet(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel) => dictionary.TryGetValue(key, out channel);
     }
 
     #endregion

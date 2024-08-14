@@ -16,11 +16,13 @@ public class StaticTest
     {
         using (Radio.Open<ITestService>(new TestService()))
         {
+            Radio.GetChannel<ITestService>().Count.Is(1);
             Radio.Send<ITestService>().Double(1).SequenceEqual([2]).IsTrue();
             Radio.Send<ITestService>().Double(2).SequenceEqual([4]).IsTrue();
 
             using (Radio.Open<ITestService>(new TestService()))
             {
+                Radio.GetChannel<ITestService>().Count.Is(2);
                 Radio.Send<ITestService>().Double(1).SequenceEqual([2, 2]).IsTrue();
                 Radio.Send<ITestService>().Double(2).SequenceEqual([4, 4]).IsTrue();
             }
@@ -28,6 +30,7 @@ public class StaticTest
             Radio.Send<ITestService>().Double(3).SequenceEqual([6]).IsTrue();
         }
 
+        Radio.GetChannel<ITestService>().Count.Is(0);
         Radio.Send<ITestService>().Double(4).SequenceEqual([]).IsTrue();
     }
 
@@ -36,9 +39,14 @@ public class StaticTest
     {
         using (Radio.Open<ITestService, int>(new TestService(), 1))
         {
+            Radio.GetChannel<ITestService>().Count.Is(0);
             Radio.Send<ITestService>().Double(1).SequenceEqual([]).IsTrue();
             Radio.Send<ITestService, int>(0).Double(2).SequenceEqual([]).IsTrue();
             Radio.Send<ITestService, int>(1).Double(2).SequenceEqual([4]).IsTrue();
+            if (Radio.TryGetChannel<ITestService, int>(1, out var channel))
+            {
+                channel.Count.Is(1);
+            }
 
             using (Radio.Open<ITestService, int>(new TestService(), 2))
             {

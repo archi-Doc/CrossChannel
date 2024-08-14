@@ -83,7 +83,7 @@ public class Channel<TService>
             this.Initialize();
         }
 
-        // public int Count => this.count; // Deprecated because it may lead to inconsistent results between 'count' and 'values'.
+        public int Count => this.count; // It may lead to inconsistent results between 'count' and 'values'.
 
         internal int CleanupCount { get; set; } // no lock, not thread safe
 
@@ -254,6 +254,8 @@ public class Channel<TService>
     {
         return new Link(this, instance, weakReference);
     }
+
+    public int Count => this.list.Count;
 
     public (Link?[] Array, int CountHint) InternalGetList() => this.list.GetValuesAndCountHint();
 }
