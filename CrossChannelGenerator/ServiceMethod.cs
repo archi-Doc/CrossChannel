@@ -14,6 +14,7 @@ public class ServiceMethod
     public const string RadioResultName = "CrossChannel.RadioResult<T>";
     public const string TaskName = "System.Threading.Tasks.Task";
     public const string TaskRadioResultName = "System.Threading.Tasks.Task<TResult>";
+    public const string CancellationTokenName = "System.Threading.CancellationToken";
 
     public enum Type
     {
@@ -82,6 +83,8 @@ public class ServiceMethod
         this.ReturnObject = returnObject;
         this.ReturnType = returnType;
         this.ResultObject = resultObject;
+
+        // this.CancellationTokenIndex = this.method.Method_Parameters.IndexOf(CancellationTokenName);
     }
 
     public Location Location => this.method.Location;
@@ -101,6 +104,8 @@ public class ServiceMethod
     public CrossChannelObject? ResultObject { get; private set; }
 
     public string ResultName => this.ResultObject?.FullName ?? string.Empty;
+
+    // public int CancellationTokenIndex { get; private set; }
 
     private CrossChannelObject method;
 

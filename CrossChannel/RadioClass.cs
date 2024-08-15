@@ -71,12 +71,12 @@ public class RadioClass
         return dictionary.GetOrAdd(key, x => new Channel<TService>());
     }
 
-    public Channel<TService> GetOrEmpty<TService, TKey>(TKey key)
+    /*public Channel<TService> GetOrEmpty<TService, TKey>(TKey key)
         where TService : class, IRadioService
         where TKey : notnull
     {
         var dictionary = (ConcurrentDictionary<TKey, Channel<TService>>)this.typeToDictionary.GetOrAdd(typeof(TService), x => new ConcurrentDictionary<TKey, Channel<TService>>());
     }
 
-    public static bool TryGet(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel) => dictionary.TryGetValue(key, out channel);
+    public static bool TryGet(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel) => dictionary.TryGetValue(key, out channel);*/
 }

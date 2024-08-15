@@ -26,7 +26,7 @@ public class MessageService : IMessageService
     }
 }
 
-internal static class Sample
+internal static class Example
 {
     public static void QuickStart()
     {
@@ -83,41 +83,41 @@ internal static class Sample
 
         Console.WriteLine();
 
-        using (Radio.Open<ITestService>(new TestService()))
+        using (Radio.Open<IExampleService>(new ExampleService()))
         {
-            var result = Radio.Send<ITestService>().Double(2);
+            var result = Radio.Send<IExampleService>().Double(2);
             Console.WriteLine($"Double: {result.ToString()}");
 
-            using (Radio.Open<ITestService>(new TestService()))
+            using (Radio.Open<IExampleService>(new ExampleService()))
             {
-                result = Radio.Send<ITestService>().Double(3);
+                result = Radio.Send<IExampleService>().Double(3);
                 Console.WriteLine($"Double: {result.ToString()}");
             }
 
-            await Radio.Send<ITestService>().AsyncMethod(1000);
+            await Radio.Send<IExampleService>().AsyncMethod(1000);
         }
     }
 }
 
 
 [RadioServiceInterface]
-public interface ITestService : IRadioService
+public interface IExampleService : IRadioService
 {
     RadioResult<int> Double(int x); // Define a function with a return value. To share the return value on the receiving side as well, the type must be either void, Task, RadioResult<T>, or Task<RadioResult<T>>.
 
     Task AsyncMethod(int delay);
 }
 
-public class TestService : ITestService
+public class ExampleService : IExampleService
 {// Implement the interface.
-    public TestService()
+    public ExampleService()
     {
     }
 
-    RadioResult<int> ITestService.Double(int x)
+    RadioResult<int> IExampleService.Double(int x)
         => new(x * 2);
 
-    async Task ITestService.AsyncMethod(int delay)
+    async Task IExampleService.AsyncMethod(int delay)
     {
         await Task.Delay(delay);
 

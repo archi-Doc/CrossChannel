@@ -12,7 +12,9 @@ class Program
         Console.WriteLine("CrossChannel Sample:");
         Console.WriteLine();
 
-        // Sample.QuickStart();
-        await Sample.Other();
+        // Example.QuickStart();
+        // await Example.Other();
+
+        await Test.Test1();
     }
 }
