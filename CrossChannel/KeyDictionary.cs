@@ -6,19 +6,23 @@ namespace CrossChannel;
 
 #pragma warning disable SA1401 // Fields should be private
 
-internal class KeyDictionary<TKey>
+internal class KeyDictionary<TService, TKey>
+    where TService : class, IRadioService
     where TKey : notnull
 {
-
     public class Item
     {
-        internal object? Channel;
-        private int nodeINdex;
+        internal Channel<TService> Channel;
+
+        internal int NodeIndex;
+
+        public Item(object syncObject)
+        {
+            this.Channel = new(syncObject);
+        }
     }
 
-    private Item newItem = new();
     private readonly UnorderedMap<TKey, Item> keyToItem = new();
-    private readonly LinkedList<Item> emptyItems = new();
 
     public KeyDictionary()
     {
@@ -27,28 +31,36 @@ internal class KeyDictionary<TKey>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGet(TKey key, [MaybeNullWhen(false)] out Item item)
     {
-        return this.keyToItem.TryGetValue(key, out item);
+        lock (this.keyToItem)
+        {
+            return this.keyToItem.TryGetValue(key, out item);
+        }
     }
 
     public Item GetOrAdd(TKey key)
     {
-        (var nodeINdex, var newlyAdded) = this.keyToItem.Add(key, this.newItem);
-        if (newlyAdded)
+        lock (this.keyToItem)
         {
-        }
-        if (this.keyToItem.TryGetValue(key, out var item))
-        {
-            return item;
-        }
-        else
-        {
-            item = new();
-
+            if (this.keyToItem.TryGetValue(key, out var item))
+            {
+                return item;
+            }
+            else
+            {
+                item = new(this.keyToItem);
+                (var nodeINdex, var newlyAdded) = this.keyToItem.Add(key, item);
+                item.NodeIndex = nodeINdex;
+                return item;
+            }
         }
     }
 
-    public void TryTrim(Item item)
+    public Remove(Item item)
     {
-
+        lock (this.keyToItem)
+        {
+            this.keyToItem.RemoveNode(item.NodeIndex);
+            item.Channel.
+        }
     }
 }

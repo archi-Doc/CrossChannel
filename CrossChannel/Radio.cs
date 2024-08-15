@@ -79,12 +79,10 @@ public static class Radio
         where TKey : notnull
     {
         private static readonly ConcurrentDictionary<TKey, Channel<TService>> dictionary;
-        private static readonly Channel<TService> empty;
 
         static ChannelCache()
         {
             dictionary = new();
-            empty = new();
         }
 
         public static Channel<TService> GetOrAdd(TKey key) => dictionary.GetOrAdd(key, x => new());
