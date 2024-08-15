@@ -30,11 +30,6 @@ public class Channel<TService>
             {
                 this.strongReference = instance;
             }
-
-            lock (this.channel.syncObject)
-            {
-                this.channel.list.Add(this);
-            }
         }
 
         public bool TryGetInstance([MaybeNullWhen(false)] out TService instance)
@@ -51,18 +46,10 @@ public class Channel<TService>
         }
 
         public void Close()
-            => this.Dispose();
+            => this.channel.Remove(this);
 
         public void Dispose()
-        {
-            lock (this.channel.syncObject)
-            {
-                if (this.Index != -1)
-                {
-                    this.channel.list.Remove(this); // this.Index is set to -1
-                }
-            }
-        }
+            => this.channel.Remove(this);
     }
 
     #endregion
@@ -84,8 +71,6 @@ public class Channel<TService>
         }
 
         public int Count => this.count; // It may lead to inconsistent results between 'count' and 'values'.
-
-        internal int CleanupCount { get; set; } // no lock, not thread safe
 
         public Link?[] GetValues() => this.values; // no lock, safe for iterate
 
@@ -129,33 +114,31 @@ public class Channel<TService>
             }
         }
 
-        public bool Remove(Link value)
+        public void Remove(Link value)
         {
             if (this.IsDisposed)
             {
-                return true;
+                return;
             }
 
             var index = value.Index;
             ref var v = ref this.values[index];
             if (v == null)
             {
-                throw new KeyNotFoundException($"key index {index} is not found.");
+                return;
             }
 
             v = default(Link);
             this.freeIndex.Enqueue(index);
             value.Index = -1;
             this.count--;
-
-            return this.count == 0;
         }
 
         /// <summary>
         /// Shrink the list when there are too many unused objects.
         /// </summary>
         /// <returns>true if the list is empty.</returns>
-        public bool TryShrink()
+        public bool TryTrim()
         {
             if (this.count == 0)
             {// Empty
@@ -242,20 +225,65 @@ public class Channel<TService>
 
     internal TService Broker { get; }
 
-    private readonly object syncObject = new(); // -> Lock
+    private readonly object syncObject; // -> Lock
     private readonly FastList list = new();
+    private int trimCount;
+    private int checkReferenceCount;
 
-    public Channel()
+    public Channel(object? syncObject)
     {
+        this.syncObject = syncObject ?? new object();
         this.Broker = (TService)RadioRegistry.Get<TService>().Constructor(this);
     }
 
     public Link Open(TService instance, bool weakReference)
     {
-        return new Link(this, instance, weakReference);
+        var link = new Link(this, instance, weakReference);
+        lock (this.syncObject)
+        {
+            this.list.Add(link);
+            if (this.trimCount++ >= RadioConstants.ChannelTrimThreshold)
+            {
+                this.trimCount = 0;
+                this.TrimInternal();
+            }
+        }
+
+        return link;
     }
 
     public int Count => this.list.Count;
 
     public (Link?[] Array, int CountHint) InternalGetList() => this.list.GetValuesAndCountHint();
+
+    private void Remove(Link link)
+    {
+        lock (this.syncObject)
+        {
+            if (link.Index != -1)
+            {
+                this.list.Remove(link); // this.Index is set to -1
+            }
+        }
+    }
+
+    private void TrimInternal()
+    {
+        if (this.checkReferenceCount++ >= RadioConstants.ChannelCheckReferenceThreshold)
+        {
+            this.checkReferenceCount = 0;
+
+            var array = this.list.GetValues();
+            for (var i = 0; i < array.Length; i++)
+            {
+                if (array[i] is { } link
+                    && !link.TryGetInstance(out _))
+                {
+                    this.list.Remove(link);
+                }
+            }
+        }
+
+        this.list.TryTrim();
+    }
 }

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace XUnitTest;
 
-public class CleanupTest
+public class TrimTest
 {
     [Fact]
     public void WeakReference()
@@ -21,18 +21,19 @@ public class CleanupTest
 
         radio.Send<ITestService>().Double(1).Count.Is(0);
 
-        for (var i = 0; i < RadioConstants.CleanupListThreshold; i++)
+        for (var i = 0; i < RadioConstants.ChannelTrimThreshold; i++)
         {
             CreateChannel();
         }
 
+        radio.GetChannel<ITestService>().Count.Is(RadioConstants.ChannelTrimThreshold);
         GC.Collect(); // Empty list
         radio.Send<ITestService>().Double(1).Count.Is(0);
 
-        var objects = Enumerable.Repeat(new TestService(), RadioConstants.CleanupListThreshold).ToArray();
+        var objects = Enumerable.Repeat(new TestService(), RadioConstants.ChannelTrimThreshold).ToArray();
         var number = 0;
 
-        for (var i = 0; i < RadioConstants.CleanupListThreshold; i++)
+        for (var i = 0; i < RadioConstants.ChannelTrimThreshold; i++)
         {
             if (i % 3 == 0)
             {

@@ -30,7 +30,7 @@ public class ObsoleteRadioClass
             typeof(TMessage),
             x => new FastList<XChannel_Message<TMessage>>());
 
-        if (list.CleanupCount++ >= RadioConstants.CleanupListThreshold)
+        if (list.CleanupCount++ >= RadioConstants.ChannelTrimThreshold)
         {
             lock (list)
             {
@@ -119,7 +119,7 @@ public class ObsoleteRadioClass
             new Identifier_MessageResult(typeof(TMessage), typeof(TResult)),
             x => new FastList<XChannel_MessageResult<TMessage, TResult>>());
 
-        if (list.CleanupCount++ >= RadioConstants.CleanupListThreshold)
+        if (list.CleanupCount++ >= RadioConstants.ChannelTrimThreshold)
         {
             lock (list)
             {
