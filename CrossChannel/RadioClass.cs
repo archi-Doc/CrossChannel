@@ -27,13 +27,13 @@ public class RadioClass
         return channel.Open(instance, weakReference);
     }
 
-    public Channel<TService>.Link Open<TService, TKey>(TService instance, TKey key, bool weakReference = false)
+    /*public Channel<TService>.Link Open<TService, TKey>(TService instance, TKey key, bool weakReference = false)
         where TService : class, IRadioService
         where TKey : notnull
     {
         var xchannel = this.GetChannel<TService, TKey>(key);
         return xchannel.Open(instance, weakReference);
-    }
+    }*/
 
     public TService Send<TService>()
         where TService : class, IRadioService
@@ -41,20 +41,20 @@ public class RadioClass
         return this.GetChannel<TService>().Broker;
     }
 
-    public TService Send<TService, TKey>(TKey key)
+    /*public TService Send<TService, TKey>(TKey key)
         where TService : class, IRadioService
         where TKey : notnull
     {
         return this.GetChannel<TService, TKey>(key).Broker;
-    }
+    }*/
 
     public Channel<TService> GetChannel<TService>()
         where TService : class, IRadioService
     {
-        return (Channel<TService>)this.typeToChannel.GetOrAdd(typeof(TService), x => new Channel<TService>(default));
+        return (Channel<TService>)this.typeToChannel.GetOrAdd(typeof(TService), x => new Channel<TService>());
     }
 
-    public bool TryGetChannel<TService, TKey>(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
+    /*public bool TryGetChannel<TService, TKey>(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
         where TService : class, IRadioService
         where TKey : notnull
     {
@@ -73,9 +73,9 @@ public class RadioClass
 
         channel = default;
         return false;
-    }
+    }*/
 
-    private Channel<TService> GetChannel<TService, TKey>(TKey key)
+    /*private Channel<TService> GetChannel<TService, TKey>(TKey key)
         where TService : class, IRadioService
         where TKey : notnull
     {
@@ -96,5 +96,5 @@ public class RadioClass
 
             return c;
         }
-    }
+    }*/
 }

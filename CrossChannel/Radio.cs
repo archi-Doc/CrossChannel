@@ -79,6 +79,7 @@ public static class Radio
         where TKey : notnull
     {
         private static readonly ConcurrentDictionary<TKey, Channel<TService>> dictionary;
+        private static readonly Channel<TService> empty = new();
 
         static ChannelCache()
         {

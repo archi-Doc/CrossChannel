@@ -6,7 +6,7 @@ namespace CrossChannel;
 
 #pragma warning disable SA1401 // Fields should be private
 
-internal class KeyDictionary<TService, TKey>
+/*internal class KeyDictionary<TService, TKey>
     where TService : class, IRadioService
     where TKey : notnull
 {
@@ -63,4 +63,4 @@ internal class KeyDictionary<TService, TKey>
             item.Channel.
         }
     }
-}
+}*/

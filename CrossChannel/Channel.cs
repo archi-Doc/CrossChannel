@@ -1,6 +1,7 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 using System.Threading;
+using Arc.Collections;
 
 namespace CrossChannel;
 
@@ -225,21 +226,30 @@ public class Channel<TService>
 
     internal TService Broker { get; }
 
-    private readonly object syncObject; // -> Lock
+    private readonly object dualObject; // -> Lock
+    private readonly int nodeIndex;
     private readonly FastList list = new();
     private int trimCount;
     private int checkReferenceCount;
 
-    public Channel(object? syncObject)
+    public Channel()
     {
-        this.syncObject = syncObject ?? new object();
+        this.dualObject = new();
+        this.nodeIndex = -1;
+        this.Broker = (TService)RadioRegistry.Get<TService>().Constructor(this);
+    }
+
+    public Channel(IUnorderedMap map, int nodeIndex)
+    {
+        this.dualObject = map;
+        this.nodeIndex = nodeIndex;
         this.Broker = (TService)RadioRegistry.Get<TService>().Constructor(this);
     }
 
     public Link Open(TService instance, bool weakReference)
     {
         var link = new Link(this, instance, weakReference);
-        lock (this.syncObject)
+        lock (this.dualObject)
         {
             this.list.Add(link);
             if (this.trimCount++ >= RadioConstants.ChannelTrimThreshold)
@@ -258,7 +268,7 @@ public class Channel<TService>
 
     private void Remove(Link link)
     {
-        lock (this.syncObject)
+        lock (this.dualObject)
         {
             if (link.Index != -1)
             {
