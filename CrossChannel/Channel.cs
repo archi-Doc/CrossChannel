@@ -253,7 +253,7 @@ public class Channel<TService>
         {
             this.list.Add(link);
             if (this.trimCount++ >= RadioConstants.ChannelTrimThreshold)
-            {
+            {//
                 this.trimCount = 0;
                 this.TrimInternal();
             }
@@ -273,6 +273,11 @@ public class Channel<TService>
             if (link.Index != -1)
             {
                 this.list.Remove(link); // this.Index is set to -1
+            }
+
+            if (this.nodeIndex != -1)
+            {
+                ((IUnorderedMap)this.dualObject).RemoveNode(this.nodeIndex);
             }
         }
     }
