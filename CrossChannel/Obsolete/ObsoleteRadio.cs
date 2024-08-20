@@ -23,7 +23,7 @@ public static class ObsoleteRadio // CrossChannel by Romeo
     public static XChannel Open<TMessage>(Action<TMessage> method, object? weakReference = null)
     {
         var list = Cache_Message<TMessage>.List;
-        if (list.CleanupCount++ >= RadioConstants.ChannelTrimThreshold)
+        if (list.CleanupCount++ >= ObsoleteRadioConstants.ChannelTrimThreshold)
         {
             lock (list)
             {
@@ -79,7 +79,7 @@ public static class ObsoleteRadio // CrossChannel by Romeo
         where TKey : notnull
     {
         var collection = Cache_KeyMessage<TKey, TMessage>.Collection;
-        if (collection.CleanupCount++ >= RadioConstants.CleanupDictionaryThreshold)
+        if (collection.CleanupCount++ >= ObsoleteRadioConstants.CleanupDictionaryThreshold)
         {
             lock (collection)
             {
@@ -106,7 +106,7 @@ public static class ObsoleteRadio // CrossChannel by Romeo
     public static XChannel OpenTwoWay<TMessage, TResult>(Func<TMessage, TResult> method, object? weakReference = null)
     {
         var list = Cache_MessageResult<TMessage, TResult>.List;
-        if (list.CleanupCount++ >= RadioConstants.ChannelTrimThreshold)
+        if (list.CleanupCount++ >= ObsoleteRadioConstants.ChannelTrimThreshold)
         {
             lock (list)
             {
@@ -165,7 +165,7 @@ public static class ObsoleteRadio // CrossChannel by Romeo
         where TKey : notnull
     {
         var collection = Cache_KeyMessageResult<TKey, TMessage, TResult>.Collection;
-        if (collection.CleanupCount++ >= RadioConstants.CleanupDictionaryThreshold)
+        if (collection.CleanupCount++ >= ObsoleteRadioConstants.CleanupDictionaryThreshold)
         {
             lock (collection)
             {

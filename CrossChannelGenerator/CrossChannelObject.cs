@@ -364,7 +364,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
         // ssb.AppendLine($"// Register {this.ClassName}");
         var @namespace = this.ContainingObject is null ? this.Namespace : this.ContainingObject.FullName;
         var maxLinks = this.RadioServiceInterfaceAttribute.SingleChannel ? "1" : "int.MaxValue";
-        ssb.AppendLine($"RadioRegistry.Register(new(typeof({this.FullName}), x => new {@namespace}.{this.ClassName}(x), () => new Channel<{this.FullName}>(), (a) => new Channel<{this.FullName}>(a), {maxLinks}));");
+        ssb.AppendLine($"ChannelRegistry.Register(new(typeof({this.FullName}), x => new {@namespace}.{this.ClassName}(x), () => new Channel<{this.FullName}>(), (a) => new Channel<{this.FullName}>(a), {maxLinks}));");
 
         scope?.Dispose();
     }

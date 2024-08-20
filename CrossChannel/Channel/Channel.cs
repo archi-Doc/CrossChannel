@@ -7,6 +7,9 @@ namespace CrossChannel;
 
 public abstract class Channel
 {
+    public const int TrimThreshold = 32;
+    public const int CheckReferenceThreshold = 32;
+
     public int MaxLinks { get; internal set; }
 
     internal int NodeIndex { get; set; }
@@ -250,7 +253,7 @@ public class Channel<TService> : Channel
         this.dualObject = new();
         this.NodeIndex = -1;
 
-        var info = RadioRegistry.Get<TService>();
+        var info = ChannelRegistry.Get<TService>();
         this.MaxLinks = info.MaxLinks;
         this.Broker = (TService)info.NewBroker(this);
     }
@@ -259,7 +262,7 @@ public class Channel<TService> : Channel
     {
         this.dualObject = map;
 
-        var info = RadioRegistry.Get<TService>();
+        var info = ChannelRegistry.Get<TService>();
         this.MaxLinks = info.MaxLinks;
         this.Broker = (TService)info.NewBroker(this);
     }
@@ -275,7 +278,7 @@ public class Channel<TService> : Channel
 
             var link = new Link(this, instance, weakReference);
             this.list.Add(link);
-            if (this.trimCount++ >= RadioConstants.ChannelTrimThreshold)
+            if (this.trimCount++ >= TrimThreshold)
             {
                 this.trimCount = 0;
                 this.TrimInternal();
@@ -309,7 +312,7 @@ public class Channel<TService> : Channel
 
     private void TrimInternal()
     {// lock (this.dualObject) is required
-        if (this.checkReferenceCount++ >= RadioConstants.ChannelCheckReferenceThreshold)
+        if (this.checkReferenceCount++ >= CheckReferenceThreshold)
         {
             this.checkReferenceCount = 0;
 

@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CrossChannel;
 
-public static class RadioRegistry
+public static class ChannelRegistry
 {
     private static ConcurrentDictionary<Type, ChannelInformation> typeToInformation = new();
     // private static ThreadsafeTypeKeyHashtable<ChannelInformation> typeToInformation = new();
@@ -62,7 +62,7 @@ public static class RadioRegistry
         foreach (var x in typeToInformation.Values)
         {// ITestService => Radio.Send<ITestService>() or RadioClass.Send<>()
             // IKeyedService => Radio.Send<ITestService, TKey>(key) or RadioClass
-            // services.Add(new(x.ServiceType, RadioRegistry.Get(x.ServiceType).NewChannel()));
+            // services.Add(new(x.ServiceType, ChannelRegistry.Get(x.ServiceType).NewChannel()));
         }
     }
 }
