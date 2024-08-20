@@ -73,26 +73,7 @@ public static class Radio
     public static bool TryGetChannel<TService, TKey>(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
         where TService : class, IRadioService
         where TKey : notnull
-    {
-        if (!twoTypeToMap.TryGetValue(typeof(TService), typeof(TKey), out var obj) ||
-            obj is not UnorderedMap<TKey, object> map)
-        {
-            channel = default;
-            return false;
-        }
-
-        lock (map)
-        {
-            if (!map.TryGetValue(key, out obj))
-            {
-                channel = default;
-                return false;
-            }
-
-            channel = obj as Channel<TService>;
-            return channel is not null;
-        }
-    }
+        => RadioHelper.TryGetChannel(twoTypeToMap, key, out channel);
 
     /// <summary>
     /// Tries to get the channel for the specified service type and key.
@@ -105,26 +86,7 @@ public static class Radio
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public static bool TryGetChannel<TKey>(Type serviceType, TKey key, [MaybeNullWhen(false)] out Channel channel)
         where TKey : notnull
-    {
-        if (!twoTypeToMap.TryGetValue(serviceType, typeof(TKey), out var obj) ||
-            obj is not UnorderedMap<TKey, object> map)
-        {
-            channel = default;
-            return false;
-        }
-
-        lock (map)
-        {
-            if (!map.TryGetValue(key, out obj))
-            {
-                channel = default;
-                return false;
-            }
-
-            channel = obj as Channel;
-            return channel is not null;
-        }
-    }
+        => RadioHelper.TryGetChannel(twoTypeToMap, serviceType, key, out channel);
 
     /// <summary>
     /// Opens a channel for the specified service type and registers the instance.
@@ -155,23 +117,7 @@ public static class Radio
         where TService : class, IRadioService
         where TKey : notnull
     {
-        var map = (UnorderedMap<TKey, object>)twoTypeToMap.GetOrAdd(typeof(TService), typeof(TKey), (x, y) => new UnorderedMap<TKey, object>());
-
-        lock (map)
-        {
-            Channel<TService>? channel;
-            if (map.TryGetValue(key, out var obj))
-            {
-                channel = (Channel<TService>)obj;
-            }
-            else
-            {
-                channel = new Channel<TService>(map);
-                (channel.NodeIndex, _) = map.Add(key, channel);
-            }
-
-            return channel.Open(instance, weakReference);
-        }
+        return RadioHelper.GetOrAddChannel(twoTypeToMap, instance, key).Open(instance, weakReference);
     }
 
     /// <summary>

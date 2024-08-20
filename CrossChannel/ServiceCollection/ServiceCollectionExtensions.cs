@@ -6,6 +6,11 @@ namespace CrossChannel;
 
 public static class ServiceCollectionExtensions
 {
+    /// <summary>
+    /// Adds the CrossChannel services to the specified <see cref="IServiceCollection"/>.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <returns>An instance of <see cref="ICrossChannelBuilder"/> that can be used to further configure the CrossChannel services.</returns>
     public static ICrossChannelBuilder AddCrossChannel(this IServiceCollection services)
     {
         foreach (var x in ChannelRegistry.Channels)
