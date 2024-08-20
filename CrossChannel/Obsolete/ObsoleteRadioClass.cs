@@ -30,7 +30,7 @@ public class ObsoleteRadioClass
             typeof(TMessage),
             x => new FastList<XChannel_Message<TMessage>>());
 
-        if (list.CleanupCount++ >= RadioConstants.ChannelTrimThreshold)
+        if (list.CleanupCount++ >= ObsoleteRadioConstants.ChannelTrimThreshold)
         {
             lock (list)
             {
@@ -89,7 +89,7 @@ public class ObsoleteRadioClass
             new Identifier_KeyMessage(typeof(TKey), typeof(TMessage)),
             x => new XCollection_KeyMessage<TKey, TMessage>());
 
-        if (collection.CleanupCount++ >= RadioConstants.CleanupDictionaryThreshold)
+        if (collection.CleanupCount++ >= ObsoleteRadioConstants.CleanupDictionaryThreshold)
         {
             lock (collection)
             {
@@ -119,7 +119,7 @@ public class ObsoleteRadioClass
             new Identifier_MessageResult(typeof(TMessage), typeof(TResult)),
             x => new FastList<XChannel_MessageResult<TMessage, TResult>>());
 
-        if (list.CleanupCount++ >= RadioConstants.ChannelTrimThreshold)
+        if (list.CleanupCount++ >= ObsoleteRadioConstants.ChannelTrimThreshold)
         {
             lock (list)
             {
@@ -181,7 +181,7 @@ public class ObsoleteRadioClass
             new Identifier_KeyMessageResult(typeof(TKey), typeof(TMessage), typeof(TResult)),
             x => new XCollection_KeyMessageResult<TKey, TMessage, TResult>());
 
-        if(collection.CleanupCount++ >= RadioConstants.CleanupDictionaryThreshold)
+        if(collection.CleanupCount++ >= ObsoleteRadioConstants.CleanupDictionaryThreshold)
         {
             lock (collection)
             {

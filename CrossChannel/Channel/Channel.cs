@@ -5,7 +5,17 @@ using Arc.Collections;
 
 namespace CrossChannel;
 
-public class Channel<TService>
+public abstract class Channel
+{
+    public const int TrimThreshold = 32;
+    public const int CheckReferenceThreshold = 32;
+
+    public int MaxLinks { get; internal set; }
+
+    internal int NodeIndex { get; set; }
+}
+
+public class Channel<TService> : Channel
     where TService : class, IRadioService
 {
     #region Link
@@ -231,33 +241,29 @@ public class Channel<TService>
 
     #endregion
 
-    public int MaxLinks { get; private set; }
-
     internal TService Broker { get; }
-
-    internal int NodeIndex { get; set; }
 
     private object dualObject; // nodeIndex == -1 ? new object() : IUnorderedMap;
     private FastList list = new();
     private int trimCount;
     private int checkReferenceCount;
 
-    public Channel(int maxLinks)
+    public Channel()
     {
         this.dualObject = new();
         this.NodeIndex = -1;
 
-        var info = RadioRegistry.Get<TService>();
-        this.MaxLinks = maxLinks;
+        var info = ChannelRegistry.Get<TService>();
+        this.MaxLinks = info.MaxLinks;
         this.Broker = (TService)info.NewBroker(this);
     }
 
-    public Channel(int maxLinks, IUnorderedMap map)
+    public Channel(IUnorderedMap map)
     {
         this.dualObject = map;
 
-        var info = RadioRegistry.Get<TService>();
-        this.MaxLinks = maxLinks;
+        var info = ChannelRegistry.Get<TService>();
+        this.MaxLinks = info.MaxLinks;
         this.Broker = (TService)info.NewBroker(this);
     }
 
@@ -272,7 +278,7 @@ public class Channel<TService>
 
             var link = new Link(this, instance, weakReference);
             this.list.Add(link);
-            if (this.trimCount++ >= RadioConstants.ChannelTrimThreshold)
+            if (this.trimCount++ >= TrimThreshold)
             {
                 this.trimCount = 0;
                 this.TrimInternal();
@@ -306,7 +312,7 @@ public class Channel<TService>
 
     private void TrimInternal()
     {// lock (this.dualObject) is required
-        if (this.checkReferenceCount++ >= RadioConstants.ChannelCheckReferenceThreshold)
+        if (this.checkReferenceCount++ >= CheckReferenceThreshold)
         {
             this.checkReferenceCount = 0;
 

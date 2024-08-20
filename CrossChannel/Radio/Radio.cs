@@ -39,7 +39,7 @@ public static class Radio
         {
             if (!map.TryGetValue(key, out var channel))
             {
-                channel = new Channel<TService>(int.MaxValue, map);
+                channel = new Channel<TService>(map);
                 (channel.NodeIndex, _) = map.Add(key, channel);
             }
 
@@ -60,14 +60,14 @@ public static class Radio
         if (!twoTypeToMap.TryGetValue(typeof(TService), typeof(TKey), out var obj) ||
             obj is not UnorderedMap<TKey, Channel<TService>> map)
         {
-            return RadioRegistry.GetEmptyChannel<TService>().Broker;
+            return ChannelRegistry.GetEmptyChannel<TService>().Broker;
         }
 
         lock (map)
         {
             if (!map.TryGetValue(key, out var channel))
             {
-                return RadioRegistry.GetEmptyChannel<TService>().Broker;
+                return ChannelRegistry.GetEmptyChannel<TService>().Broker;
             }
 
             return channel.Broker;
@@ -110,8 +110,8 @@ public static class Radio
 
         static ChannelCache()
         {
-            channel = new(int.MaxValue);
-            //channel = (Channel<TService>)RadioRegistry.Get<TService>().NewChannel();
+            channel = new();
+            //channel = (Channel<TService>)ChannelRegistry.Get<TService>().NewChannel();
         }
 
         public static Channel<TService> Channel => channel;

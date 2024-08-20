@@ -21,19 +21,19 @@ public class TrimTest
 
         radio.Send<ITestService>().Double(1).Count.Is(0);
 
-        for (var i = 0; i < RadioConstants.ChannelTrimThreshold; i++)
+        for (var i = 0; i < Channel.TrimThreshold; i++)
         {
             CreateChannel();
         }
 
-        radio.GetChannel<ITestService>().Count.Is(RadioConstants.ChannelTrimThreshold);
+        radio.GetChannel<ITestService>().Count.Is(Channel.TrimThreshold);
         GC.Collect(); // Empty list
         radio.Send<ITestService>().Double(1).Count.Is(0);
 
-        var objects = Enumerable.Repeat(new TestService(), RadioConstants.ChannelTrimThreshold).ToArray();
+        var objects = Enumerable.Repeat(new TestService(), Channel.TrimThreshold).ToArray();
         var number = 0;
 
-        for (var i = 0; i < RadioConstants.ChannelTrimThreshold; i++)
+        for (var i = 0; i < Channel.TrimThreshold; i++)
         {
             if (i % 3 == 0)
             {
