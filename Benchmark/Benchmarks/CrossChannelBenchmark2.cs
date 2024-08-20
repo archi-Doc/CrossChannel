@@ -2,14 +2,14 @@
 
 using System.Collections.Generic;
 using BenchmarkDotNet.Attributes;
-using CrossChannel;
+using CrossChannel.Obsolete;
 
 namespace Benchmark;
 
 [Config(typeof(BenchmarkConfig))]
 public class CrossChannelBenchmark2
 {
-    public RadioClass TestRadio { get; } = new();
+    public ObsoleteRadioClass TestRadio { get; } = new();
 
     public List<XChannel> ChannelList = new();
 
@@ -20,17 +20,17 @@ public class CrossChannelBenchmark2
     [GlobalSetup]
     public void Setup()
     {
-        ChannelList.Add(Radio.Open<int>(x => { }));
-        ChannelList.Add(Radio.OpenKey<int, int>(0, x => { }));
-        ChannelList.Add(Radio.OpenTwoWay<int, int>(x => x));
-        ChannelList.Add(Radio.OpenTwoWayKey<int, int, int>(0, x => x));
+        ChannelList.Add(ObsoleteRadio.Open<int>(x => { }));
+        ChannelList.Add(ObsoleteRadio.OpenKey<int, int>(0, x => { }));
+        ChannelList.Add(ObsoleteRadio.OpenTwoWay<int, int>(x => x));
+        ChannelList.Add(ObsoleteRadio.OpenTwoWayKey<int, int, int>(0, x => x));
 
         ChannelList.Add(this.TestRadio.Open<int>(x => { }));
         ChannelList.Add(this.TestRadio.OpenKey<int, int>(0, x => { }));
         ChannelList.Add(this.TestRadio.OpenTwoWay<int, int>(x => x));
         ChannelList.Add(this.TestRadio.OpenTwoWayKey<int, int, int>(0, x => x));
 
-        ChannelList.Add(Radio.Open<short>(x => { }, this));
+        ChannelList.Add(ObsoleteRadio.Open<short>(x => { }, this));
     }
 
     [GlobalCleanup]
@@ -47,7 +47,7 @@ public class CrossChannelBenchmark2
     [Benchmark]
     public void Radio_Open()
     {
-        using (var c = Radio.Open<uint>(x => { }))
+        using (var c = ObsoleteRadio.Open<uint>(x => { }))
         {
         }
     }
@@ -55,7 +55,7 @@ public class CrossChannelBenchmark2
     [Benchmark]
     public void Radio_OpenKey()
     {
-        using (var c = Radio.OpenKey<uint, uint>(0, x => { }))
+        using (var c = ObsoleteRadio.OpenKey<uint, uint>(0, x => { }))
         {
         }
     }
@@ -63,7 +63,7 @@ public class CrossChannelBenchmark2
     [Benchmark]
     public void Radio_OpenTwoWay()
     {
-        using (var c = Radio.OpenTwoWay<uint, uint>(x => x))
+        using (var c = ObsoleteRadio.OpenTwoWay<uint, uint>(x => x))
         {
         }
     }
@@ -71,7 +71,7 @@ public class CrossChannelBenchmark2
     [Benchmark]
     public void Radio_OpenTwoWayKey()
     {
-        using (var c = Radio.OpenTwoWayKey<uint, uint, uint>(0, x => x))
+        using (var c = ObsoleteRadio.OpenTwoWayKey<uint, uint, uint>(0, x => x))
         {
         }
     }
@@ -111,25 +111,25 @@ public class CrossChannelBenchmark2
     [Benchmark]
     public int Radio_Send()
     {
-        return Radio.Send<int>(0);
+        return ObsoleteRadio.Send<int>(0);
     }
 
     [Benchmark]
     public int Radio_SendKey()
     {
-        return Radio.SendKey<int, int>(0, 0);
+        return ObsoleteRadio.SendKey<int, int>(0, 0);
     }
 
     [Benchmark]
     public int[] Radio_SendTwoWay()
     {
-        return Radio.SendTwoWay<int, int>(0);
+        return ObsoleteRadio.SendTwoWay<int, int>(0);
     }
 
     [Benchmark]
     public int[] Radio_SendTwoWayKey()
     {
-        return Radio.SendTwoWayKey<int, int, int>(0, 0);
+        return ObsoleteRadio.SendTwoWayKey<int, int, int>(0, 0);
     }
 
     [Benchmark]
@@ -159,7 +159,7 @@ public class CrossChannelBenchmark2
     [Benchmark]
     public void Radio_Weak_Open()
     {
-        using (var c = Radio.Open<ushort>(x => { }, this))
+        using (var c = ObsoleteRadio.Open<ushort>(x => { }, this))
         {
         }
     }
@@ -167,6 +167,6 @@ public class CrossChannelBenchmark2
     [Benchmark]
     public int Radio_Weak_Send()
     {
-        return Radio.Send<short>(0);
+        return ObsoleteRadio.Send<short>(0);
     }
 }

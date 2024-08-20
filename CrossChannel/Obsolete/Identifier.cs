@@ -2,7 +2,7 @@
 
 using System;
 
-namespace CrossChannel;
+namespace CrossChannel.Obsolete;
 
 public class Identifier_MessageResult
 {

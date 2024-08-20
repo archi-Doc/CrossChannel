@@ -1,6 +1,7 @@
 // Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 using System;
+using System.Linq;
 using CrossChannel;
 using Xunit;
 
@@ -13,41 +14,49 @@ public class StaticTest
     [Fact]
     public void Static_TwoWay()
     {
-        using (var c = Radio.OpenTwoWay<int, int>(x => x * 2))
+        using (Radio.Open<ITestService>(new TestService()))
         {
-            Radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { 2 });
-            Radio.SendTwoWay<int, int>(2).IsStructuralEqual(new int[] { 4 });
+            Radio.GetChannel<ITestService>().Count.Is(1);
+            Radio.Send<ITestService>().Double(1).SequenceEqual([2]).IsTrue();
+            Radio.Send<ITestService>().Double(2).SequenceEqual([4]).IsTrue();
 
-            using (var d = Radio.OpenTwoWay<int, int>(x => x * 2))
+            using (Radio.Open<ITestService>(new TestService()))
             {
-                Radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { 2, 2 });
-                Radio.SendTwoWay<int, int>(2).IsStructuralEqual(new int[] { 4, 4 });
+                Radio.GetChannel<ITestService>().Count.Is(2);
+                Radio.Send<ITestService>().Double(1).SequenceEqual([2, 2]).IsTrue();
+                Radio.Send<ITestService>().Double(2).SequenceEqual([4, 4]).IsTrue();
             }
 
-            Radio.SendTwoWay<int, int>(3).IsStructuralEqual(new int[] { 6 });
+            Radio.Send<ITestService>().Double(3).SequenceEqual([6]).IsTrue();
         }
 
-        Radio.SendTwoWay<int, int>(4).IsStructuralEqual(new int[] { });
+        Radio.GetChannel<ITestService>().Count.Is(0);
+        Radio.Send<ITestService>().Double(4).SequenceEqual([]).IsTrue();
     }
 
     [Fact]
     public void Static_TwoWayKey()
     {
-        using (var c = Radio.OpenTwoWayKey<int, int, int>(1, x => x * 2))
+        using (Radio.Open<ITestService, int>(new TestService(), 1))
         {
-            Radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { });
-            Radio.SendTwoWayKey<int, int, int>(0, 2).IsStructuralEqual(new int[] { });
-            Radio.SendTwoWayKey<int, int, int>(1, 2).IsStructuralEqual(new int[] { 4 });
-
-            using (var d = Radio.OpenTwoWayKey<int, int, int>(2, x => x * 3))
+            Radio.GetChannel<ITestService>().Count.Is(0);
+            Radio.Send<ITestService>().Double(1).SequenceEqual([]).IsTrue();
+            Radio.Send<ITestService, int>(0).Double(2).SequenceEqual([]).IsTrue();
+            Radio.Send<ITestService, int>(1).Double(2).SequenceEqual([4]).IsTrue();
+            if (Radio.TryGetChannel<ITestService, int>(1, out var channel))
             {
-                Radio.SendTwoWay<int, int>(1).IsStructuralEqual(new int[] { });
-                Radio.SendTwoWayKey<int, int, int>(0, 2).IsStructuralEqual(new int[] { });
-                Radio.SendTwoWayKey<int, int, int>(1, 2).IsStructuralEqual(new int[] { 4 });
-                Radio.SendTwoWayKey<int, int, int>(2, 2).IsStructuralEqual(new int[] { 6 });
+                channel.Count.Is(1);
+            }
+
+            using (Radio.Open<ITestService, int>(new TestService(), 2))
+            {
+                Radio.Send<ITestService>().Double(1).SequenceEqual([]).IsTrue();
+                Radio.Send<ITestService, int>(0).Double(2).SequenceEqual([]).IsTrue();
+                Radio.Send<ITestService, int>(1).Double(2).SequenceEqual([4]).IsTrue();
+                Radio.Send<ITestService, int>(2).Double(3).SequenceEqual([6]).IsTrue();
             }
         }
 
-        Radio.SendTwoWay<int, int>(4).IsStructuralEqual(new int[] { });
+        Radio.Send<ITestService>().Double(4).SequenceEqual([]).IsTrue();
     }
 }

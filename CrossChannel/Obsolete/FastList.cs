@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace CrossChannel;
+namespace CrossChannel.Obsolete;
 
 // NOT thread safe, highly customized for XChannel.
 public sealed class FastList<T> : IDisposable

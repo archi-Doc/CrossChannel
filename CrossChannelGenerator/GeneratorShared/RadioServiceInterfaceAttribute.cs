@@ -1,5 +1,6 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
+using Arc.Visceral;
 using Microsoft.CodeAnalysis;
 
 namespace CrossChannel;
@@ -17,18 +18,18 @@ public sealed class RadioServiceInterfaceAttributeMock
 
     public Location Location { get; }
 
-    // public bool RequireUiThread { get; set; }
+    public bool SingleChannel { get; set; } = false;
 
     public static RadioServiceInterfaceAttributeMock FromArray(Location location, object?[] constructorArguments, KeyValuePair<string, object?>[] namedArguments)
     {
         var attribute = new RadioServiceInterfaceAttributeMock(location);
 
-        /*object? val;
-        val = AttributeHelper.GetValue(-1, nameof(ImplicitKeyAsName), constructorArguments, namedArguments);
+        object? val;
+        val = VisceralHelper.GetValue(-1, nameof(SingleChannel), constructorArguments, namedArguments);
         if (val != null)
         {
-            attribute.ImplicitKeyAsName = (bool)val;
-        }*/
+            attribute.SingleChannel = (bool)val;
+        }
 
         return attribute;
     }

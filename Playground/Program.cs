@@ -3,7 +3,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using CrossChannel;
-using MessagePipe;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Playground;
@@ -54,15 +53,25 @@ public partial class TestService : ITestService
     }
 }
 
+public class TestClass
+{
+    private readonly ITestService service;
+
+    public TestClass(ITestService service)
+    {// service broker
+        this.service = service;
+    }
+}
+
 class Program
 {
     static void Main(string[] args)
     {
-        var c = NewRadio.Open<ITestService>(new TestService());
-        
-        var result = NewRadio.Send<ITestService>().Test2(2);
+        var c = Radio.Open<ITestService>(new TestService());
+
+        var result = Radio.Send<ITestService>().Test2(2);
         c.Close();
 
-        result = NewRadio.Send<ITestService>().Test2(2);
+        result = Radio.Send<ITestService>().Test2(2);
     }
 }

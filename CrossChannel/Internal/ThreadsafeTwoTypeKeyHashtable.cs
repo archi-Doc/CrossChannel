@@ -5,7 +5,13 @@
 
 namespace CrossChannel.Internal;
 
-internal class ThreadsafeTypeKeyHashtable<TValue>
+/*public readonly record struct TwoTypeKey(Type Key, Type Key2)
+{
+    public override int GetHashCode()
+        => HashCode.Combine(this.Key, this.Key2);
+}*/
+
+internal class ThreadsafeTwoTypeKeyHashtable<TValue>
 {
     private const double LoadFactor = 0.75d;
 
@@ -15,53 +21,55 @@ internal class ThreadsafeTypeKeyHashtable<TValue>
 
     private class Entry
     {
-        public Entry(Type key, TValue value, int hash)
+        public Entry(Type key, Type key2, TValue value, int hash)
         {
             this.Key = key;
+            this.Key2 = key2;
             this.Value = value;
             this.Hash = hash;
         }
 
         internal Type Key;
+        internal Type Key2;
         internal TValue Value;
         internal int Hash;
         internal Entry? Next;
     }
 
-    public ThreadsafeTypeKeyHashtable(int capacity = 4)
+    public ThreadsafeTwoTypeKeyHashtable(int capacity = 4)
     {
         var tableSize = CalculateCapacity(capacity);
         this.buckets = new Entry[tableSize];
     }
 
-    public bool TryAdd(Type key, TValue value)
-        => this.TryAdd(key, _ => value);
+    public bool TryAdd(Type key, Type key2, TValue value)
+        => this.TryAdd(key, key2, (_, _) => value);
 
-    public bool TryAdd(Type key, Func<Type, TValue> valueFactory)
-        => this.TryAddInternal(key, valueFactory, out TValue _);
+    public bool TryAdd(Type key, Type key2, Func<Type, Type, TValue> valueFactory)
+        => this.TryAddInternal(key, key2, valueFactory, out TValue _);
 
-    public TValue GetOrAdd(Type key, Func<Type, TValue> valueFactory)
+    public TValue GetOrAdd(Type key, Type key2, Func<Type, Type, TValue> valueFactory)
     {
         TValue? v;
-        if (this.TryGetValue(key, out v))
+        if (this.TryGetValue(key, key2, out v))
         {
             return v;
         }
 
-        this.TryAddInternal(key, valueFactory, out v);
+        this.TryAddInternal(key, key2, valueFactory, out v);
         return v;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGetValue(Type key, [MaybeNullWhen(false)] out TValue value)
+    public bool TryGetValue(Type key, Type key2, [MaybeNullWhen(false)] out TValue value)
     {
         Entry[] table = this.buckets;
-        var hash = key.GetHashCode();
+        var hash = key.GetHashCode() ^ key2.GetHashCode();
         Entry? entry = table[hash & table.Length - 1];
 
         while (entry != null)
         {
-            if (entry.Key == key)
+            if (entry.Key == key && entry.Key2 == key2)
             {
                 value = entry.Value;
                 return true;
@@ -91,7 +99,7 @@ internal class ThreadsafeTypeKeyHashtable<TValue>
         return capacity;
     }
 
-    private bool TryAddInternal(Type key, Func<Type, TValue> valueFactory, out TValue resultingValue)
+    private bool TryAddInternal(Type key, Type key2, Func<Type, Type, TValue> valueFactory, out TValue resultingValue)
     {
         lock (this.syncObject)
         {
@@ -106,14 +114,14 @@ internal class ThreadsafeTypeKeyHashtable<TValue>
                     Entry? e = this.buckets[i];
                     while (e != null)
                     {
-                        var newEntry = new Entry(e.Key, e.Value, e.Hash);
-                        this.AddToBuckets(nextBucket, key, newEntry, null!, out resultingValue);
+                        var newEntry = new Entry(e.Key, e.Key2, e.Value, e.Hash);
+                        this.AddToBuckets(nextBucket, key, key2, newEntry, null!, out resultingValue);
                         e = e.Next;
                     }
                 }
 
                 // add entry(if failed to add, only do resize)
-                var successAdd = this.AddToBuckets(nextBucket, key, null, valueFactory, out resultingValue);
+                var successAdd = this.AddToBuckets(nextBucket, key, key2, null, valueFactory, out resultingValue);
 
                 // replace field(threadsafe for read)
                 System.Threading.Volatile.Write(ref this.buckets, nextBucket);
@@ -128,7 +136,7 @@ internal class ThreadsafeTypeKeyHashtable<TValue>
             else
             {
                 // add entry(insert last is thread safe for read)
-                var successAdd = this.AddToBuckets(this.buckets, key, null, valueFactory, out resultingValue);
+                var successAdd = this.AddToBuckets(this.buckets, key, key2, null, valueFactory, out resultingValue);
                 if (successAdd)
                 {
                     this.size++;
@@ -139,9 +147,9 @@ internal class ThreadsafeTypeKeyHashtable<TValue>
         }
     }
 
-    private bool AddToBuckets(Entry[] buckets, Type newKey, Entry? newEntryOrNull, Func<Type, TValue> valueFactory, out TValue resultingValue)
+    private bool AddToBuckets(Entry[] buckets, Type newKey, Type newKey2, Entry? newEntryOrNull, Func<Type, Type, TValue> valueFactory, out TValue resultingValue)
     {
-        var h = (newEntryOrNull != null) ? newEntryOrNull.Hash : newKey.GetHashCode();
+        var h = (newEntryOrNull != null) ? newEntryOrNull.Hash : (newKey.GetHashCode() ^ newKey2.GetHashCode());
         if (buckets[h & (buckets.Length - 1)] == null)
         {
             if (newEntryOrNull != null)
@@ -151,8 +159,8 @@ internal class ThreadsafeTypeKeyHashtable<TValue>
             }
             else
             {
-                resultingValue = valueFactory(newKey);
-                System.Threading.Volatile.Write(ref buckets[h & (buckets.Length - 1)], new Entry(newKey, resultingValue, h));
+                resultingValue = valueFactory(newKey, newKey2);
+                System.Threading.Volatile.Write(ref buckets[h & (buckets.Length - 1)], new Entry(newKey, newKey2, resultingValue, h));
             }
         }
         else
@@ -175,8 +183,8 @@ internal class ThreadsafeTypeKeyHashtable<TValue>
                     }
                     else
                     {
-                        resultingValue = valueFactory(newKey);
-                        System.Threading.Volatile.Write(ref searchLastEntry.Next!, new Entry(newKey, resultingValue, h));
+                        resultingValue = valueFactory(newKey, newKey2);
+                        System.Threading.Volatile.Write(ref searchLastEntry.Next!, new Entry(newKey, newKey2, resultingValue, h));
                     }
 
                     break;

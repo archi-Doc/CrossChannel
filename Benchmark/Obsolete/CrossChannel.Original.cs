@@ -10,7 +10,7 @@ using Arc.WeakDelegate;
 
 namespace Arc.CrossChannel.Original;
 
-public readonly struct ChannelIdentification
+/*public readonly struct ChannelIdentification
 {
     public readonly Type MessageType; // The type of a message.
     public readonly Type? ResultType; // The type of a result.
@@ -277,46 +277,6 @@ public static class CrossChannel
 
         return array;
     }
-
-    /*[return: MaybeNull]
-    public static TResult Send<TMessage, TResult>(TMessage message, out int numberReceived) => SendTarget<TMessage, TResult>(message, null, out numberReceived);
-
-    [return: MaybeNull]
-    public static TResult SendTarget<TMessage, TResult>(TMessage message, object? targetId, out int numberReceived)
-    {
-        XChannel[] array;
-        TResult result = default;
-        numberReceived = 0;
-
-        lock (cs)
-        {
-            array = PrepareXChannelArray(Cache_WeakFunction<TMessage, TResult>.List, targetId);
-        }
-
-        try
-        {
-            foreach (var x in array)
-            {
-                var d = x.WeakDelegate as WeakFunc<TMessage, TResult>;
-                if (d == null)
-                {
-                    continue;
-                }
-
-                result = d.Execute(message, out var executed);
-                if (executed)
-                {
-                    numberReceived++;
-                }
-            }
-        }
-        finally
-        {
-            DecrementReferenceCount(array);
-        }
-
-        return result;
-    }*/
 
     /// <summary>
     /// Send a message to receivers.
@@ -610,4 +570,4 @@ public class XChannel : IDisposable
             this.Disposed = true;
         }
     }
-}
+}*/
