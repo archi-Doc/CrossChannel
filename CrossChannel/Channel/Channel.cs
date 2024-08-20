@@ -38,6 +38,8 @@ public class Channel<TService>
             this.channel = channel;
         }
 
+        public bool IsValid => this.Index != -1;
+
         public bool TryGetInstance([MaybeNullWhen(false)] out TService instance)
         {
             if (this.strongReference is not null)
@@ -233,8 +235,9 @@ public class Channel<TService>
 
     internal TService Broker { get; }
 
+    internal int NodeIndex { get; set; }
+
     private object dualObject; // nodeIndex == -1 ? new object() : IUnorderedMap;
-    private int nodeIndex;
     private FastList list = new();
     private int trimCount;
     private int checkReferenceCount;
@@ -242,17 +245,16 @@ public class Channel<TService>
     public Channel()
     {
         this.dualObject = new();
-        this.nodeIndex = -1;
+        this.NodeIndex = -1;
 
         var info = RadioRegistry.Get<TService>();
         this.SingleChannel = info.SingleChannel;
         this.Broker = (TService)info.NewBroker(this);
     }
 
-    public Channel(IUnorderedMap map, int nodeIndex)
+    public Channel(IUnorderedMap map)
     {
         this.dualObject = map;
-        this.nodeIndex = nodeIndex;
 
         var info = RadioRegistry.Get<TService>();
         this.SingleChannel = info.SingleChannel;
@@ -263,9 +265,8 @@ public class Channel<TService>
     {
         lock (this.dualObject)
         {
-            if (this.SingleChannel &&
-                this.list.Count > 0)
-            {
+            if (this.list.Count >= this.MaxChannels)
+            {// Invalid link
                 return new(this);
             }
 
@@ -294,10 +295,11 @@ public class Channel<TService>
                 this.list.Remove(link); // this.Index is set to -1
             }
 
-            if (this.nodeIndex != -1 &&
+            if (this.NodeIndex != -1 &&
                 this.Count == 0)
             {
-                ((IUnorderedMap)this.dualObject).RemoveNode(this.nodeIndex);
+                ((IUnorderedMap)this.dualObject).RemoveNode(this.NodeIndex);
+                this.NodeIndex = -1;
             }
         }
     }

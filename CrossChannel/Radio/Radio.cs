@@ -39,8 +39,8 @@ public static class Radio
         {
             if (!map.TryGetValue(key, out var channel))
             {
-                channel = new Channel<TService>(map, 3);
-                //(channel.nodeIndex, _) = map.Add(key, channel);
+                channel = new Channel<TService>(map);
+                (channel.NodeIndex, _) = map.Add(key, channel);
             }
 
             return channel.Open(instance, weakReference);
@@ -60,6 +60,7 @@ public static class Radio
         if (!twoTypeToMap.TryGetValue(typeof(TService), typeof(TKey), out var obj) ||
             obj is not UnorderedMap<TKey, Channel<TService>> map)
         {
+            return RadioRegistry.Get<TService>().Empty;
             return default;
         }
 
