@@ -226,7 +226,7 @@ public class Channel<TService>
 
     internal TService Broker { get; }
 
-    private readonly object dualObject; // -> Lock
+    private readonly object dualObject; // nodeIndex == -1 ? new object() : IUnorderedMap;
     private readonly int nodeIndex;
     private readonly FastList list = new();
     private int trimCount;
@@ -253,7 +253,7 @@ public class Channel<TService>
         {
             this.list.Add(link);
             if (this.trimCount++ >= RadioConstants.ChannelTrimThreshold)
-            {//
+            {
                 this.trimCount = 0;
                 this.TrimInternal();
             }
@@ -283,7 +283,7 @@ public class Channel<TService>
     }
 
     private void TrimInternal()
-    {
+    {// lock (this.dualObject) is required
         if (this.checkReferenceCount++ >= RadioConstants.ChannelCheckReferenceThreshold)
         {
             this.checkReferenceCount = 0;

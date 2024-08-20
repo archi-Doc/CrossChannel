@@ -53,12 +53,22 @@ public partial class TestService : ITestService
     }
 }
 
+public class TestClass
+{
+    private readonly ITestService service;
+
+    public TestClass(ITestService service)
+    {// service broker
+        this.service = service;
+    }
+}
+
 class Program
 {
     static void Main(string[] args)
     {
         var c = Radio.Open<ITestService>(new TestService());
-        
+
         var result = Radio.Send<ITestService>().Test2(2);
         c.Close();
 
