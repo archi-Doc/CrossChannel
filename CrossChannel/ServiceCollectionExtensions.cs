@@ -8,6 +8,7 @@ public static class ServiceCollectionExtensions
 {
     public static ICrossChannelBuilder AddCrossChannel(this IServiceCollection services)
     {
+        RadioRegistry.AddService(services);
         // services.Add(new(typeof(IRadioService), Radio.Send<IRadioService>()));
         return new CrossChannelBuilder(services);
     }

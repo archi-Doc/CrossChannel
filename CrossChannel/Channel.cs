@@ -5,8 +5,18 @@ using Arc.Collections;
 
 namespace CrossChannel;
 
-public class Channel<TService>
-    where TService : class
+public abstract class Channel
+{
+
+    internal Channel GetOrCreateGlobal<TService>(
+    {
+        typeof(Channel<>).MakeGenericType(Type);
+        RadioRegistry.Get(serviceType);
+    }
+}
+
+public class Channel<TService> : Channel
+    where TService : class, IRadioService
 {
     #region Link
 
@@ -20,8 +30,8 @@ public class Channel<TService>
         private readonly WeakReference<TService>? weakReference;
         private readonly TService? strongReference;
 
-        public Link(Channel<TService> channel, TService instance, bool weakReference)
-        {
+        internal Link(Channel<TService> channel, TService instance, bool weakReference)
+        {// Valid link
             this.channel = channel;
             if (weakReference)
             {
@@ -31,6 +41,11 @@ public class Channel<TService>
             {
                 this.strongReference = instance;
             }
+        }
+
+        internal Link(Channel<TService> channel)
+        {// Invalid link
+            this.channel = channel;
         }
 
         public bool TryGetInstance([MaybeNullWhen(false)] out TService instance)
@@ -236,30 +251,36 @@ public class Channel<TService>
     {
         this.dualObject = new();
         this.nodeIndex = -1;
-        this.Broker = (TService)RadioRegistry.Get<TService>().Constructor(this);
+        this.Broker = (TService)RadioRegistry.Get<TService>().NewBroker(this);
     }
 
     public Channel(IUnorderedMap map, int nodeIndex)
     {
         this.dualObject = map;
         this.nodeIndex = nodeIndex;
-        this.Broker = (TService)RadioRegistry.Get<TService>().Constructor(this);
+        this.Broker = (TService)RadioRegistry.Get<TService>().NewBroker(this);
     }
 
     public Link Open(TService instance, bool weakReference)
     {
-        var link = new Link(this, instance, weakReference);
         lock (this.dualObject)
         {
+            if (this.SingleChannel &&
+                this.list.Count > 0)
+            {
+                return new(this);
+            }
+
+            var link = new Link(this, instance, weakReference);
             this.list.Add(link);
             if (this.trimCount++ >= RadioConstants.ChannelTrimThreshold)
             {
                 this.trimCount = 0;
                 this.TrimInternal();
             }
-        }
 
-        return link;
+            return link;
+        }
     }
 
     public int Count => this.list.Count;
@@ -275,7 +296,8 @@ public class Channel<TService>
                 this.list.Remove(link); // this.Index is set to -1
             }
 
-            if (this.nodeIndex != -1)
+            if (this.nodeIndex != -1 &&
+                this.Count == 0)
             {
                 ((IUnorderedMap)this.dualObject).RemoveNode(this.nodeIndex);
             }
