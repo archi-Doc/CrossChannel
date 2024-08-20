@@ -51,7 +51,7 @@ public class RadioClass
     public Channel<TService> GetChannel<TService>()
         where TService : class, IRadioService
     {
-        return (Channel<TService>)this.typeToChannel.GetOrAdd(typeof(TService), x => new Channel<TService>(int.MaxValue));
+        return (Channel<TService>)this.typeToChannel.GetOrAdd(typeof(TService), x => new Channel<TService>());
     }
 
     /*public bool TryGetChannel<TService, TKey>(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)

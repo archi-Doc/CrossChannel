@@ -5,7 +5,14 @@ using Arc.Collections;
 
 namespace CrossChannel;
 
-public class Channel<TService>
+public abstract class Channel
+{
+    public int MaxLinks { get; internal set; }
+
+    internal int NodeIndex { get; set; }
+}
+
+public class Channel<TService> : Channel
     where TService : class, IRadioService
 {
     #region Link
@@ -231,33 +238,29 @@ public class Channel<TService>
 
     #endregion
 
-    public int MaxLinks { get; private set; }
-
     internal TService Broker { get; }
-
-    internal int NodeIndex { get; set; }
 
     private object dualObject; // nodeIndex == -1 ? new object() : IUnorderedMap;
     private FastList list = new();
     private int trimCount;
     private int checkReferenceCount;
 
-    public Channel(int maxLinks)
+    public Channel()
     {
         this.dualObject = new();
         this.NodeIndex = -1;
 
         var info = RadioRegistry.Get<TService>();
-        this.MaxLinks = maxLinks;
+        this.MaxLinks = info.MaxLinks;
         this.Broker = (TService)info.NewBroker(this);
     }
 
-    public Channel(int maxLinks, IUnorderedMap map)
+    public Channel(IUnorderedMap map)
     {
         this.dualObject = map;
 
         var info = RadioRegistry.Get<TService>();
-        this.MaxLinks = maxLinks;
+        this.MaxLinks = info.MaxLinks;
         this.Broker = (TService)info.NewBroker(this);
     }
 

@@ -39,7 +39,7 @@ public static class Radio
         {
             if (!map.TryGetValue(key, out var channel))
             {
-                channel = new Channel<TService>(int.MaxValue, map);
+                channel = new Channel<TService>(map);
                 (channel.NodeIndex, _) = map.Add(key, channel);
             }
 
@@ -110,7 +110,7 @@ public static class Radio
 
         static ChannelCache()
         {
-            channel = new(int.MaxValue);
+            channel = new();
             //channel = (Channel<TService>)RadioRegistry.Get<TService>().NewChannel();
         }
 
