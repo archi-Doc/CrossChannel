@@ -16,5 +16,8 @@ public sealed class RadioServiceInterfaceAttribute : Attribute
     {
     }
 
-    public bool SingleChannel { get; set; } = false;
+    /// <summary>
+    /// Gets or sets a value indicating whether the maximum number of channel links is one.
+    /// </summary>
+    public bool SingleLink { get; set; } = false;
 }

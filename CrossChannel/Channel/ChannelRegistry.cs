@@ -1,17 +1,14 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 using System.Collections.Concurrent;
-using CrossChannel.Internal;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CrossChannel;
 
 public static class ChannelRegistry
 {
     private static ConcurrentDictionary<Type, ChannelInformation> typeToInformation = new();
-    // private static ThreadsafeTypeKeyHashtable<ChannelInformation> typeToInformation = new();
 
-    internal static class InformationCache<TService>
+    private static class InformationCache<TService>
         where TService : class, IRadioService
     {
         public static readonly ChannelInformation Information;
@@ -29,7 +26,6 @@ public static class ChannelRegistry
 
     public static bool Register(ChannelInformation information)
     {
-        // typeToInformation.TryAdd(information.MachineType, information);
         return typeToInformation.TryAdd(information.ServiceType, information);
     }
 
@@ -53,16 +49,7 @@ public static class ChannelRegistry
 
     public static Channel<TService> GetEmptyChannel<TService>()
         where TService : class, IRadioService
-    {
-        return (Channel<TService>)InformationCache<TService>.Information.EmptyChannel;
-    }
+        => (Channel<TService>)InformationCache<TService>.Information.EmptyChannel;
 
-    public static void AddService(IServiceCollection services)
-    {
-        foreach (var x in typeToInformation.Values)
-        {// ITestService => Radio.Send<ITestService>() or RadioClass.Send<>()
-            // IKeyedService => Radio.Send<ITestService, TKey>(key) or RadioClass
-            // services.Add(new(x.ServiceType, ChannelRegistry.Get(x.ServiceType).NewChannel()));
-        }
-    }
+    public static ICollection<ChannelInformation> Channels => typeToInformation.Values;
 }

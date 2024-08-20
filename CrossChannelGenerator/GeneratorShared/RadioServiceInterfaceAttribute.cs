@@ -18,17 +18,17 @@ public sealed class RadioServiceInterfaceAttributeMock
 
     public Location Location { get; }
 
-    public bool SingleChannel { get; set; } = false;
+    public bool SingleLink { get; set; } = false;
 
     public static RadioServiceInterfaceAttributeMock FromArray(Location location, object?[] constructorArguments, KeyValuePair<string, object?>[] namedArguments)
     {
         var attribute = new RadioServiceInterfaceAttributeMock(location);
 
         object? val;
-        val = VisceralHelper.GetValue(-1, nameof(SingleChannel), constructorArguments, namedArguments);
+        val = VisceralHelper.GetValue(-1, nameof(SingleLink), constructorArguments, namedArguments);
         if (val != null)
         {
-            attribute.SingleChannel = (bool)val;
+            attribute.SingleLink = (bool)val;
         }
 
         return attribute;

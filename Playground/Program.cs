@@ -67,11 +67,18 @@ class Program
 {
     static void Main(string[] args)
     {
-        var c = Radio.Open<ITestService>(new TestService());
+        /*var c = Radio.Open<ITestService>(new TestService());
 
         var result = Radio.Send<ITestService>().Test2(2);
         c.Close();
 
-        result = Radio.Send<ITestService>().Test2(2);
+        result = Radio.Send<ITestService>().Test2(2);*/
+
+        var collection = new ServiceCollection();
+        collection.AddCrossChannel();
+        var provider = collection.BuildServiceProvider();
+
+        var testService = provider.GetRequiredService<ITestService>();
+        testService.Test1();
     }
 }

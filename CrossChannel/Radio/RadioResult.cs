@@ -18,12 +18,20 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     private readonly T result;
     private readonly T[]? resultArray; // 0:Empty, 1:Single, >1:Valid array
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RadioResult{T}"/> struct with a single result.
+    /// </summary>
+    /// <param name="result">The single result.</param>
     public RadioResult(T result)
     {
         this.result = result;
         Unsafe.As<T[]?, ulong>(ref this.resultArray) = SingleResultValue;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RadioResult{T}"/> struct with an array of results.
+    /// </summary>
+    /// <param name="resultArray">The array of results.</param>
     public RadioResult(T[] resultArray)
     {
         if (resultArray.Length == 0)
@@ -43,12 +51,23 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
         }
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the <see cref="RadioResult{T}"/> is empty.
+    /// </summary>
     [MemberNotNullWhen(false, nameof(resultArray))]
     public bool IsEmpty => this.resultArray is null;
 
+    /// <summary>
+    /// Gets the number of results in the <see cref="RadioResult{T}"/>.
+    /// </summary>
     public int Count => this.resultArray is null ? 0 : (this.HasSingleResult ? 1 : this.resultArray.Length);
 
-    public bool TryGetSingleResult([MaybeNullWhen(false)] out T result)
+    /// <summary>
+    /// Tries to get the single result from the <see cref="RadioResult{T}"/>.
+    /// </summary>
+    /// <param name="result">The single result.</param>
+    /// <returns><c>true</c> if the single result is successfully retrieved; otherwise, <c>false</c>.</returns>
+    public bool TryGetSingleResult([System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out T result)
     {
         if (this.IsEmpty)
         {
@@ -67,6 +86,11 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
         }
     }
 
+    /// <summary>
+    /// Determines whether the specified <see cref="RadioResult{T}"/> is equal to the current <see cref="RadioResult{T}"/>.
+    /// </summary>
+    /// <param name="other">The <see cref="RadioResult{T}"/> to compare with the current <see cref="RadioResult{T}"/>.</param>
+    /// <returns><c>true</c> if the specified <see cref="RadioResult{T}"/> is equal to the current <see cref="RadioResult{T}"/>; otherwise, <c>false</c>.</returns>
     public bool Equals(RadioResult<T> other)
     {
         if (this.IsEmpty)
@@ -83,6 +107,7 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
         }
     }
 
+    /// <inheritdoc/>
     public override int GetHashCode()
     {
         if (this.IsEmpty)
@@ -105,6 +130,7 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
         }
     }
 
+    /// <inheritdoc/>
     public override string ToString()
     {
         if (this.IsEmpty)
@@ -137,10 +163,15 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
 
     public Enumerator GetEnumerator() => new Enumerator(this);
 
+    /// <inheritdoc/>
     IEnumerator<T> IEnumerable<T>.GetEnumerator() => new Enumerator(this);
 
+    /// <inheritdoc/>
     IEnumerator IEnumerable.GetEnumerator() => new Enumerator(this);
 
+    /// <summary>
+    /// Enumerates the results in the <see cref="RadioResult{T}"/>.
+    /// </summary>
     public struct Enumerator : IEnumerator<T>, IEnumerator
     {
         private RadioResult<T> result;
@@ -156,10 +187,12 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
             this.current = default(T);
         }
 
+        /// <inheritdoc/>
         public void Dispose()
         {
         }
 
+        /// <inheritdoc/>
         public bool MoveNext()
         {
             if (this.total == 0)
@@ -196,8 +229,10 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
             }
         }
 
+        /// <inheritdoc/>
         public T Current => this.current!;
 
+        /// <inheritdoc/>
         object IEnumerator.Current
         {
             get
@@ -211,6 +246,7 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
             }
         }
 
+        /// <inheritdoc/>
         void IEnumerator.Reset()
         {
             this.index = 0;
