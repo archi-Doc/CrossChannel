@@ -15,24 +15,23 @@ public class ChannelInformation
 
     public Func<object, object> NewBroker { get; }
 
-    public Func<object> NewChannel { get; }
+    public Func<int, object> NewChannel { get; }
 
-    public Func<IUnorderedMap, object> NewChannel2 { get; }
+    public Func<int, IUnorderedMap, object> NewChannel2 { get; }
 
-    public int MaxChannels { get; private set; }
+    public int MaxLinks { get; private set; }
 
     public object EmptyChannel { get; }
 
-    public ChannelInformation(Type serviceType, Func<object, object> newBroker, Func<object> newChannel, Func<IUnorderedMap, object> newChannel2, bool singleChannel)
+    public ChannelInformation(Type serviceType, Func<object, object> newBroker, Func<int, object> newChannel, Func<int, IUnorderedMap, object> newChannel2, bool singleLink)
     {
         this.ServiceType = serviceType;
         this.NewBroker = newBroker;
         this.NewChannel = newChannel;
         this.NewChannel2 = newChannel2;
-        this.MaxChannels = singleChannel ? 1 : int.MaxValue;
+        this.MaxLinks = singleLink ? 1 : int.MaxValue;
 
-        var empty = this.NewChannel();
-        empty.MaxChannels = 0;
+        var empty = this.NewChannel(0);
         this.EmptyChannel = empty;
     }
 }

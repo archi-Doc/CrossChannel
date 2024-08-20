@@ -51,12 +51,18 @@ public static class RadioRegistry
         }
     }
 
+    public static Channel<TService> GetEmptyChannel<TService>()
+        where TService : class, IRadioService
+    {
+        return (Channel<TService>)InformationCache<TService>.Information.EmptyChannel;
+    }
+
     public static void AddService(IServiceCollection services)
     {
         foreach (var x in typeToInformation.Values)
         {// ITestService => Radio.Send<ITestService>() or RadioClass.Send<>()
             // IKeyedService => Radio.Send<ITestService, TKey>(key) or RadioClass
-            services.Add(new(x.ServiceType, RadioRegistry.Get(x.ServiceType).NewChannel()));
+            // services.Add(new(x.ServiceType, RadioRegistry.Get(x.ServiceType).NewChannel()));
         }
     }
 }

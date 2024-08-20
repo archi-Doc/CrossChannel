@@ -231,7 +231,7 @@ public class Channel<TService>
 
     #endregion
 
-    public bool SingleChannel { get; private set; }
+    public int MaxLinks { get; private set; }
 
     internal TService Broker { get; }
 
@@ -242,22 +242,22 @@ public class Channel<TService>
     private int trimCount;
     private int checkReferenceCount;
 
-    public Channel()
+    public Channel(int maxLinks)
     {
         this.dualObject = new();
         this.NodeIndex = -1;
 
         var info = RadioRegistry.Get<TService>();
-        this.SingleChannel = info.SingleChannel;
+        this.MaxLinks = maxLinks;
         this.Broker = (TService)info.NewBroker(this);
     }
 
-    public Channel(IUnorderedMap map)
+    public Channel(int maxLinks, IUnorderedMap map)
     {
         this.dualObject = map;
 
         var info = RadioRegistry.Get<TService>();
-        this.SingleChannel = info.SingleChannel;
+        this.MaxLinks = maxLinks;
         this.Broker = (TService)info.NewBroker(this);
     }
 
@@ -265,7 +265,7 @@ public class Channel<TService>
     {
         lock (this.dualObject)
         {
-            if (this.list.Count >= this.MaxChannels)
+            if (this.list.Count >= this.MaxLinks)
             {// Invalid link
                 return new(this);
             }
