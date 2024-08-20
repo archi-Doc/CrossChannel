@@ -22,6 +22,60 @@ public static class Radio
     {
     }
 
+    public static Channel<TService> GetChannel<TService>()
+        where TService : class, IRadioService
+        => ChannelCache<TService>.Channel;
+
+    public static Channel GetChannel(Type serviceType)
+        => typeToChannel.GetOrAdd(serviceType, a => ChannelRegistry.Get(serviceType).NewChannel());
+
+    public static bool TryGetChannel<TService, TKey>(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
+        where TService : class, IRadioService
+        where TKey : notnull
+    {
+        if (!twoTypeToMap.TryGetValue(typeof(TService), typeof(TKey), out var obj) ||
+            obj is not UnorderedMap<TKey, object> map)
+        {
+            channel = default;
+            return false;
+        }
+
+        lock (map)
+        {
+            if (!map.TryGetValue(key, out obj))
+            {
+                channel = default;
+                return false;
+            }
+
+            channel = obj as Channel<TService>;
+            return channel is not null;
+        }
+    }
+
+    public static bool TryGetChannel<TKey>(Type serviceType, TKey key, [MaybeNullWhen(false)] out Channel channel)
+        where TKey : notnull
+    {
+        if (!twoTypeToMap.TryGetValue(serviceType, typeof(TKey), out var obj) ||
+            obj is not UnorderedMap<TKey, object> map)
+        {
+            channel = default;
+            return false;
+        }
+
+        lock (map)
+        {
+            if (!map.TryGetValue(key, out obj))
+            {
+                channel = default;
+                return false;
+            }
+
+            channel = obj as Channel;
+            return channel is not null;
+        }
+    }
+
     public static Channel<TService>.Link Open<TService>(TService instance, bool weakReference = false)
         where TService : class, IRadioService
     {
@@ -33,11 +87,16 @@ public static class Radio
         where TService : class, IRadioService
         where TKey : notnull
     {
-        var map = (UnorderedMap<TKey, Channel<TService>>)twoTypeToMap.GetOrAdd(typeof(TService), typeof(TKey), (x, y) => new UnorderedMap<TKey, Channel<TService>>());
+        var map = (UnorderedMap<TKey, object>)twoTypeToMap.GetOrAdd(typeof(TService), typeof(TKey), (x, y) => new UnorderedMap<TKey, object>());
 
         lock (map)
         {
-            if (!map.TryGetValue(key, out var channel))
+            Channel<TService>? channel;
+            if (map.TryGetValue(key, out var obj))
+            {
+                channel = (Channel<TService>)obj;
+            }
+            else
             {
                 channel = new Channel<TService>(map);
                 (channel.NodeIndex, _) = map.Add(key, channel);
@@ -57,47 +116,13 @@ public static class Radio
         where TService : class, IRadioService
         where TKey : notnull
     {
-        if (!twoTypeToMap.TryGetValue(typeof(TService), typeof(TKey), out var obj) ||
-            obj is not UnorderedMap<TKey, Channel<TService>> map)
+        if (TryGetChannel<TService, TKey>(key, out var channel))
         {
-            return ChannelRegistry.GetEmptyChannel<TService>().Broker;
-        }
-
-        lock (map)
-        {
-            if (!map.TryGetValue(key, out var channel))
-            {
-                return ChannelRegistry.GetEmptyChannel<TService>().Broker;
-            }
-
             return channel.Broker;
         }
-    }
-
-    public static Channel<TService> GetChannel<TService>()
-        where TService : class, IRadioService
-        => ChannelCache<TService>.Channel;
-
-    public static bool TryGetChannel<TService, TKey>(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
-        where TService : class, IRadioService
-        where TKey : notnull
-    {
-        if (!twoTypeToMap.TryGetValue(typeof(TService), typeof(TKey), out var obj) ||
-            obj is not UnorderedMap<TKey, Channel<TService>> map)
+        else
         {
-            channel = default;
-            return false;
-        }
-
-        lock (map)
-        {
-            if (map.TryGetValue(key, out channel!))
-            {
-                channel = default;
-                return false;
-            }
-
-            return true;
+            return ChannelRegistry.EmptyChannel<TService>().Broker;
         }
     }
 
@@ -110,14 +135,15 @@ public static class Radio
 
         static ChannelCache()
         {
-            channel = new();
-            //channel = (Channel<TService>)ChannelRegistry.Get<TService>().NewChannel();
+            // channel = new();
+            channel = (Channel<TService>)typeToChannel.GetOrAdd(typeof(TService), a => ChannelRegistry.Get<TService>().NewChannel());
         }
 
         public static Channel<TService> Channel => channel;
     }
 
-    private static readonly ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap = new();
+    private static readonly ThreadsafeTypeKeyHashtable<Channel> typeToChannel = new();
+    private static readonly ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap = new(); // UnorderedMap<TKey, object> // object is Channel<TService>
 
     #endregion
 }

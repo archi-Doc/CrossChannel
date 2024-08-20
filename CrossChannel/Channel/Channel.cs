@@ -13,9 +13,17 @@ public abstract class Channel
     public int MaxLinks { get; internal set; }
 
     internal int NodeIndex { get; set; }
+
+    internal abstract object GetBroker();
 }
 
-public class Channel<TService> : Channel
+public interface IChannel<TService>
+    where TService : class, IRadioService
+{
+    Channel<TService>.Link Open(TService instance, bool weakReference);
+}
+
+public class Channel<TService> : Channel, IChannel<TService>
     where TService : class, IRadioService
 {
     #region Link
@@ -291,6 +299,8 @@ public class Channel<TService> : Channel
     public int Count => this.list.Count;
 
     public (Link?[] Array, int CountHint) InternalGetList() => this.list.GetValuesAndCountHint();
+
+    internal override object GetBroker() => this.Broker;
 
     private void Remove(Link link)
     {
