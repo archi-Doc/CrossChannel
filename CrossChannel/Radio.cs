@@ -68,6 +68,7 @@ public static class Radio
         static ChannelCache()
         {
             channel = new();
+            //channel = (Channel<TService>)RadioRegistry.Get<TService>().NewChannel();
         }
 
         public static Channel<TService> Channel => channel;

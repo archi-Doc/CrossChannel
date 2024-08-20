@@ -362,9 +362,9 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
         ScopingStringBuilder.IScope? scope = generateMethod ? ssb.ScopeBrace($"public static void {CrossChannelBody.InitializerName}()") : null;
 
         // ssb.AppendLine($"// Register {this.ClassName}");
-
         var @namespace = this.ContainingObject is null ? this.Namespace : this.ContainingObject.FullName;
-        ssb.AppendLine($"RadioRegistry.Register(new(typeof({this.FullName}), x => new {@namespace}.{this.ClassName}(x)));");
+        var singleChannel = this.RadioServiceInterfaceAttribute.SingleChannel ? "true" : "false";
+        ssb.AppendLine($"RadioRegistry.Register(new(typeof({this.FullName}), x => new {@namespace}.{this.ClassName}(x), () => new Channel<{this.FullName}>(), (a, b) => new Channel<{this.FullName}>(a, b), {singleChannel}));");
 
         scope?.Dispose();
     }

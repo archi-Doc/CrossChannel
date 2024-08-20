@@ -56,7 +56,7 @@ public static class RadioRegistry
         foreach (var x in typeToInformation.Values)
         {// ITestService => Radio.Send<ITestService>() or RadioClass.Send<>()
             // IKeyedService => Radio.Send<ITestService, TKey>(key) or RadioClass
-            services.Add(new(x.ServiceType, Radio.Send(x.ServiceType)));
+            services.Add(new(x.ServiceType, RadioRegistry.Get(x.ServiceType).NewChannel()));
         }
     }
 }

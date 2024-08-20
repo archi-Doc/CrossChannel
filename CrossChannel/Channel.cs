@@ -5,17 +5,7 @@ using Arc.Collections;
 
 namespace CrossChannel;
 
-public abstract class Channel
-{
-
-    internal Channel GetOrCreateGlobal<TService>(
-    {
-        typeof(Channel<>).MakeGenericType(Type);
-        RadioRegistry.Get(serviceType);
-    }
-}
-
-public class Channel<TService> : Channel
+public class Channel<TService>
     where TService : class, IRadioService
 {
     #region Link
@@ -239,11 +229,13 @@ public class Channel<TService> : Channel
 
     #endregion
 
+    public bool SingleChannel { get; private set; }
+
     internal TService Broker { get; }
 
-    private readonly object dualObject; // nodeIndex == -1 ? new object() : IUnorderedMap;
-    private readonly int nodeIndex;
-    private readonly FastList list = new();
+    private object dualObject; // nodeIndex == -1 ? new object() : IUnorderedMap;
+    private int nodeIndex;
+    private FastList list = new();
     private int trimCount;
     private int checkReferenceCount;
 
@@ -251,14 +243,20 @@ public class Channel<TService> : Channel
     {
         this.dualObject = new();
         this.nodeIndex = -1;
-        this.Broker = (TService)RadioRegistry.Get<TService>().NewBroker(this);
+
+        var info = RadioRegistry.Get<TService>();
+        this.SingleChannel = info.SingleChannel;
+        this.Broker = (TService)info.NewBroker(this);
     }
 
     public Channel(IUnorderedMap map, int nodeIndex)
     {
         this.dualObject = map;
         this.nodeIndex = nodeIndex;
-        this.Broker = (TService)RadioRegistry.Get<TService>().NewBroker(this);
+
+        var info = RadioRegistry.Get<TService>();
+        this.SingleChannel = info.SingleChannel;
+        this.Broker = (TService)info.NewBroker(this);
     }
 
     public Link Open(TService instance, bool weakReference)

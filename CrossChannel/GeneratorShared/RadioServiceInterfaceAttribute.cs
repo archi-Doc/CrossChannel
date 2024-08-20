@@ -16,5 +16,5 @@ public sealed class RadioServiceInterfaceAttribute : Attribute
     {
     }
 
-    // public bool RequireUiThread { get; set; }
+    public bool SingleChannel { get; set; } = false;
 }
