@@ -1,16 +1,14 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 using System.Collections.Concurrent;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CrossChannel;
 
 public static class ChannelRegistry
 {
     private static ConcurrentDictionary<Type, ChannelInformation> typeToInformation = new();
-    // private static ThreadsafeTypeKeyHashtable<ChannelInformation> typeToInformation = new();
 
-    internal static class InformationCache<TService>
+    private static class InformationCache<TService>
         where TService : class, IRadioService
     {
         public static readonly ChannelInformation Information;
@@ -28,7 +26,6 @@ public static class ChannelRegistry
 
     public static bool Register(ChannelInformation information)
     {
-        // typeToInformation.TryAdd(information.MachineType, information);
         return typeToInformation.TryAdd(information.ServiceType, information);
     }
 
@@ -50,7 +47,7 @@ public static class ChannelRegistry
         }
     }
 
-    public static Channel<TService> EmptyChannel<TService>()
+    public static Channel<TService> GetEmptyChannel<TService>()
         where TService : class, IRadioService
         => (Channel<TService>)InformationCache<TService>.Information.EmptyChannel;
 
