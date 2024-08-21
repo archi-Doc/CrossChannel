@@ -5,21 +5,51 @@ using Arc.Collections;
 
 namespace CrossChannel;
 
+/// <summary>
+/// Represents an abstract channel.
+/// </summary>
 public abstract class Channel
 {
+    /// <summary>
+    /// The threshold value for trimming the channel list.
+    /// </summary>
     public const int TrimThreshold = 32;
+
+    /// <summary>
+    /// The threshold value for checking weak references in the channel list.
+    /// </summary>
     public const int CheckReferenceThreshold = 32;
 
+    /// <summary>
+    /// Gets the maximum number of links allowed in the channel.
+    /// </summary>
     public int MaxLinks { get; internal set; }
 
+    /// <summary>
+    /// Gets or sets the index of the node in the channel.
+    /// </summary>
     internal int NodeIndex { get; set; }
 
+    /// <summary>
+    /// Gets the broker object associated with the channel.
+    /// </summary>
+    /// <returns>The broker object.</returns>
     internal abstract object GetBroker();
 }
 
+/// <summary>
+/// Represents a channel interface for a specific service.
+/// </summary>
+/// <typeparam name="TService">The type of the service.</typeparam>
 public interface IChannel<TService>
     where TService : class, IRadioService
 {
+    /// <summary>
+    /// Opens a channel for the specified service instance.
+    /// </summary>
+    /// <param name="instance">The service instance.</param>
+    /// <param name="weakReference">Specifies whether to use a weak reference for the service instance.</param>
+    /// <returns>The channel link if the channel is successfully opened; otherwise, null.</returns>
     Channel<TService>.Link? Open(TService instance, bool weakReference = false);
 }
 
