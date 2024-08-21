@@ -96,7 +96,7 @@ public static class Radio
     /// <param name="weakReference">Indicates whether to use a weak reference for the instance.</param>
     /// <returns>A link to the opened channel.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
-    public static Channel<TService>.Link Open<TService>(TService instance, bool weakReference = false)
+    public static Channel<TService>.Link? Open<TService>(TService instance, bool weakReference = false)
         where TService : class, IRadioService
     {
         var channel = ChannelCache<TService>.Channel;
@@ -113,7 +113,7 @@ public static class Radio
     /// <param name="weakReference">Indicates whether to use a weak reference for the instance.</param>
     /// <returns>A link to the opened channel.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
-    public static Channel<TService>.Link OpenWithKey<TService, TKey>(TService instance, TKey key, bool weakReference = false)
+    public static Channel<TService>.Link? OpenWithKey<TService, TKey>(TService instance, TKey key, bool weakReference = false)
         where TService : class, IRadioService
         where TKey : notnull
     {
