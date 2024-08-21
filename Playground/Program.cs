@@ -79,6 +79,18 @@ class Program
         var provider = collection.BuildServiceProvider();
 
         var testService = provider.GetRequiredService<ITestService>();
+        testService.Test1(); // No service
+
+        var channel = provider.GetRequiredService<IChannel<ITestService>>();
+        var link = channel.Open((ITestService)new TestService());
+
         testService.Test1();
+
+        var sender = provider.GetRequiredService<ISender<ITestService>>();
+        sender.Send().Test1();
+
+        link?.Close();
+        testService.Test1();// No service
+
     }
 }

@@ -20,7 +20,7 @@ public abstract class Channel
 public interface IChannel<TService>
     where TService : class, IRadioService
 {
-    Channel<TService>.Link Open(TService instance, bool weakReference);
+    Channel<TService>.Link? Open(TService instance, bool weakReference = false);
 }
 
 public class Channel<TService> : Channel, IChannel<TService>
@@ -275,13 +275,13 @@ public class Channel<TService> : Channel, IChannel<TService>
         this.Broker = (TService)info.NewBroker(this);
     }
 
-    public Link Open(TService instance, bool weakReference)
+    public Link? Open(TService instance, bool weakReference)
     {
         lock (this.dualObject)
         {
             if (this.list.Count >= this.MaxLinks)
             {// Invalid link
-                return new(this);
+                return default; // new(this);
             }
 
             var link = new Link(this, instance, weakReference);

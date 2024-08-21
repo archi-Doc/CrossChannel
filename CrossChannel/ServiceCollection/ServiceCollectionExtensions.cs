@@ -19,6 +19,8 @@ public static class ServiceCollectionExtensions
             services.Add(new(x.ServiceType, a => Radio.GetChannel(x.ServiceType).GetBroker(), ServiceLifetime.Singleton)); // ISomeService
             services.Add(new(typeof(IChannel<>).MakeGenericType(x.ServiceType), a => Radio.GetChannel(x.ServiceType), ServiceLifetime.Singleton)); // IChannel<ISomeService>
             services.Add(new(typeof(ISender<>).MakeGenericType(x.ServiceType), a => Activator.CreateInstance(typeof(Sender<>).MakeGenericType(x.ServiceType))!, ServiceLifetime.Singleton)); // ISender<ISomeService>
+
+            // In the future, we might add an option to switch to RadioClass.
         }
 
         return new CrossChannelBuilder(services);

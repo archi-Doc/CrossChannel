@@ -75,10 +75,10 @@ internal static class Example
     public static async Task Other()
     {
         // Open a channel with the key which limits the delivery of messages.
-        using (Radio.Open<IMessageService, int>(new MessageService("Key: "), 1))
+        using (Radio.OpenWithKey<IMessageService, int>(new MessageService("Key: "), 1))
         {// Channel with Key 1
-            Radio.Send<IMessageService, int>(0).Message("0"); // Message is not received.
-            Radio.Send<IMessageService, int>(1).Message("1"); // Message is received.
+            Radio.SendWithKey<IMessageService, int>(0).Message("0"); // Message is not received.
+            Radio.SendWithKey<IMessageService, int>(1).Message("1"); // Message is received.
         }
 
         Console.WriteLine();
