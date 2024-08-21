@@ -32,4 +32,8 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Generated\*" />
+  </ItemGroup>
+
 </Project>
