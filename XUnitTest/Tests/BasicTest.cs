@@ -10,7 +10,7 @@ namespace XUnitTest;
 public class BasicTest
 {
     [Fact]
-    public void Class_TwoWay()
+    public void TestClass()
     {
         var radio = new RadioClass();
         using (radio.Open((ITestService)new TestService()))
@@ -29,12 +29,12 @@ public class BasicTest
 
         radio.Send<ITestService>().Double(4).SequenceEqual([]).IsTrue();
 
-        using (radio.Open((ITestService)new TestService(), 1))
+        using (radio.OpenWithKey((ITestService)new TestService(), 1))
         {
-            radio.Send<ITestService, int>(0).Double(1).SequenceEqual([]).IsTrue();
-            radio.Send<ITestService, int>(1).Double(1).SequenceEqual([2, ]).IsTrue();
+            radio.SendWithKey<ITestService, int>(0).Double(1).SequenceEqual([]).IsTrue();
+            radio.SendWithKey<ITestService, int>(1).Double(1).SequenceEqual([2, ]).IsTrue();
         }
 
-        radio.Send<ITestService, int>(1).Double(1).SequenceEqual([]).IsTrue();
+        radio.SendWithKey<ITestService, int>(1).Double(1).SequenceEqual([]).IsTrue();
     }
 }

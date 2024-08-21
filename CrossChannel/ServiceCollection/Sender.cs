@@ -23,5 +23,5 @@ internal class Sender<TService> : ISender<TService>
 
     public TService Send<TKey>(TKey key)
         where TKey : notnull
-        => Radio.Send<TService, TKey>(key);
+        => Radio.SendWithKey<TService, TKey>(key);
 }

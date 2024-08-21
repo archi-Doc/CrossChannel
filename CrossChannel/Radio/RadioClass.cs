@@ -45,10 +45,10 @@ public class RadioClass
     /// <param name="channel">When this method returns, contains the channel associated with the specified service type and key, if the key is found; otherwise, the default value.</param>
     /// <returns><c>true</c> if the channel for the specified service type and key is found; otherwise, <c>false</c>.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
-    public bool TryGetChannel<TService, TKey>(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
+    public bool TryGetChannelWithKey<TService, TKey>(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
         where TService : class, IRadioService
         where TKey : notnull
-        => RadioHelper.TryGetChannel(this.twoTypeToMap, key, out channel);
+        => RadioHelper.TryGetChannelWithKey(this.twoTypeToMap, key, out channel);
 
     /// <summary>
     /// Tries to get the channel for the specified service type and key.
@@ -59,9 +59,9 @@ public class RadioClass
     /// <param name="channel">When this method returns, contains the channel associated with the specified service type and key, if the key is found; otherwise, the default value.</param>
     /// <returns><c>true</c> if the channel for the specified service type and key is found; otherwise, <c>false</c>.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
-    public bool TryGetChannel<TKey>(Type serviceType, TKey key, [MaybeNullWhen(false)] out Channel channel)
+    public bool TryGetChannelWithKey<TKey>(Type serviceType, TKey key, [MaybeNullWhen(false)] out Channel channel)
         where TKey : notnull
-        => RadioHelper.TryGetChannel(this.twoTypeToMap, serviceType, key, out channel);
+        => RadioHelper.TryGetChannelWithKey(this.twoTypeToMap, serviceType, key, out channel);
 
     /// <summary>
     /// Opens a channel for the specified service type and registers the instance.
@@ -88,11 +88,11 @@ public class RadioClass
     /// <param name="weakReference">Indicates whether to use a weak reference for the instance.</param>
     /// <returns>A link to the opened channel.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
-    public Channel<TService>.Link Open<TService, TKey>(TService instance, TKey key, bool weakReference = false)
+    public Channel<TService>.Link OpenWithKey<TService, TKey>(TService instance, TKey key, bool weakReference = false)
         where TService : class, IRadioService
         where TKey : notnull
     {
-        return RadioHelper.GetOrAddChannel(this.twoTypeToMap, instance, key).Open(instance, weakReference);
+        return RadioHelper.GetOrAddChannelWithKey(this.twoTypeToMap, instance, key).Open(instance, weakReference);
     }
 
     /// <summary>
@@ -117,11 +117,11 @@ public class RadioClass
     /// <param name="key">The key.</param>
     /// <returns>The broker of the channel for the specified service type and key, or the broker of an empty channel if the channel is not found.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
-    public TService Send<TService, TKey>(TKey key)
+    public TService SendWithKey<TService, TKey>(TKey key)
         where TService : class, IRadioService
         where TKey : notnull
     {
-        if (RadioHelper.TryGetChannel<TService, TKey>(this.twoTypeToMap, key, out var channel))
+        if (RadioHelper.TryGetChannelWithKey<TService, TKey>(this.twoTypeToMap, key, out var channel))
         {
             return channel.Broker;
         }

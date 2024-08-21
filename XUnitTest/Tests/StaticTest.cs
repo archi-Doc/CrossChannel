@@ -37,23 +37,23 @@ public class StaticTest
     [Fact]
     public void Static_TwoWayKey()
     {
-        using (Radio.Open<ITestService, int>(new TestService(), 1))
+        using (Radio.OpenWithKey<ITestService, int>(new TestService(), 1))
         {
             Radio.GetChannel<ITestService>().Count.Is(0);
             Radio.Send<ITestService>().Double(1).SequenceEqual([]).IsTrue();
-            Radio.Send<ITestService, int>(0).Double(2).SequenceEqual([]).IsTrue();
-            Radio.Send<ITestService, int>(1).Double(2).SequenceEqual([4]).IsTrue();
-            if (Radio.TryGetChannel<ITestService, int>(1, out var channel))
+            Radio.SendWithKey<ITestService, int>(0).Double(2).SequenceEqual([]).IsTrue();
+            Radio.SendWithKey<ITestService, int>(1).Double(2).SequenceEqual([4]).IsTrue();
+            if (Radio.TryGetChannelWithKey<ITestService, int>(1, out var channel))
             {
                 channel.Count.Is(1);
             }
 
-            using (Radio.Open<ITestService, int>(new TestService(), 2))
+            using (Radio.OpenWithKey<ITestService, int>(new TestService(), 2))
             {
                 Radio.Send<ITestService>().Double(1).SequenceEqual([]).IsTrue();
-                Radio.Send<ITestService, int>(0).Double(2).SequenceEqual([]).IsTrue();
-                Radio.Send<ITestService, int>(1).Double(2).SequenceEqual([4]).IsTrue();
-                Radio.Send<ITestService, int>(2).Double(3).SequenceEqual([6]).IsTrue();
+                Radio.SendWithKey<ITestService, int>(0).Double(2).SequenceEqual([]).IsTrue();
+                Radio.SendWithKey<ITestService, int>(1).Double(2).SequenceEqual([4]).IsTrue();
+                Radio.SendWithKey<ITestService, int>(2).Double(3).SequenceEqual([6]).IsTrue();
             }
         }
 

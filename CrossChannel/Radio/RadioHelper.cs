@@ -7,7 +7,7 @@ namespace CrossChannel;
 
 internal static class RadioHelper
 {
-    public static bool TryGetChannel<TService, TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
+    public static bool TryGetChannelWithKey<TService, TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
         where TService : class, IRadioService
         where TKey : notnull
     {
@@ -31,7 +31,7 @@ internal static class RadioHelper
         }
     }
 
-    public static bool TryGetChannel<TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, Type serviceType, TKey key, [MaybeNullWhen(false)] out Channel channel)
+    public static bool TryGetChannelWithKey<TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, Type serviceType, TKey key, [MaybeNullWhen(false)] out Channel channel)
         where TKey : notnull
     {
         if (twoTypeToMap.TryGetValue(serviceType, typeof(TKey), out var obj) ||
@@ -54,7 +54,7 @@ internal static class RadioHelper
         }
     }
 
-    public static Channel<TService> GetOrAddChannel<TService, TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, TService instance, TKey key)
+    public static Channel<TService> GetOrAddChannelWithKey<TService, TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, TService instance, TKey key)
         where TService : class, IRadioService
         where TKey : notnull
     {
