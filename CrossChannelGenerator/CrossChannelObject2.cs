@@ -68,7 +68,7 @@ public partial class CrossChannelObject
     private void GenerateBrokerMethod_RadioResult(ScopingStringBuilder ssb, ServiceMethod method)
     {// RadioResult<T>
         this.Generate_GetList(ssb);
-        ssb.AppendLine($"{method.ResultName} firstResult = default;");
+        ssb.AppendLine($"{method.ResultName} firstResult = default!;");
         ssb.AppendLine($"{method.ResultName}[]? results = default;");
         ssb.AppendLine("var count = 0;");
 
