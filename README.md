@@ -238,5 +238,14 @@ Here is a benchmark for each feature.
 
 
 
-> CrossChannel.Radio.Send<ITaichi>().Message(3055952910, "生きている人、いますか？");
+```csharp
+ulong hkr = 3055952910;
+while (true)
+{
+    var r = CrossChannel.Radio.Send<ITaichi>().Message(hkr++, "生きている人、いますか？");
+    if (r.TryGetSingleResult(out _)) break;
+}
+```
+
+
 
