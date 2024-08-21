@@ -20,7 +20,7 @@ public abstract class Channel
 public interface IChannel<TService>
     where TService : class, IRadioService
 {
-    Channel<TService>.Link? Open(TService instance, bool weakReference);
+    Channel<TService>.Link? Open(TService instance, bool weakReference = false);
 }
 
 public class Channel<TService> : Channel, IChannel<TService>
