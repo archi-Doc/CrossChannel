@@ -18,7 +18,7 @@ public sealed class RadioServiceInterfaceAttribute : Attribute
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the maximum number of channel links is one.
+    /// Gets or sets the maximum number of links of the channel (default is <see cref="int.MaxValue"/>).
     /// </summary>
-    public bool SingleLink { get; set; } = false;
+    public int MaxLinks { get; set; } = int.MaxValue;
 }
