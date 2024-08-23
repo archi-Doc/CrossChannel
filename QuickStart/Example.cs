@@ -2,13 +2,16 @@
 using System.Threading.Tasks;
 using CrossChannel;
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
+
 namespace QuickStart;
 
 // First, define a common interface to be used by both the receiver and the sender.
 [RadioServiceInterface] // Add the RadioServiceInterface attribute.
 public interface IMessageService : IRadioService
 {// The target interface must derive from IRadioService.
-    void Message(string message);   
+    void Message(string message);
 }
 
 public class MessageService : IMessageService
@@ -20,6 +23,39 @@ public class MessageService : IMessageService
 
     public void Message(string message)
         => Console.WriteLine(this.prefix + message);
+}
+
+[RadioServiceInterface] // RadioServiceInterface attribute is required.
+public interface ITestService : IRadioService
+{// The target interface must derive from IRadioService.
+    void Test1(); // A function without a return value.
+
+    RadioResult<int> Test2(int x); // With a return value. Since the number of return values can be zero or more depending on the number of Subscribers, it is necessary to wrap them in a RadioResult structure.
+
+    Task Test3(); // Asynchronous function without a return value.
+
+    Task<RadioResult<int>> Test4(); // Asynchronous function without a return value.
+}
+
+public class TestService : ITestService
+{// The return type of the interface function must be either void, Task, RadioResult<T>, Task<RadioResult<T>>.
+    void ITestService.Test1()
+    {// Since multiple threads may call it simultaneously, please make the function thread-safe.
+    }
+
+    RadioResult<int> ITestService.Test2(int x)
+    {// Wrap the return value in RadioResult structure.
+        return new(0);
+    }
+
+    async Task ITestService.Test3()
+    {// May be called from any thread (UI or non-UI).
+    }
+
+    async Task<RadioResult<int>> ITestService.Test4()
+    {// The asynchronous function returns after all Subscribers have completed their processing.
+        return new(0);
+    }
 }
 
 internal static class Example
@@ -38,7 +74,7 @@ internal static class Example
         Radio.Send<IMessageService>().Message("message not received");
 
 
-        // Test2: Open a channel which has a weak reference to the object.
+        // Test2: Open a channel which has a weak reference to the instance.
         OpenWithWeakReference();
         static void OpenWithWeakReference()
         {

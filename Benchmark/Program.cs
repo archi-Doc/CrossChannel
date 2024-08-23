@@ -23,7 +23,6 @@ public class Program
             typeof(RadioResultTest),
             typeof(H2HBenchmark),
             typeof(CrossChannelBenchmark),
-            typeof(CrossChannelBenchmark2),
         });
         switcher.Run(args);
     }
