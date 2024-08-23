@@ -1,14 +1,10 @@
-## CrossChannel is Pub/Sub library for .NET
+## **Interface-based**, **fast**, **easy-to-use**, and most advanced Pub/Sub library
 
 ![Nuget](https://img.shields.io/nuget/v/Arc.CrossChannel) ![Build and Test](https://github.com/archi-Doc/CrossChannel/workflows/Build%20and%20Test/badge.svg)
 
-- **Faster** than most Pub/Sub libraries.
-- Easy to use.
-
 - Supports **Weak references**, **Asynchronous** methods.
-- Supports `Action<TMessage>`, `Func<TMessage, TResult>` delegates.
 - **Key** feature can limit the delivery of messages.
-- Thread safe.
+- Thread-safe.
 
 
 
@@ -28,7 +24,7 @@
 
 ## Quick Start
 
-Install CrossChannel using Package Manager Console.
+Install **CrossChannel** using Package Manager Console.
 
 ```
 Install-Package Arc.CrossChannel
@@ -36,51 +32,87 @@ Install-Package Arc.CrossChannel
 
 
 
-CrossChannel is a library for Publish–subscribe pattern. It's very easy to use.
+**CrossChannel** is a library for Publish–subscribe pattern. It's very easy to use.
 
-1. **Subscribe**: Open a channel to receive messages, specifying a delegate to be called. 
-2. **Publish**: Send a message. The channel identifier is the type of message (and key and result if necessary).
-3. **Unsubscribe**: Close the channel.
+1. **Service interface**: A common interface to be used by both the subscriber and the publisher.
+
+2. **Subscriber (receiver)**: Responsible for executing the methods of the interface. You can register the Subscriber by opening a channel.
+
+3. **Publisher (sender)**: Call the interface function and delegate processing to the Subscriber. The number of return values varies depending on the number of registered Subscribers.
+
+4. **Unsubscribe**: Close the channel.
+
+   
 
 This is a small sample code to use CrossChannel.
 
+First, define an interface to be shared between the Publisher(Sender) and Subscriber(Receiver), then define the Subscriber responsible for processing (implementing the interface).
+
 ```csharp
-// CrossChannel.Radio is a public static class.
+// First, define a common interface to be used by both the receiver and the sender.
+[RadioServiceInterface] // Add the RadioServiceInterface attribute.
+public interface IMessageService : IRadioService
+{// The target interface must derive from IRadioService.
+    void Message(string message);
+}
+
+public class MessageService : IMessageService
+{// Implement the interface.
+    private readonly string prefix;
+
+    public MessageService(string prefix)
+    {
+        this.prefix = prefix;
+    }
+
+    public void Message(string message)
+    {
+        Console.WriteLine(this.prefix + message);
+    }
+}
+```
+
+
+
+```csharp
 // Open a channel which simply outputs the received message to the console.
-using (var channel = CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Test " + x); }))
+using (var channel = Radio.Open<IMessageService>(new MessageService("Test: ")))
 {
-    // Send a message. The result is "Test message."
-    CrossChannel.Radio.Send<string>("message.");
+    // Send a message. The result is "Test: message"
+    Radio.Send<IMessageService>().Message("message");
 }
 
 // This message will not be displayed because the channel is closed.
-CrossChannel.Radio.Send<string>("Message not received.");
+Radio.Send<IMessageService>().Message("message not received");
 
-// Open a channel which has a weak reference to an object.
+
+// Test2: Open a channel which has a weak reference to the object.
 OpenWithWeakReference();
 static void OpenWithWeakReference()
 {
-    CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Weak " + x); }, new object());
+    Radio.Open<IMessageService>(new MessageService("Test: "), true);
 }
 
-// Send a message. The result is "Weak message."
-CrossChannel.Radio.Send<string>("message.");
+// Send a message. The result is "Test: weak message"
+Radio.Send<IMessageService>().Message("weak message");
 
 // The object is garbage collected.
 GC.Collect();
 
 // This message will not be displayed because the channel is automatically closed.
-CrossChannel.Radio.Send<string>("Message not received.");
+Radio.Send<IMessageService>().Message("message not received");
 
-// Don't forget to close the channel when you did not specify a weak reference, since this will cause memory leaks.
-CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Leak " + x); });
 
-// You can create a local radio class.
-var radio = new CrossChannel.RadioClass();
-using (radio.Open<string>(x => { Console.WriteLine("Local " + x); }))
+// Test 3: Don't forget to close the channel when you did not specify the weak reference, since this will cause memory leaks.
+_ = Radio.Open<IMessageService>(new MessageService("Leak: "));
+Radio.Send<IMessageService>().Message("message");
+
+// Test 4: You can create a local radio class.
+var radio = new RadioClass();
+using (radio.Open<IMessageService>(new MessageService("Local: ")))
 {
-    // Send a message. The result is "Local message."
-    radio.Send<string>("message.");
+    // Send a message. The result is "Local: message"
+    radio.Send<IMessageService>().Message("message");
 }
 ```
 
@@ -96,18 +128,17 @@ MP: [Cysharp/MessagePipe](https://github.com/Cysharp/MessagePipe)
 
 PS: [upta/pubsub](https://github.com/upta/pubsub)
 
-| Method           |        Mean |     Error |     StdDev |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-| ---------------- | ----------: | --------: | ---------: | -----: | ----: | ----: | --------: |
-| CC_OpenSend      |    55.48 ns |  0.152 ns |   0.213 ns | 0.0114 |     - |     - |      48 B |
-| CC_OpenSend8     |    88.95 ns |  0.128 ns |   0.192 ns | 0.0114 |     - |     - |      48 B |
-| MP_OpenSend      |   179.64 ns |  0.631 ns |   0.884 ns | 0.0134 |     - |     - |      56 B |
-| MP_OpenSend8     |   234.70 ns |  0.394 ns |   0.590 ns | 0.0134 |     - |     - |      56 B |
-| PS_OpenSend      |   402.67 ns |  0.783 ns |   1.148 ns | 0.1144 |     - |     - |     480 B |
-| PS_OpenSend8     | 1,253.93 ns | 77.629 ns | 116.191 ns | 0.3815 |     - |     - |   1,600 B |
-| CC_OpenSend_Key  |    71.84 ns |  0.929 ns |   1.390 ns | 0.0135 |     - |     - |      56 B |
-| CC_OpenSend8_Key |   168.34 ns |  2.873 ns |   4.300 ns | 0.0134 |     - |     - |      56 B |
-| MP_OpenSend_Key  |   287.17 ns |  4.814 ns |   6.904 ns | 0.0725 |     - |     - |     304 B |
-| MP_OpenSend8_Key |   467.52 ns |  0.884 ns |   1.295 ns | 0.0725 |     - |     - |     304 B |
+| Method        |        Mean |     Error |     StdDev |   Gen0 | Allocated |
+| ------------- | ----------: | --------: | ---------: | -----: | --------: |
+| CC_OpenSend   |    41.91 ns |  0.650 ns |   0.972 ns | 0.0038 |      48 B |
+| CC_OpenSend8  |    54.13 ns |  0.909 ns |   1.274 ns | 0.0038 |      48 B |
+| CC_OpenSend88 |   365.16 ns |  4.738 ns |   7.091 ns | 0.0305 |     384 B |
+| MP_OpenSend   |    89.58 ns |  0.938 ns |   1.404 ns | 0.0044 |      56 B |
+| MP_OpenSend8  |    98.55 ns |  1.161 ns |   1.702 ns | 0.0044 |      56 B |
+| MP_OpenSend88 |   805.17 ns | 12.591 ns |  18.845 ns | 0.0353 |     448 B |
+| PS_OpenSend   |   267.89 ns | 13.514 ns |  20.228 ns | 0.0381 |     480 B |
+| PS_OpenSend8  |   672.32 ns | 65.482 ns |  95.982 ns | 0.1268 |    1600 B |
+| PS_OpenSend88 | 2,921.00 ns | 99.322 ns | 145.584 ns | 0.3586 |    4544 B |
 
 The [benchmark code](/Benchmark/Benchmarks/H2HBenchmark.cs) is simple: open a channel (subscribe), send a message (publish), and close the channel (unsubscribe).
 
