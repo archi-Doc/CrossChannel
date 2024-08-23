@@ -58,15 +58,6 @@ public class H2HBenchmark
     private ISimpleService simpleService7 = new SimpleService();
     private ISimpleService simpleService8 = new SimpleService();
 
-    private ISimpleServiceB simpleServiceB1 = new SimpleServiceB(1);
-    private ISimpleServiceB simpleServiceB2 = new SimpleServiceB(2);
-    private ISimpleServiceB simpleServiceB3 = new SimpleServiceB(3);
-    private ISimpleServiceB simpleServiceB4 = new SimpleServiceB(4);
-    private ISimpleServiceB simpleServiceB5 = new SimpleServiceB(5);
-    private ISimpleServiceB simpleServiceB6 = new SimpleServiceB(6);
-    private ISimpleServiceB simpleServiceB7 = new SimpleServiceB(7);
-    private ISimpleServiceB simpleServiceB8 = new SimpleServiceB(8);
-
     public H2HBenchmark()
     {
         var sc = new ServiceCollection();

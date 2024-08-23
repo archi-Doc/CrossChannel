@@ -1,4 +1,4 @@
-## **Interface-based**, **fast**, **easy-to-use**, and most advanced Pub/Sub library
+## **Interface-based**, **fast**, and most advanced Pub/Sub library
 
 ![Nuget](https://img.shields.io/nuget/v/Arc.CrossChannel) ![Build and Test](https://github.com/archi-Doc/CrossChannel/workflows/Build%20and%20Test/badge.svg)
 
@@ -12,12 +12,10 @@
 
 - [Quick Start](#quick-start)
 - [Performance](#performance)
-- [Delegates](#delegates)
+- [Interface and methods](#interface-and-methods)
 - [Features](#features)
   - [Weak reference](#weak-reference)
-  - [Async](#async)
   - [Key](#key)
-  - [Two way](#two-way)
 - [Benchmark](#benchmark)
 
 
@@ -32,19 +30,17 @@ Install-Package Arc.CrossChannel
 
 
 
-**CrossChannel** is a library for Publish–subscribe pattern. It's very easy to use.
+**CrossChannel** is a library for Publish–subscribe pattern, and it consists of the following elements.
 
 1. **Service interface**: A common interface to be used by both the subscriber and the publisher.
 
 2. **Subscriber (receiver)**: Responsible for executing the methods of the interface. You can register the Subscriber by opening a channel.
 
-3. **Publisher (sender)**: Call the interface function and delegate processing to the Subscriber. The number of return values varies depending on the number of registered Subscribers.
+3. **Publisher (sender)**: Call the interface methods to the Subscriber. The number of return values varies depending on the number of registered Subscribers.
 
 4. **Unsubscribe**: Close the channel.
 
    
-
-This is a small sample code to use CrossChannel.
 
 First, define an interface to be shared between the Publisher(Sender) and Subscriber(Receiver), then define the Subscriber responsible for processing (implementing the interface).
 
@@ -61,14 +57,10 @@ public class MessageService : IMessageService
     private readonly string prefix;
 
     public MessageService(string prefix)
-    {
-        this.prefix = prefix;
-    }
+        => this.prefix = prefix;
 
     public void Message(string message)
-    {
-        Console.WriteLine(this.prefix + message);
-    }
+        => Console.WriteLine(this.prefix + message);
 }
 ```
 
@@ -144,13 +136,46 @@ The [benchmark code](/Benchmark/Benchmarks/H2HBenchmark.cs) is simple: open a ch
 
 
 
-## Delegates
+## Interface and methods
 
-The delegates passed to `Open()` functions must satisfy these requirements.
+```csharp
+[RadioServiceInterface] // RadioServiceInterface attribute is required.
+public interface ITestService : IRadioService
+{// The target interface must derive from IRadioService.
+    void Test1(); // A function without a return value.
 
-- Should be **Thread safe** (multiple threads may call `Send()`).
-- May be called from any thread (**UI** or **non-UI**).
-- Avoid recursive call (e.g. `Radio.Open<int>(x => { Radio.Send<int>(0); });`).
+    RadioResult<int> Test2(int x); // With a return value. Since the number of return values can be zero or more depending on the number of Subscribers, it is necessary to wrap them in a RadioResult structure.
+
+    Task Test3(); // Asynchronous function without a return value.
+
+    Task<RadioResult<int>> Test4(); // Asynchronous function without a return value.
+}
+```
+
+
+
+```csharp
+public class TestService : ITestService
+{// The return type of the interface function must be either void, Task, RadioResult<T>, Task<RadioResult<T>>.
+    void ITestService.Test1()
+    {// Since multiple threads may call it simultaneously, please make the function thread-safe.
+    }
+
+    RadioResult<int> ITestService.Test2(int x)
+    {// Wrap the return value in RadioResult structure.
+        return new(0);
+    }
+
+    async Task ITestService.Test3()
+    {// May be called from any thread (UI or non-UI).
+    }
+
+    async Task<RadioResult<int>> ITestService.Test4()
+    {// The asynchronous function returns after all Subscribers have completed their processing.
+        return new(0);
+    }
+}
+```
 
 
 
@@ -158,45 +183,25 @@ The delegates passed to `Open()` functions must satisfy these requirements.
 
 ### Weak reference
 
-If you specify a weak reference to a channel, you do not need to close the channel.
-
 ```csharp
-CreateChannel();
-void CreateChannel()
-{
-    var obj = new object(); // Target object
+ // Test2: Open a channel which has a weak reference to the instance.
+ OpenWithWeakReference();
+ static void OpenWithWeakReference()
+ {
+     Radio.Open<IMessageService>(new MessageService("Test: "), true);
+ }
 
-    // Open a channel with a weak reference.
-    Radio.Open<int>(x => System.Console.WriteLine(x), obj);
+ // Send a message. The result is "Test: weak message"
+ Radio.Send<IMessageService>().Message("weak message");
 
-    Radio.Send(1); // The result "1"
-}
+ // The object is garbage collected.
+ GC.Collect();
 
-GC.Collect(); // The channel will be closed when the object is garbage collected.
-Radio.Send(2); // The result ""
-
-var channel = Radio.Open<int>(x => System.Console.WriteLine(x), new object());
-channel.Dispose(); // Of course, you can close the channel manually.
+ // This message will not be displayed because the channel is automatically closed.
+ Radio.Send<IMessageService>().Message("message not received");
 ```
 
 It's quite useful for WPF program (e.g. view service).
-
-
-
-### Async
-
-```csharp
-// Open a channel which receives a message asynchronously.
-using (var channelAsync = Radio.OpenAsync<string>(async x =>
-{
-    Console.WriteLine($"Received: {x}");
-    await Task.Delay(1000);
-    Console.WriteLine($"Done.");
-}))
-{
-    await Radio.SendAsync("Test async");
-}
-```
 
 
 
@@ -204,34 +209,10 @@ using (var channelAsync = Radio.OpenAsync<string>(async x =>
 
 ```csharp
 // Open a channel with the key which limits the delivery of messages.
-using (var channelKey = Radio.OpenKey<int, string>(1, x => Console.WriteLine(x)))
+using (Radio.OpenWithKey<IMessageService, int>(new MessageService("Key: "), 1))
 {// Channel with Key 1
-    Radio.SendKey(0, "Key 0"); // Message is not received.
-    Radio.SendKey(1, "Key 1"); // Message is received.
-}
-
-```
-
-
-
-### Two way
-
-```csharp
-// Open a two-way (bidirectional) channel which receives a message and sends back a result.
-using (var channelTwoWay = Radio.OpenTwoWay<int, int>(x =>
-{
-    Console.WriteLine($"TwoWay: {x} -> {x * 2}");
-    return x * 2;
-}))
-{
-    Radio.SendTwoWay<int, int>(2); // TwoWay: 2 -> 4
-
-    using (var channelTwoWay2 = Radio.OpenTwoWay<int, int>(x => x * 3))
-    {
-        // The result is an array of TResult.
-        var result = Radio.SendTwoWay<int, int>(3); // TwoWay: 3 -> 6
-        Console.WriteLine($"Results: {string.Join(", ", result)}"); // Results: 6, 9
-    }
+    Radio.SendWithKey<IMessageService, int>(0).Message("0"); // Message is not received.
+    Radio.SendWithKey<IMessageService, int>(1).Message("1"); // Message is received.
 }
 ```
 
@@ -242,32 +223,28 @@ using (var channelTwoWay = Radio.OpenTwoWay<int, int>(x =>
 Here is a benchmark for each feature.
 
 - `Radio` is the fastest since it uses static type caching.
-- `RadioClass` uses `ConcurrentDictionary` which is a bit slower than static type caching, but still fast enough.
-- `Async` and `Key` features cause slight performance degradation.
-- Opening a channel with weak reference is about 8x slower, but sending messages is not that slow.
+- `RadioClass` uses `ThreadsafeTypeKeyHashtable` which is a bit slower than static type caching, but still fast enough.
+- `Key` features cause slight performance degradation.
+- Opening a channel with weak reference is about 4x slower, but sending messages is not that slow.
 
-| Method              |       Mean |     Error |    StdDev |     Median |  Gen 0 | Gen 1 | Gen 2 | Allocated |
-| ------------------- | ---------: | --------: | --------: | ---------: | -----: | ----: | ----: | --------: |
-| Radio_Open          |  50.784 ns | 0.5998 ns | 0.8978 ns |  50.767 ns | 0.0114 |     - |     - |      48 B |
-| Radio_OpenKey       |  57.632 ns | 0.1087 ns | 0.1627 ns |  57.634 ns | 0.0135 |     - |     - |      56 B |
-| Radio_OpenTwoWay    |  50.183 ns | 0.2385 ns | 0.3420 ns |  50.077 ns | 0.0114 |     - |     - |      48 B |
-| Radio_OpenTwoWayKey |  57.773 ns | 0.1298 ns | 0.1862 ns |  57.792 ns | 0.0135 |     - |     - |      56 B |
-| Class_Open          |  70.498 ns | 1.7349 ns | 2.3747 ns |  72.347 ns | 0.0114 |     - |     - |      48 B |
-| Class_OpenKey       |  92.001 ns | 0.8801 ns | 1.2900 ns |  91.433 ns | 0.0211 |     - |     - |      88 B |
-| Class_OpenTwoWay    |  83.422 ns | 0.4797 ns | 0.6879 ns |  83.063 ns | 0.0191 |     - |     - |      80 B |
-| Class_OpenTwoWayKey |  99.484 ns | 0.3034 ns | 0.4254 ns |  99.368 ns | 0.0230 |     - |     - |      96 B |
-| Radio_Send          |   5.037 ns | 0.1905 ns | 0.2793 ns |   4.867 ns |      - |     - |     - |         - |
-| Radio_SendKey       |  12.656 ns | 0.1736 ns | 0.2545 ns |  12.447 ns |      - |     - |     - |         - |
-| Radio_SendTwoWay    |  18.325 ns | 0.2839 ns | 0.4161 ns |  18.139 ns | 0.0172 |     - |     - |      72 B |
-| Radio_SendTwoWayKey |  26.264 ns | 0.0385 ns | 0.0539 ns |  26.253 ns | 0.0172 |     - |     - |      72 B |
-| Class_Send          |  19.102 ns | 0.2788 ns | 0.4173 ns |  19.332 ns |      - |     - |     - |         - |
-| Class_SendKey       |  41.382 ns | 0.4741 ns | 0.6799 ns |  41.231 ns | 0.0076 |     - |     - |      32 B |
-| Class_SendTwoWay    |  46.961 ns | 0.0795 ns | 0.1140 ns |  46.956 ns | 0.0249 |     - |     - |     104 B |
-| Class_SendTwoWayKey |  61.940 ns | 0.5976 ns | 0.7977 ns |  62.584 ns | 0.0267 |     - |     - |     112 B |
-| Radio_Weak_Open     | 405.360 ns | 1.6483 ns | 2.3107 ns | 406.124 ns | 0.0458 |     - |     - |     192 B |
-| Radio_Weak_Send     |  15.726 ns | 0.2326 ns | 0.3410 ns |  15.480 ns |      - |     - |     - |         - |
-
-
+| Method               |       Mean |      Error |     StdDev |   Gen0 | Allocated |
+| -------------------- | ---------: | ---------: | ---------: | -----: | --------: |
+| Send                 |   1.916 ns |  0.0200 ns |  0.0287 ns |      - |         - |
+| OpenSend             |  39.654 ns |  0.3066 ns |  0.4494 ns | 0.0038 |      48 B |
+| OpenSend8            |  54.575 ns |  0.3954 ns |  0.5796 ns | 0.0038 |      48 B |
+| OpenSend_Weak        | 134.302 ns |  7.7571 ns | 11.3703 ns | 0.0057 |      72 B |
+| OpenSend8_Weak       | 139.289 ns |  3.1632 ns |  4.5366 ns | 0.0057 |      72 B |
+| SendKey              |   8.722 ns |  0.1016 ns |  0.1520 ns |      - |         - |
+| OpenSend_Key         | 124.375 ns |  4.7073 ns |  6.5990 ns | 0.0241 |     304 B |
+| OpenSend8_Key        | 287.545 ns |  9.2775 ns | 13.8862 ns | 0.0238 |     304 B |
+| Class_Send           |   8.061 ns |  0.4541 ns |  0.6656 ns |      - |         - |
+| Class_OpenSend       |  47.849 ns |  2.0198 ns |  2.9606 ns | 0.0038 |      48 B |
+| Class_OpenSend8      |  82.368 ns |  0.6213 ns |  0.8911 ns | 0.0038 |      48 B |
+| Class_OpenSend_Weak  | 156.877 ns |  8.0446 ns | 11.5373 ns | 0.0057 |      72 B |
+| Class_OpenSend8_Weak | 217.078 ns | 17.0128 ns | 23.8496 ns | 0.0057 |      72 B |
+| Class_SendKey        |   9.470 ns |  0.2608 ns |  0.3823 ns |      - |         - |
+| Class_OpenSend_Key   | 126.246 ns |  2.0165 ns |  2.8920 ns | 0.0241 |     304 B |
+| Class_OpenSend8_Key  | 285.156 ns |  8.0497 ns | 11.5447 ns | 0.0238 |     304 B |
 
 ```csharp
 ulong hkr = 3055952910;
@@ -277,6 +254,4 @@ while (true)
     if (r.TryGetSingleResult(out _)) break;
 }
 ```
-
-
 
