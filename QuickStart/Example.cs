@@ -8,7 +8,7 @@ namespace QuickStart;
 [RadioServiceInterface] // Add the RadioServiceInterface attribute.
 public interface IMessageService : IRadioService
 {// The target interface must derive from IRadioService.
-    void Message(string message);
+    void Message(string message);   
 }
 
 public class MessageService : IMessageService
@@ -16,14 +16,10 @@ public class MessageService : IMessageService
     private readonly string prefix;
 
     public MessageService(string prefix)
-    {
-        this.prefix = prefix;
-    }
+        => this.prefix = prefix;
 
     public void Message(string message)
-    {
-        Console.WriteLine(this.prefix + message);
-    }
+        => Console.WriteLine(this.prefix + message);
 }
 
 internal static class Example

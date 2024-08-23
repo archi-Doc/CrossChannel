@@ -1,14 +1,10 @@
-## CrossChannel is Pub/Sub library for .NET
+## **Interface-based**, **fast**, and **easy-to-use** Pub/Sub library
 
 ![Nuget](https://img.shields.io/nuget/v/Arc.CrossChannel) ![Build and Test](https://github.com/archi-Doc/CrossChannel/workflows/Build%20and%20Test/badge.svg)
 
-- **Faster** than most Pub/Sub libraries.
-- Easy to use.
-
 - Supports **Weak references**, **Asynchronous** methods.
-- Supports `Action<TMessage>`, `Func<TMessage, TResult>` delegates.
 - **Key** feature can limit the delivery of messages.
-- Thread safe.
+- Thread-safe.
 
 
 
@@ -42,45 +38,73 @@ CrossChannel is a library for Publish–subscribe pattern. It's very easy to use
 2. **Publish**: Send a message. The channel identifier is the type of message (and key and result if necessary).
 3. **Unsubscribe**: Close the channel.
 
-This is a small sample code to use CrossChannel.
+First, define an interface to be shared between the Publisher(Sender) and Subscriber(Receiver), then define the Subscriber responsible for processing (implementing the interface).
 
 ```csharp
-// CrossChannel.Radio is a public static class.
+// First, define a common interface to be used by both the receiver and the sender.
+[RadioServiceInterface] // Add the RadioServiceInterface attribute.
+public interface IMessageService : IRadioService
+{// The target interface must derive from IRadioService.
+    void Message(string message);
+}
+
+public class MessageService : IMessageService
+{// Implement the interface.
+    private readonly string prefix;
+
+    public MessageService(string prefix)
+    {
+        this.prefix = prefix;
+    }
+
+    public void Message(string message)
+    {
+        Console.WriteLine(this.prefix + message);
+    }
+}
+```
+
+This is a small sample code to use **CrossChannel**.
+
+```csharp
 // Open a channel which simply outputs the received message to the console.
-using (var channel = CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Test " + x); }))
+using (var channel = Radio.Open<IMessageService>(new MessageService("Test: ")))
 {
-    // Send a message. The result is "Test message."
-    CrossChannel.Radio.Send<string>("message.");
+    // Send a message. The result is "Test: message"
+    Radio.Send<IMessageService>().Message("message");
 }
 
 // This message will not be displayed because the channel is closed.
-CrossChannel.Radio.Send<string>("Message not received.");
+Radio.Send<IMessageService>().Message("message not received");
 
-// Open a channel which has a weak reference to an object.
+
+// Test2: Open a channel which has a weak reference to the object.
 OpenWithWeakReference();
 static void OpenWithWeakReference()
 {
-    CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Weak " + x); }, new object());
+    Radio.Open<IMessageService>(new MessageService("Test: "), true);
 }
 
-// Send a message. The result is "Weak message."
-CrossChannel.Radio.Send<string>("message.");
+// Send a message. The result is "Test: weak message"
+Radio.Send<IMessageService>().Message("weak message");
 
 // The object is garbage collected.
 GC.Collect();
 
 // This message will not be displayed because the channel is automatically closed.
-CrossChannel.Radio.Send<string>("Message not received.");
+Radio.Send<IMessageService>().Message("message not received");
 
-// Don't forget to close the channel when you did not specify a weak reference, since this will cause memory leaks.
-CrossChannel.Radio.Open<string>(x => { Console.WriteLine("Leak " + x); });
 
-// You can create a local radio class.
-var radio = new CrossChannel.RadioClass();
-using (radio.Open<string>(x => { Console.WriteLine("Local " + x); }))
+// Test 3: Don't forget to close the channel when you did not specify the weak reference, since this will cause memory leaks.
+_ = Radio.Open<IMessageService>(new MessageService("Leak: "));
+Radio.Send<IMessageService>().Message("message");
+
+// Test 4: You can create a local radio class.
+var radio = new RadioClass();
+using (radio.Open<IMessageService>(new MessageService("Local: ")))
 {
-    // Send a message. The result is "Local message."
-    radio.Send<string>("message.");
+    // Send a message. The result is "Local: message"
+    radio.Send<IMessageService>().Message("message");
 }
 ```
 

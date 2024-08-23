@@ -9,7 +9,7 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        Console.WriteLine("CrossChannel Sample:");
+        Console.WriteLine("CrossChannel:");
         Console.WriteLine();
 
         // Example.QuickStart();

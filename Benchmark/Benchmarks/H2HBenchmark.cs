@@ -79,7 +79,7 @@ public class H2HBenchmark
     {
     }
 
-    [Benchmark]
+    /*[Benchmark]
     public void CC_OpenSend()
     {
         using (ObsoleteRadio.Open<int>(x => { }))
@@ -131,10 +131,10 @@ public class H2HBenchmark
         }
 
         return;
-    }
+    }*/
 
     [Benchmark]
-    public void CC2_OpenSend()
+    public void CC_OpenSend()
     {
         using (Radio.Open(this.simpleService1))
         {
@@ -145,7 +145,7 @@ public class H2HBenchmark
     }
 
     [Benchmark]
-    public void CC2_OpenSend8()
+    public void CC_OpenSend8()
     {
         using (Radio.Open(this.simpleService1))
         {
@@ -163,7 +163,7 @@ public class H2HBenchmark
     }
 
     [Benchmark]
-    public void CC2_OpenSend88()
+    public void CC_OpenSend88()
     {
         using (Radio.Open(this.simpleService1))
         using (Radio.Open(this.simpleService2))
@@ -247,10 +247,10 @@ public class H2HBenchmark
         return;
     }
 
-    /*[Benchmark]
+    [Benchmark]
     public void PS_OpenSend()
     {
-        Hub.Default.Subscribe<int>(x => { });
+        Hub.Default.Subscribe<int>( x => { });
         Hub.Default.Publish<int>(1);
         Hub.Default.Unsubscribe<int>();
 
@@ -272,7 +272,38 @@ public class H2HBenchmark
         Hub.Default.Unsubscribe<int>();
 
         return;
-    }*/
+    }
+
+    [Benchmark]
+    public void PS_OpenSend88()
+    {
+        Hub.Default.Subscribe<int>(simpleService1, x => { });
+        Hub.Default.Subscribe<int>(simpleService2, x => { });
+        Hub.Default.Subscribe<int>(simpleService3, x => { });
+        Hub.Default.Subscribe<int>(simpleService4, x => { });
+        Hub.Default.Subscribe<int>(simpleService5, x => { });
+        Hub.Default.Subscribe<int>(simpleService6, x => { });
+        Hub.Default.Subscribe<int>(simpleService7, x => { });
+        Hub.Default.Subscribe<int>(simpleService8, x => { });
+        Hub.Default.Publish<int>(1);
+        Hub.Default.Publish<int>(2);
+        Hub.Default.Publish<int>(3);
+        Hub.Default.Publish<int>(4);
+        Hub.Default.Publish<int>(5);
+        Hub.Default.Publish<int>(6);
+        Hub.Default.Publish<int>(7);
+        Hub.Default.Publish<int>(8);
+        Hub.Default.Unsubscribe<int>(simpleService1);
+        Hub.Default.Unsubscribe<int>(simpleService2);
+        Hub.Default.Unsubscribe<int>(simpleService3);
+        Hub.Default.Unsubscribe<int>(simpleService4);
+        Hub.Default.Unsubscribe<int>(simpleService5);
+        Hub.Default.Unsubscribe<int>(simpleService6);
+        Hub.Default.Unsubscribe<int>(simpleService7);
+        Hub.Default.Unsubscribe<int>(simpleService8);
+
+        return;
+    }
 
     /*[Benchmark]
     public void CC_OpenSend_Key()
