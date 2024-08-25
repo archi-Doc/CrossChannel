@@ -140,8 +140,9 @@ The [benchmark code](/Benchmark/Benchmarks/H2HBenchmark.cs) is simple: open a ch
 
 ```csharp
 [RadioServiceInterface] // RadioServiceInterface attribute is required.
-public interface ITestService : IRadioService
-{// The target interface must derive from IRadioService.
+public interface ITestService : IRadioService // The target interface must derive from IRadioService
+{// The return type of the interface function must be either void, Task, RadioResult<T>, Task<RadioResult<T>>.
+
     void Test1(); // A function without a return value.
 
     RadioResult<int> Test2(int x); // With a return value. Since the number of return values can be zero or more depending on the number of Subscribers, it is necessary to wrap them in a RadioResult structure.
@@ -150,13 +151,14 @@ public interface ITestService : IRadioService
 
     Task<RadioResult<int>> Test4(); // Asynchronous function without a return value.
 }
+
 ```
 
 
 
 ```csharp
 public class TestService : ITestService
-{// The return type of the interface function must be either void, Task, RadioResult<T>, Task<RadioResult<T>>.
+{
     void ITestService.Test1()
     {// Since multiple threads may call it simultaneously, please make the function thread-safe.
     }
@@ -183,6 +185,8 @@ public class TestService : ITestService
 
 ### Weak reference
 
+Weak reference is quite useful for WPF program (e.g. view service).
+
 ```csharp
  // Test2: Open a channel which has a weak reference to the instance.
  OpenWithWeakReference();
@@ -200,8 +204,6 @@ public class TestService : ITestService
  // This message will not be displayed because the channel is automatically closed.
  Radio.Send<IMessageService>().Message("message not received");
 ```
-
-It's quite useful for WPF program (e.g. view service).
 
 
 
@@ -245,6 +247,8 @@ Here is a benchmark for each feature.
 | Class_SendKey        |   9.470 ns |  0.2608 ns |  0.3823 ns |      - |         - |
 | Class_OpenSend_Key   | 126.246 ns |  2.0165 ns |  2.8920 ns | 0.0241 |     304 B |
 | Class_OpenSend8_Key  | 285.156 ns |  8.0497 ns | 11.5447 ns | 0.0238 |     304 B |
+
+
 
 ```csharp
 ulong hkr = 3055952910;
