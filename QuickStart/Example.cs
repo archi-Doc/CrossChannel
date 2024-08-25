@@ -26,8 +26,9 @@ public class MessageService : IMessageService
 }
 
 [RadioServiceInterface] // RadioServiceInterface attribute is required.
-public interface ITestService : IRadioService
-{// The target interface must derive from IRadioService.
+public interface ITestService : IRadioService // The target interface must derive from IRadioService
+{// The return type of the interface function must be either void, Task, RadioResult<T>, Task<RadioResult<T>>.
+
     void Test1(); // A function without a return value.
 
     RadioResult<int> Test2(int x); // With a return value. Since the number of return values can be zero or more depending on the number of Subscribers, it is necessary to wrap them in a RadioResult structure.
@@ -38,7 +39,7 @@ public interface ITestService : IRadioService
 }
 
 public class TestService : ITestService
-{// The return type of the interface function must be either void, Task, RadioResult<T>, Task<RadioResult<T>>.
+{
     void ITestService.Test1()
     {// Since multiple threads may call it simultaneously, please make the function thread-safe.
     }
