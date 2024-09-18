@@ -89,14 +89,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         {
             cancellationToken.ThrowIfCancellationRequested();
             this.GenerateHeader(ssb);
-            if (string.IsNullOrEmpty(x.Key))
-            {// Global namespace
-            }
-            else
-            {
-                ssb.AppendLine($"namespace {x.Key};");
-                ssb.AppendLine();
-            }
+            ssb.AppendNamespace(x.Key);
 
             rootObjects.AddRange(x.Value); // For loader generation
 
