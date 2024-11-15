@@ -12,13 +12,13 @@ internal static class RadioHelper
         where TKey : notnull
     {
         if (!twoTypeToMap.TryGetValue(typeof(TService), typeof(TKey), out var obj) ||
-            obj is not UnorderedMap<TKey, object> map)
+            obj is not UnorderedMapWithLock<TKey, object> map)
         {
             channel = default;
             return false;
         }
 
-        lock (map)
+        using (map.LockObject.EnterScope())
         {
             if (!map.TryGetValue(key, out obj))
             {
@@ -35,13 +35,13 @@ internal static class RadioHelper
         where TKey : notnull
     {
         if (twoTypeToMap.TryGetValue(serviceType, typeof(TKey), out var obj) ||
-            obj is not UnorderedMap<TKey, object> map)
+            obj is not UnorderedMapWithLock<TKey, object> map)
         {
             channel = default;
             return false;
         }
 
-        lock (map)
+        using (map.LockObject.EnterScope())
         {
             if (!map.TryGetValue(key, out obj))
             {
@@ -58,9 +58,9 @@ internal static class RadioHelper
         where TService : class, IRadioService
         where TKey : notnull
     {
-        var map = (UnorderedMap<TKey, object>)twoTypeToMap.GetOrAdd(typeof(TService), typeof(TKey), (x, y) => new UnorderedMap<TKey, object>());
+        var map = (UnorderedMapWithLock<TKey, object>)twoTypeToMap.GetOrAdd(typeof(TService), typeof(TKey), (x, y) => new UnorderedMapWithLock<TKey, object>());
 
-        lock (map)
+        using (map.LockObject.EnterScope())
         {
             Channel<TService>? channel;
             if (map.TryGetValue(key, out var obj))

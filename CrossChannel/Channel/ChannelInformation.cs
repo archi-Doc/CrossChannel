@@ -27,7 +27,7 @@ public class ChannelInformation
     /// <summary>
     /// Gets the function that creates a new keyed channel.
     /// </summary>
-    public Func<IUnorderedMap, Channel> NewChannel2 { get; }
+    public Func<IUnorderedMapWithLock, Channel> NewChannel2 { get; }
 
     /// <summary>
     /// Gets the maximum number of links for the channel.
@@ -61,7 +61,7 @@ public class ChannelInformation
     /// <param name="newChannel">The function that creates a new channel.</param>
     /// <param name="newChannel2">The function that creates a new channel with an unordered map.</param>
     /// <param name="maxLinks">The maximum number of links for the channel.</param>
-    public ChannelInformation(Type serviceType, Func<Channel, object> newBroker, Func<Channel> newChannel, Func<IUnorderedMap, Channel> newChannel2, int maxLinks)
+    public ChannelInformation(Type serviceType, Func<Channel, object> newBroker, Func<Channel> newChannel, Func<IUnorderedMapWithLock, Channel> newChannel2, int maxLinks)
     {
         this.ServiceType = serviceType;
         this.NewBroker = newBroker;

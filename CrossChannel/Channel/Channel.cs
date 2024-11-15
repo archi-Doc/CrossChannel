@@ -281,14 +281,18 @@ public class Channel<TService> : Channel, IChannel<TService>
 
     internal TService Broker { get; }
 
-    private object dualObject; // nodeIndex == -1 ? new object() : IUnorderedMap;
-    private FastList list = new();
+    internal Lock LockObject => this.NodeIndex == -1 ? (Lock)this.dualObject : ((IUnorderedMapWithLock)this.dualObject).LockObject;
+
+    private readonly object dualObject; // nodeIndex == -1 ? new Lock() : IUnorderedMapWithLock;
+    private readonly FastList list = new();
     private int trimCount;
     private int checkReferenceCount;
 
     public Channel()
     {
-        this.dualObject = new();
+#pragma warning disable CS9216 // A value of type 'System.Threading.Lock' converted to a different type will use likely unintended monitor-based locking in 'lock' statement.
+        this.dualObject = new Lock();
+#pragma warning restore CS9216 // A value of type 'System.Threading.Lock' converted to a different type will use likely unintended monitor-based locking in 'lock' statement.
         this.NodeIndex = -1;
 
         var info = ChannelRegistry.Get<TService>();
@@ -296,7 +300,7 @@ public class Channel<TService> : Channel, IChannel<TService>
         this.Broker = (TService)info.NewBroker(this);
     }
 
-    public Channel(IUnorderedMap map)
+    public Channel(IUnorderedMapWithLock map)
     {
         this.dualObject = map;
 
@@ -307,7 +311,7 @@ public class Channel<TService> : Channel, IChannel<TService>
 
     public Link? Open(TService instance, bool weakReference)
     {
-        lock (this.dualObject)
+        using (this.LockObject.EnterScope())
         {
             if (this.list.Count >= this.MaxLinks)
             {// Invalid link
@@ -334,7 +338,7 @@ public class Channel<TService> : Channel, IChannel<TService>
 
     private void Remove(Link link)
     {
-        lock (this.dualObject)
+        using (this.LockObject.EnterScope())
         {
             if (link.Index != -1)
             {
@@ -344,14 +348,14 @@ public class Channel<TService> : Channel, IChannel<TService>
             if (this.NodeIndex != -1 &&
                 this.Count == 0)
             {
-                ((IUnorderedMap)this.dualObject).RemoveNode(this.NodeIndex);
+                ((IUnorderedMapWithLock)this.dualObject).RemoveNode(this.NodeIndex);
                 this.NodeIndex = -1;
             }
         }
     }
 
     private void TrimInternal()
-    {// lock (this.dualObject) is required
+    {// using (this.LockObject.EnterScope()) is required
         if (this.checkReferenceCount++ >= CheckReferenceThreshold)
         {
             this.checkReferenceCount = 0;
