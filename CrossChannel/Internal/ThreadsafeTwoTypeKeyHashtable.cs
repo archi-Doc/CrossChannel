@@ -3,6 +3,8 @@
 #pragma warning disable SA1214 // Readonly fields should appear before non-readonly fields
 #pragma warning disable SA1401 // Fields should be private
 
+using System.Threading;
+
 namespace CrossChannel.Internal;
 
 /*public readonly record struct TwoTypeKey(Type Key, Type Key2)
@@ -15,7 +17,7 @@ internal class ThreadsafeTwoTypeKeyHashtable<TValue>
 {
     private const double LoadFactor = 0.75d;
 
-    private readonly object syncObject = new();
+    private readonly Lock lockObject = new();
     private Entry[] buckets;
     private int size; // only use in writer lock
 
@@ -101,7 +103,7 @@ internal class ThreadsafeTwoTypeKeyHashtable<TValue>
 
     private bool TryAddInternal(Type key, Type key2, Func<Type, Type, TValue> valueFactory, out TValue resultingValue)
     {
-        lock (this.syncObject)
+        using (this.lockObject.EnterScope())
         {
             var nextCapacity = CalculateCapacity(this.size + 1);
 
