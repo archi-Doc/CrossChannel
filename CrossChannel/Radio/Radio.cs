@@ -38,7 +38,7 @@ public static class Radio
     }
 
     private static readonly ThreadsafeTypeKeyHashtable<Channel> typeToChannel = new();
-    private static readonly ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap = new(); // UnorderedMap<TKey, object> // object is Channel<TService>
+    private static readonly ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap = new(); // UnorderedMapWithLock<TKey, object> // object is Channel<TService>
 
     #endregion
 

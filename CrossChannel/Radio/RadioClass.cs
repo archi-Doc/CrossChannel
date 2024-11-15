@@ -11,7 +11,7 @@ namespace CrossChannel;
 public class RadioClass
 {
     private readonly ThreadsafeTypeKeyHashtable<Channel> typeToChannel = new();
-    private readonly ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap = new(); // UnorderedMap<TKey, object> // object is Channel<TService>
+    private readonly ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap = new(); // UnorderedMapWithLock<TKey, object> // object is Channel<TService>
 
     public RadioClass()
     {
