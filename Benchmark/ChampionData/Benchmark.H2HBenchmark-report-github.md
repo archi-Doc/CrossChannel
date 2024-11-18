@@ -1,23 +1,23 @@
 ```
 
-BenchmarkDotNet v0.14.0, Windows 11 (10.0.22621.4037/22H2/2022Update/SunValley2)
-12th Gen Intel Core i7-1280P, 1 CPU, 20 logical and 14 physical cores
-.NET SDK 9.0.100-preview.7.24407.12
-  [Host]    : .NET 8.0.7 (8.0.724.31311), X64 RyuJIT AVX2
-  MediumRun : .NET 8.0.7 (8.0.724.31311), X64 RyuJIT AVX2
+BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.2314)
+13th Gen Intel Core i9-13900K, 1 CPU, 32 logical and 24 physical cores
+.NET SDK 9.0.100-rc.2.24474.11
+  [Host]    : .NET 9.0.0 (9.0.24.47305), X64 RyuJIT AVX2
+  MediumRun : .NET 9.0.0 (9.0.24.47305), X64 RyuJIT AVX2
 
 Job=MediumRun  IterationCount=15  LaunchCount=2  
 WarmupCount=10  
 
 ```
-| Method        | Mean        | Error     | StdDev     | Gen0   | Allocated |
-|-------------- |------------:|----------:|-----------:|-------:|----------:|
-| CC_OpenSend   |    41.91 ns |  0.650 ns |   0.972 ns | 0.0038 |      48 B |
-| CC_OpenSend8  |    54.13 ns |  0.909 ns |   1.274 ns | 0.0038 |      48 B |
-| CC_OpenSend88 |   365.16 ns |  4.738 ns |   7.091 ns | 0.0305 |     384 B |
-| MP_OpenSend   |    89.58 ns |  0.938 ns |   1.404 ns | 0.0044 |      56 B |
-| MP_OpenSend8  |    98.55 ns |  1.161 ns |   1.702 ns | 0.0044 |      56 B |
-| MP_OpenSend88 |   805.17 ns | 12.591 ns |  18.845 ns | 0.0353 |     448 B |
-| PS_OpenSend   |   267.89 ns | 13.514 ns |  20.228 ns | 0.0381 |     480 B |
-| PS_OpenSend8  |   672.32 ns | 65.482 ns |  95.982 ns | 0.1268 |    1600 B |
-| PS_OpenSend88 | 2,921.00 ns | 99.322 ns | 145.584 ns | 0.3586 |    4544 B |
+| Method        | Mean        | Error     | StdDev    | Median      | Gen0   | Allocated |
+|-------------- |------------:|----------:|----------:|------------:|-------:|----------:|
+| CC_OpenSend   |    29.12 ns |  0.353 ns |  0.518 ns |    29.00 ns | 0.0025 |      48 B |
+| CC_OpenSend8  |    34.44 ns |  0.828 ns |  1.239 ns |    34.35 ns | 0.0025 |      48 B |
+| CC_OpenSend88 |   282.60 ns | 13.417 ns | 19.666 ns |   298.49 ns | 0.0200 |     384 B |
+| MP_OpenSend   |    69.54 ns |  0.427 ns |  0.640 ns |    69.50 ns | 0.0029 |      56 B |
+| MP_OpenSend8  |    73.48 ns |  0.350 ns |  0.523 ns |    73.50 ns | 0.0029 |      56 B |
+| MP_OpenSend88 |   612.95 ns |  3.361 ns |  5.030 ns |   613.16 ns | 0.0229 |     448 B |
+| PS_OpenSend   |   150.37 ns |  0.739 ns |  1.106 ns |   150.18 ns | 0.0229 |     432 B |
+| PS_OpenSend8  |   397.44 ns |  3.054 ns |  4.571 ns |   398.00 ns | 0.0734 |    1384 B |
+| PS_OpenSend88 | 2,914.53 ns | 44.459 ns | 66.544 ns | 2,902.36 ns | 0.2060 |    3904 B |
