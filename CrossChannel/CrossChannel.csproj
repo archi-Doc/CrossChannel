@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Arc.Collections" Version="1.19.1" />
+    <PackageReference Include="Arc.Collections" Version="1.19.2" />
     <PackageReference Include="Arc.Threading" Version="0.30.2" />
     <PackageReference Include="FastExpressionCompiler" Version="4.2.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
