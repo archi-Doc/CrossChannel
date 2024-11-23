@@ -26,7 +26,6 @@
 
   <ItemGroup>
     <PackageReference Include="Arc.Collections" Version="1.19.3" />
-    <PackageReference Include="FastExpressionCompiler" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
       <PrivateAssets>all</PrivateAssets>

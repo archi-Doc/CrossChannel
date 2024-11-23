@@ -2,6 +2,7 @@
 
 #pragma warning disable SA1649 // File name should match first type name
 
+/*
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -175,11 +176,6 @@ public class WeakAction<T> : WeakDelegate
                 .CompileFast();
 
             delegateCache.TryAdd(key, this.compiledDelegate);
-
-            /*lock (delegateCache)
-            {
-                delegateCache[key] = this.compiledDelegate;
-            }*/
         }
     }
 
@@ -498,4 +494,4 @@ public class WeakDelegate : IWeakDelegate
         this.weakDelegateTarget = null;
         this.hardDelegateTarget = null;
     }
-}
+}*/

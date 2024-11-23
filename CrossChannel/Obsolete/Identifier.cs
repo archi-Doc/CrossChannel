@@ -4,7 +4,7 @@ using System;
 
 namespace CrossChannel.Obsolete;
 
-public class Identifier_MessageResult
+/*public class Identifier_MessageResult
 {
     public Type MessageType { get; }
 

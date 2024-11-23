@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CrossChannel.Obsolete;
 
-/// <summary>
+/*/// <summary>
 /// RadioClass is a non-static version of <see cref="ObsoleteRadio"/>.<br/>
 /// It's easy to use.<br/>
 /// 1. Open a channel (register a subscriber) : <see cref="Open{TMessage}(Action{TMessage}, object?)"/>.<br/>
@@ -393,4 +393,4 @@ public class ObsoleteRadioClass
     private ConcurrentDictionary<Identifier_MessageResult, object> dictionaryMessageResult = new(); // FastList<XChannel_MessageResult<TMessage, TResult>>
     private ConcurrentDictionary<Identifier_KeyMessage, object> dictionaryKeyMessage = new(); // XCollection_KeyMessage<TKey, TMessage>
     private ConcurrentDictionary<Identifier_KeyMessageResult, object> dictionaryKeyMessageResult = new(); // XCollection_KeyMessageResult<TKey, TMessage, TResult>
-}
+}*/
