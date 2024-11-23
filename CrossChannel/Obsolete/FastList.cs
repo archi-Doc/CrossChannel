@@ -8,7 +8,7 @@ using System.Threading;
 namespace CrossChannel.Obsolete;
 
 // NOT thread safe, highly customized for XChannel.
-public sealed class FastList<T> : IDisposable
+/*public sealed class FastList<T> : IDisposable
     where T : XChannel
 {
     private const int InitialCapacity = 4;

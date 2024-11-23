@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Arc.WeakDelegate;
 
 #pragma warning disable SA1202 // Elements should be ordered by access
 #pragma warning disable SA1649 // File name should match first type name

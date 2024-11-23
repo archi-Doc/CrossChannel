@@ -2,7 +2,7 @@
 
 namespace CrossChannel.Obsolete;
 
-/// <summary>
+/*/// <summary>
 /// Radio is a static class for pub/sub service.<br/>
 /// It's easy to use.<br/>
 /// 1. Open a channel (register a subscriber) : <see cref="Open{TMessage}(Action{TMessage}, object?)"/>.<br/>
@@ -367,4 +367,4 @@ public static class ObsoleteRadio // CrossChannel by Romeo
         }
     }
 #pragma warning restore SA1401 // Fields should be private
-}
+}*/
