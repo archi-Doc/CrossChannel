@@ -14,8 +14,11 @@ using Microsoft.CodeAnalysis;
 
 namespace Arc.Visceral;
 
-public static class VisceralHelper
+internal static class VisceralHelper
 {
+    public static string RemoveWhitespace(this string input)
+        => new string(input.ToCharArray().Where(c => !char.IsWhiteSpace(c)).ToArray());
+
     public static object? GetValue(int constructorIndex, string? name, object?[] constructorArguments, KeyValuePair<string, object?>[] namedArguments)
     {
         if (constructorIndex >= 0 && constructorIndex < constructorArguments.Length)
