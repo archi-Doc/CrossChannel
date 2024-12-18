@@ -67,7 +67,7 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     /// </summary>
     /// <param name="result">The single result.</param>
     /// <returns><c>true</c> if the single result is successfully retrieved; otherwise, <c>false</c>.</returns>
-    public bool TryGetSingleResult([System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out T result)
+    public bool TryGetSingleResult([MaybeNullWhen(false)] out T result)
     {
         if (this.IsEmpty)
         {
