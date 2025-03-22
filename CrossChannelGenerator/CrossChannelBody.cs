@@ -106,7 +106,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 
                     foreach (var y in x.Value)
                     {
-                        y.GenerateRegister(ssb, false);
+                        y.GenerateRegister(ssb);
                     }
 
                     foreach (var y in x.Value.Where(y => y.Kind == VisceralObjectKind.Class))

@@ -263,7 +263,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
                 if (x.Generics_Kind != VisceralGenericsKind.OpenGeneric)
                 {// Register fixed types.
-                    x.GenerateRegister(ssb, false);
+                    x.GenerateRegister(ssb);
                 }
             }
 
@@ -345,14 +345,14 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
     {
         if (this.Generics_Kind == VisceralGenericsKind.OpenGeneric)
         {
-            this.GenerateRegister(ssb, true);
+            this.GenerateRegister(ssb);
         }
     }
 
     /// <summary>
     /// Generate the registration code.
     /// </summary>
-    internal void GenerateRegister(ScopingStringBuilder ssb, bool generateMethod)
+    internal void GenerateRegister(ScopingStringBuilder ssb)
     {
         if (this.Generics_Kind == VisceralGenericsKind.OpenGeneric ||
             this.RadioServiceInterfaceAttribute is null)
@@ -360,10 +360,6 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
             return;
         }
 
-        ScopingStringBuilder.IScope? scope = generateMethod ? ssb.ScopeBrace($"private static void {CrossChannelBody.InitializerName}()") : null;
-
         ssb.AppendLine($"ChannelRegistry.Register(new(typeof({this.FullName}), x => new {this.ClassName}(x), () => new Channel<{this.FullName}>(), (a) => new Channel<{this.FullName}>(a), {this.RadioServiceInterfaceAttribute.MaxLinks.ToString()}));");
-
-        scope?.Dispose();
     }
 }
