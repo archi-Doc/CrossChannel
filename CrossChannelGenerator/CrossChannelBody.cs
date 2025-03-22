@@ -93,7 +93,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
                 assemblyId = VisceralHelper.AssemblyNameToIdentifier(generator.AssemblyName!);
             }
 
-            var rootName = $"{RootName}"; // {assemblyId}
+            var rootName = $"{RootName}{assemblyId}";
             using (var scopeClass = ssb.ScopeBrace($"public static class {rootName}"))
             {
                 ssb.AppendLine("private static bool Initialized;");

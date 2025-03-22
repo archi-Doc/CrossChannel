@@ -360,12 +360,9 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
             return;
         }
 
-        ScopingStringBuilder.IScope? scope = generateMethod ? ssb.ScopeBrace($"public static void {CrossChannelBody.InitializerName}()") : null;
+        ScopingStringBuilder.IScope? scope = generateMethod ? ssb.ScopeBrace($"private static void {CrossChannelBody.InitializerName}()") : null;
 
-        // ssb.AppendLine($"// Register {this.ClassName}");
-        var @namespace = this.ContainingObject is null ? $"{(string.IsNullOrEmpty(this.Namespace) ? "global::" : $"{this.Namespace}.")}{CrossChannelBody.RootName}" : this.ContainingObject.FullName;
-        var period = string.IsNullOrEmpty(@namespace) ? null : ".";
-        ssb.AppendLine($"ChannelRegistry.Register(new(typeof({this.FullName}), x => new {@namespace}{period}{this.ClassName}(x), () => new Channel<{this.FullName}>(), (a) => new Channel<{this.FullName}>(a), {this.RadioServiceInterfaceAttribute.MaxLinks.ToString()}));");
+        ssb.AppendLine($"ChannelRegistry.Register(new(typeof({this.FullName}), x => new {this.ClassName}(x), () => new Channel<{this.FullName}>(), (a) => new Channel<{this.FullName}>(a), {this.RadioServiceInterfaceAttribute.MaxLinks.ToString()}));");
 
         scope?.Dispose();
     }
