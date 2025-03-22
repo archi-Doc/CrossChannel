@@ -17,6 +17,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 {
     public const string Name = "CrossChannel";
     public const string GeneratorName = "CrossChannelGenerator";
+    public const string RootName = "Root";
     public const string InitializerName = "__InitializeCC__";
 
     public static readonly DiagnosticDescriptor Error_NotPartialParent = new DiagnosticDescriptor(
@@ -131,7 +132,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 
         using (var scopeFormatter = ssb.ScopeNamespace($"{Name}.Generated"))
         {
-            using (var methods = ssb.ScopeBrace("internal static class Root"))
+            using (var methods = ssb.ScopeBrace($"internal static class {RootName}"))
             {
                 CrossChannelObject.GenerateInitializer(ssb, null, rootObjects);
             }
@@ -167,7 +168,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
                     ssb.AppendLine("if (Initialized) return;");
                     ssb.AppendLine("Initialized = true;");
 
-                    ssb.AppendLine($"{Name}.Generated.Root.{CrossChannelBody.InitializerName}();");
+                    ssb.AppendLine($"{Name}.Generated.{RootName}.{InitializerName}();");
                 }
             }
         }
