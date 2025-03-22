@@ -12,7 +12,7 @@
 
 - [Quick Start](#quick-start)
 - [Performance](#performance)
-- [Interface and methods](#interface-and-methods)
+- [Cheat sheet](#cheat-sheet)
 - [Features](#features)
   - [Weak reference](#weak-reference)
   - [Key](#key)
@@ -136,7 +136,7 @@ The [benchmark code](/Benchmark/Benchmarks/H2HBenchmark.cs) is simple: open a ch
 
 
 
-## Interface and methods
+## Cheat sheet
 
 ```csharp
 [RadioServiceInterface] // RadioServiceInterface attribute is required.
@@ -177,6 +177,20 @@ public class TestService : ITestService
         return new(0);
     }
 }
+```
+
+When using a DI container, add `CrossChannel` to the `ServiceCollection`.
+
+```csharp
+var collection = new ServiceCollection();
+collection.AddCrossChannel();
+var provider = collection.BuildServiceProvider();
+
+var channel = provider.GetRequiredService<IChannel<ITestService>>();
+var link = channel.Open((ITestService)new TestService());
+
+var testService = provider.GetRequiredService<ITestService>();
+testService.Test1();
 ```
 
 
