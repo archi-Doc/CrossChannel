@@ -263,7 +263,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
                 if (x.Generics_Kind != VisceralGenericsKind.OpenGeneric)
                 {// Register fixed types.
-                    x.GenerateRegister(ssb, false);
+                    x.GenerateRegister(ssb);
                 }
             }
 
@@ -280,7 +280,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
     /// 2. Processing child objects.<br/>
     /// 3. Generating an initializer with GenerateInitializer().
     /// </summary>
-    internal void Generate(ScopingStringBuilder ssb)
+    internal void GenerateObject(ScopingStringBuilder ssb)
     {
         if (this.ConstructedObjects == null)
         {
@@ -319,7 +319,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
                         ssb.AppendLine();
                     }
 
-                    x.Generate(ssb);
+                    x.GenerateObject(ssb);
                 }
 
                 GenerateInitializer(ssb, this, this.Children);
@@ -345,27 +345,21 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
     {
         if (this.Generics_Kind == VisceralGenericsKind.OpenGeneric)
         {
-            this.GenerateRegister(ssb, true);
+            this.GenerateRegister(ssb);
         }
     }
 
     /// <summary>
     /// Generate the registration code.
     /// </summary>
-    internal void GenerateRegister(ScopingStringBuilder ssb, bool generateMethod)
+    internal void GenerateRegister(ScopingStringBuilder ssb)
     {
-        if (this.RadioServiceInterfaceAttribute is null)
+        if (this.Generics_Kind == VisceralGenericsKind.OpenGeneric ||
+            this.RadioServiceInterfaceAttribute is null)
         {
             return;
         }
 
-        ScopingStringBuilder.IScope? scope = generateMethod ? ssb.ScopeBrace($"public static void {CrossChannelBody.InitializerName}()") : null;
-
-        // ssb.AppendLine($"// Register {this.ClassName}");
-        var @namespace = this.ContainingObject is null ? this.Namespace : this.ContainingObject.FullName;
-        var period = string.IsNullOrEmpty(@namespace) ? null : ".";
-        ssb.AppendLine($"ChannelRegistry.Register(new(typeof({this.FullName}), x => new {@namespace}{period}{this.ClassName}(x), () => new Channel<{this.FullName}>(), (a) => new Channel<{this.FullName}>(a), {this.RadioServiceInterfaceAttribute.MaxLinks.ToString()}));");
-
-        scope?.Dispose();
+        ssb.AppendLine($"ChannelRegistry.Register(new(typeof({this.FullName}), x => new {this.ClassName}(x), () => new Channel<{this.FullName}>(), (a) => new Channel<{this.FullName}>(a), {this.RadioServiceInterfaceAttribute.MaxLinks.ToString()}));");
     }
 }

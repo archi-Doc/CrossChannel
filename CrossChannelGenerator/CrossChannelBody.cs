@@ -1,7 +1,6 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 using System.Text;
-using System.Threading;
 using Arc.Visceral;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
@@ -17,7 +16,8 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 {
     public const string Name = "CrossChannel";
     public const string GeneratorName = "CrossChannelGenerator";
-    public const string InitializerName = "__InitializeCC__";
+    public const string RootName = "__CrossChannelRoot__";
+    public const string InitializerName = "__Initialize__";
 
     public static readonly DiagnosticDescriptor Error_NotPartialParent = new DiagnosticDescriptor(
         id: "CCG001", title: "Partial class/struct", messageFormat: "Parent type '{0}' is not a partial class/struct",
@@ -75,37 +75,55 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 
     public void Generate(IGeneratorInformation generator, CancellationToken cancellationToken)
     {
-        var rootObject = this.GenerateMain(generator, cancellationToken);
-        this.GenerateInitializer(generator, rootObject, cancellationToken);
-    }
+        var ssb = new ScopingStringBuilder();
 
-    public List<CrossChannelObject> GenerateMain(IGeneratorInformation generator, CancellationToken cancellationToken)
-    {
-        ScopingStringBuilder ssb = new();
-        List<CrossChannelObject> rootObjects = new();
-
-        // Namespace
+        // Namespace: string - List<CrossChannelObject>
         foreach (var x in this.Namespaces)
         {
             cancellationToken.ThrowIfCancellationRequested();
             this.GenerateHeader(ssb);
             ssb.AppendNamespace(x.Key);
 
-            rootObjects.AddRange(x.Value); // For loader generation
-
-            var firstFlag = true;
-            foreach (var y in x.Value)
+            // var topObjects = x.Value.Where(y => y.ContainingObject is null).ToList();
+            // var nestedObjects = x.Value.Where(y => y.ContainingObject is not null).ToList();
+            var assemblyId = string.Empty;
+            if (!string.IsNullOrEmpty(generator.AssemblyName))
             {
-                if (firstFlag)
+                assemblyId = VisceralHelper.AssemblyNameToIdentifier(generator.AssemblyName!);
+            }
+
+            var rootName = $"{RootName}{assemblyId}";
+            using (var scopeClass = ssb.ScopeBrace($"public static class {rootName}"))
+            {
+                ssb.AppendLine("private static bool Initialized;");
+                ssb.AppendLine("[ModuleInitializer]");
+
+                using (var scopeMethod = ssb.ScopeBrace("public static void Initialize()"))
                 {
-                    firstFlag = false;
-                }
-                else
-                {
-                    ssb.AppendLine();
+                    ssb.AppendLine("if (Initialized) return;");
+                    ssb.AppendLine("Initialized = true;");
+
+                    foreach (var y in x.Value)
+                    {
+                        y.GenerateRegister(ssb);
+                    }
+
+                    foreach (var y in x.Value.Where(y => y.Kind == VisceralObjectKind.Class))
+                    {
+                        ssb.AppendLine($"{y.FullName}.{InitializerName}();");
+                    }
                 }
 
-                y.Generate(ssb); // Primary objects
+                ssb.AppendLine();
+                foreach (var y in x.Value.Where(y => y.Kind != VisceralObjectKind.Class))
+                {
+                    y.GenerateObject(ssb);
+                }
+            }
+
+            foreach (var y in x.Value.Where(y => y.Kind == VisceralObjectKind.Class))
+            {
+                y.GenerateObject(ssb);
             }
 
             var result = ssb.Finalize();
@@ -119,69 +137,6 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
                 this.Context?.AddSource($"gen.{Name}.{x.Key}", SourceText.From(result, Encoding.UTF8));
                 this.Context2?.AddSource($"gen.{Name}.{x.Key}", SourceText.From(result, Encoding.UTF8));
             }
-        }
-
-        return rootObjects;
-    }
-
-    public void GenerateInitializer(IGeneratorInformation generator, List<CrossChannelObject> rootObjects, CancellationToken cancellationToken)
-    {
-        var ssb = new ScopingStringBuilder();
-        this.GenerateHeader(ssb);
-
-        using (var scopeFormatter = ssb.ScopeNamespace($"{Name}.Generated"))
-        {
-            using (var methods = ssb.ScopeBrace("internal static class Root"))
-            {
-                CrossChannelObject.GenerateInitializer(ssb, null, rootObjects);
-            }
-        }
-
-        // Namespace
-        var @namespace = Name;
-        var assemblyId = string.Empty; // Assembly ID
-        if (!string.IsNullOrEmpty(generator.CustomNamespace))
-        {// Custom namespace.
-            @namespace = generator.CustomNamespace;
-        }
-        else
-        {// Other (Apps)
-            // assemblyId = "_" + generator.AssemblyId.ToString("x");
-            if (!string.IsNullOrEmpty(generator.AssemblyName))
-            {
-                assemblyId = VisceralHelper.AssemblyNameToIdentifier("_" + generator.AssemblyName);
-            }
-        }
-
-        ssb.AppendLine();
-        using (var scopeCrossLink = ssb.ScopeNamespace(@namespace!))
-        {
-            using (var scopeClass = ssb.ScopeBrace($"public static class {Name}Module" + assemblyId))
-            {
-                ssb.AppendLine("private static bool Initialized;");
-                ssb.AppendLine();
-                ssb.AppendLine("[ModuleInitializer]");
-
-                using (var scopeMethod = ssb.ScopeBrace("public static void Initialize()"))
-                {
-                    ssb.AppendLine("if (Initialized) return;");
-                    ssb.AppendLine("Initialized = true;");
-
-                    ssb.AppendLine($"{Name}.Generated.Root.{CrossChannelBody.InitializerName}();");
-                }
-            }
-        }
-
-        var result = ssb.Finalize();
-
-        if (generator.GenerateToFile && generator.TargetFolder != null && Directory.Exists(generator.TargetFolder))
-        {
-            this.StringToFile(result, Path.Combine(generator.TargetFolder, $"gen.{Name}.cs"));
-        }
-        else
-        {
-            this.Context?.AddSource($"gen.{Name}", SourceText.From(result, Encoding.UTF8));
-            this.Context2?.AddSource($"gen.{Name}", SourceText.From(result, Encoding.UTF8));
         }
     }
 
