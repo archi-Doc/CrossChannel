@@ -17,8 +17,8 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 {
     public const string Name = "CrossChannel";
     public const string GeneratorName = "CrossChannelGenerator";
-    public const string RootName = "Root";
-    public const string InitializerName = "__InitializeCC__";
+    public const string RootName = "__CrossChannelRoot__";
+    public const string InitializerName = "__Initialize__";
 
     public static readonly DiagnosticDescriptor Error_NotPartialParent = new DiagnosticDescriptor(
         id: "CCG001", title: "Partial class/struct", messageFormat: "Parent type '{0}' is not a partial class/struct",
@@ -76,8 +76,69 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 
     public void Generate(IGeneratorInformation generator, CancellationToken cancellationToken)
     {
-        var rootObject = this.GenerateMain(generator, cancellationToken);
-        this.GenerateInitializer(generator, rootObject, cancellationToken);
+        var ssb = new ScopingStringBuilder();
+
+        // Namespace: string - List<CrossChannelObject>
+        foreach (var x in this.Namespaces)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            this.GenerateHeader(ssb);
+            ssb.AppendNamespace(x.Key);
+
+            // var topObjects = x.Value.Where(y => y.ContainingObject is null).ToList();
+            // var nestedObjects = x.Value.Where(y => y.ContainingObject is not null).ToList();
+            var assemblyId = string.Empty;
+            if (!string.IsNullOrEmpty(generator.AssemblyName))
+            {
+                assemblyId = VisceralHelper.AssemblyNameToIdentifier(generator.AssemblyName!);
+            }
+
+            var rootName = $"{RootName}"; // {assemblyId}
+            using (var scopeClass = ssb.ScopeBrace($"public static class {rootName}"))
+            {
+                ssb.AppendLine("private static bool Initialized;");
+                ssb.AppendLine("[ModuleInitializer]");
+
+                using (var scopeMethod = ssb.ScopeBrace("public static void Initialize()"))
+                {
+                    ssb.AppendLine("if (Initialized) return;");
+                    ssb.AppendLine("Initialized = true;");
+
+                    foreach (var y in x.Value)
+                    {
+                        y.GenerateRegister(ssb, false);
+                    }
+
+                    foreach (var y in x.Value.Where(y => y.Kind == VisceralObjectKind.Class))
+                    {
+                        ssb.AppendLine($"{y.FullName}.{InitializerName}();");
+                    }
+                }
+
+                ssb.AppendLine();
+                foreach (var y in x.Value.Where(y => y.Kind != VisceralObjectKind.Class))
+                {
+                    y.GenerateObject(ssb);
+                }
+            }
+
+            foreach (var y in x.Value.Where(y => y.Kind == VisceralObjectKind.Class))
+            {
+                y.GenerateObject(ssb);
+            }
+
+            var result = ssb.Finalize();
+
+            if (generator.GenerateToFile && generator.TargetFolder != null && Directory.Exists(generator.TargetFolder))
+            {
+                this.StringToFile(result, Path.Combine(generator.TargetFolder, $"gen.{Name}.{x.Key}.cs"));
+            }
+            else
+            {
+                this.Context?.AddSource($"gen.{Name}.{x.Key}", SourceText.From(result, Encoding.UTF8));
+                this.Context2?.AddSource($"gen.{Name}.{x.Key}", SourceText.From(result, Encoding.UTF8));
+            }
+        }
     }
 
     public List<CrossChannelObject> GenerateMain(IGeneratorInformation generator, CancellationToken cancellationToken)
@@ -85,7 +146,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         ScopingStringBuilder ssb = new();
         List<CrossChannelObject> rootObjects = new();
 
-        // Namespace
+        // Namespace: string - List<CrossChannelObject>
         foreach (var x in this.Namespaces)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -106,7 +167,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
                     ssb.AppendLine();
                 }
 
-                y.Generate(ssb); // Primary objects
+                y.GenerateObject(ssb); // Primary objects
             }
 
             var result = ssb.Finalize();
@@ -132,7 +193,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 
         using (var scopeFormatter = ssb.ScopeNamespace($"{Name}.Generated"))
         {
-            using (var methods = ssb.ScopeBrace($"internal static class {RootName}"))
+            using (var methods = ssb.ScopeBrace($"internal static partial class {RootName}"))
             {
                 CrossChannelObject.GenerateInitializer(ssb, null, rootObjects);
             }

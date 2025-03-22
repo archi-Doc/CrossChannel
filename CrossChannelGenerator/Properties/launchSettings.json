@@ -2,7 +2,7 @@
   "profiles": {
     "CrossChannelGenerator": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "..\\XUnitTest\\XUnitTest.csproj"
+      "targetProject": "..\\Playground\\Playground.csproj"
     }
   }
 }
