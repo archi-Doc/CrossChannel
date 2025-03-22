@@ -12,8 +12,8 @@ public partial class CrossChannelObject
 {
     internal void GenerateBrokerClass(ScopingStringBuilder ssb)
     {
-        var accessModifier = this.ContainingObject is null ? "internal" : "private";
-        using (ssb.ScopeBrace($"{accessModifier} class {this.ClassName} : {this.LocalName}"))
+        // var accessModifier = this.ContainingObject is null ? "internal" : "private";
+        using (ssb.ScopeBrace($"private class {this.ClassName} : {this.LocalName}"))
         {
             ssb.AppendLine($"private readonly Channel<{this.LocalName}> channel;");
             using (ssb.ScopeBrace($"public {this.ClassName}(object channel)"))
