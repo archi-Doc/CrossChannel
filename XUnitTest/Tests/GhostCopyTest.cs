@@ -1,5 +1,7 @@
 // Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
+using System;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using CrossChannel;
@@ -10,6 +12,8 @@ namespace XUnitTest;
 #pragma warning disable SA1306 // Field names should begin with lower-case letter
 #pragma warning disable SA1401 // Fields should be private
 #pragma warning disable SA1214 // Readonly fields should appear before non-readonly fields
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+#pragma warning disable CS0649
 
 public class CopyTestClass
 {
@@ -27,6 +31,14 @@ public class CopyTestClass
 
     private readonly string D = string.Empty;
 
+    private readonly object E;
+
+    private readonly object F;
+
+    private readonly long G;
+
+    private readonly byte[] H;
+
     public void Prepare()
     {
         this.X = 1;
@@ -36,6 +48,10 @@ public class CopyTestClass
         this.B = 4.44;
         this.C = "5";
         Unsafe.AsRef<string>(in this.D) = "99";
+        Unsafe.AsRef<object>(in this.E) = 2.55d;
+        Unsafe.AsRef<object>(in this.F) = this;
+        Unsafe.AsRef<long>(in this.G) = 1234;
+        Unsafe.AsRef<byte[]>(in this.H) = [1, 2, 3, 44, 55, 66, 77, 222, 9];
     }
 
     public bool Compare(CopyTestClass other)
@@ -46,7 +62,11 @@ public class CopyTestClass
             && this.A == other.A
             && this.B == other.B
             && this.C == other.C
-            && this.D == other.D;
+            && this.D == other.D
+            && this.E == other.E
+            && this.F == other.F
+            && this.G == other.G
+            && this.H.AsSpan().SequenceEqual(other.H);
     }
 }
 

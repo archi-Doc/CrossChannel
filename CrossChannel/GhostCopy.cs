@@ -1,5 +1,6 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 using FastExpressionCompiler;
@@ -20,11 +21,20 @@ public static class GhostCopy
     public delegate void CopyDelegate<T>(ref T from, ref T to)
         where T : class;
 
-    private static MethodInfo helperSetReadonly;
+    // private static MethodInfo helperSetReadonly;
+    private static MethodInfo setReadonlyMethod;
+    private static ConcurrentDictionary<Type, MethodInfo> setReadonlyMethodCache = new();
+    // private static MethodInfo unsafeAsRef;
 
     static GhostCopy()
     {
-        helperSetReadonly = typeof(GhostCopy).GetMethod(nameof(SetReadonlyFieldViaReflection), BindingFlags.Static | BindingFlags.NonPublic)!;
+        // helperSetReadonly = typeof(GhostCopy).GetMethod(nameof(SetReadonlyFieldViaReflection), BindingFlags.Static | BindingFlags.NonPublic)!;
+        setReadonlyMethod = typeof(GhostCopy).GetMethod(nameof(SetReadonlyField), BindingFlags.Static | BindingFlags.NonPublic)!;
+        /*unsafeAsRef = typeof(Unsafe).GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Single(m => m.Name == nameof(Unsafe.AsRef)
+            && m.IsGenericMethodDefinition
+            && m.GetParameters().Length == 1
+            && m.GetParameters()[0].ParameterType.IsByRef);*/
     }
 
     /// <summary>
@@ -51,7 +61,6 @@ public static class GhostCopy
         var byref = classType.MakeByRefType();
         var source = Expression.Parameter(byref, "from");
         var destination = Expression.Parameter(byref, "to");
-
         var expressionList = new List<Expression>();
 
         // Do not copy properties, since the backing fields are copied directly.
@@ -83,11 +92,18 @@ public static class GhostCopy
             var destinationField = Expression.Field(destination, field);
             if (field.IsInitOnly)
             {
-                expressionList.Add(Expression.Call(
+                var method = setReadonlyMethodCache.GetOrAdd(field.FieldType, t => setReadonlyMethod.MakeGenericMethod(t));
+                expressionList.Add(Expression.Call(method, destinationField, sourceField));
+
+                /*var unsafeAsRefMethod = unsafeAsRef.MakeGenericMethod(field.FieldType);
+                var callAsRef = Expression.Call(unsafeAsRefMethod, destinationField);
+                expressionList.Add(Expression.Assign(callAsRef, sourceField));*/
+
+                /*expressionList.Add(Expression.Call(
                     helperSetReadonly.MakeGenericMethod(field.FieldType),
                     Expression.Convert(destination, typeof(object)),
                     Expression.Constant(field, typeof(FieldInfo)),
-                    Expression.Convert(sourceField, typeof(object))));
+                    Expression.Convert(sourceField, typeof(object))));*/
             }
             else
             {
@@ -109,6 +125,11 @@ public static class GhostCopy
         catch
         {
         }
+    }
+
+    private static void SetReadonlyField<T>(ref T target, T value)
+    {
+        Unsafe.AsRef<T>(ref target) = value;
     }
 
     private static class CopyDelegateCache<T>
