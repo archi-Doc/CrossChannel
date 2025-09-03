@@ -2,6 +2,7 @@
 
 using System.Linq.Expressions;
 using System.Reflection;
+using FastExpressionCompiler;
 
 namespace CrossChannel;
 
@@ -9,6 +10,13 @@ public static class GhostCopy
 {
     public delegate void CopyDelegate<T>(ref T from, ref T to)
         where T : class;
+
+    private static MethodInfo helperSetReadonly;
+
+    static GhostCopy()
+    {
+        helperSetReadonly = typeof(GhostCopy).GetMethod(nameof(SetReadonlyFieldViaReflection), BindingFlags.Static | BindingFlags.NonPublic)!;
+    }
 
     public static void Copy<T>(ref T from, ref T to)
         where T : class
@@ -25,6 +33,8 @@ public static class GhostCopy
         var destination = Expression.Parameter(byref, "to");
 
         var expressionList = new List<Expression>();
+
+        // Do not copy properties, since the backing fields are copied directly.
         /*foreach (var property in classType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
         {
             if (property.GetIndexParameters().Length > 0)
@@ -47,16 +57,12 @@ public static class GhostCopy
                     property.PropertyType)));
         }*/
 
-        MethodInfo? helperSetReadonly = default;
         foreach (var field in classType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
         {
             var sourceField = Expression.Field(source, field);
             var destinationField = Expression.Field(destination, field);
             if (field.IsInitOnly)
             {
-                helperSetReadonly ??= typeof(GhostCopy)
-            .GetMethod(nameof(SetReadonlyFieldViaReflection), BindingFlags.Static | BindingFlags.NonPublic)!;
-
                 expressionList.Add(Expression.Call(
                     helperSetReadonly.MakeGenericMethod(field.FieldType),
                     Expression.Convert(destination, typeof(object)),
@@ -71,7 +77,7 @@ public static class GhostCopy
 
         var body = Expression.Block(expressionList);
         var lambda = Expression.Lambda<CopyDelegate<T>>(body, source, destination);
-        return lambda.Compile();
+        return lambda.CompileFast();
     }
 
     private static void SetReadonlyFieldViaReflection<TField>(object target, FieldInfo field, object valueBoxed)

@@ -24,6 +24,8 @@ public class CopyTestClass
 
     private readonly string D = string.Empty;
 
+    // private CopyTestClass tc = default!;
+
     public void Prepare()
     {
         this.X = 1;
@@ -33,6 +35,7 @@ public class CopyTestClass
         this.B = 4.44;
         this.C = "5";
         Unsafe.AsRef<string>(in this.D) = "99";
+        // this.tc = this;
     }
 }
 
