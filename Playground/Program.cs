@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using CrossChannel;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,10 +63,45 @@ public class TestClass
     }
 }
 
+public class CopyTestClass
+{
+    public int X { get; set; }
+
+    public int Y { get; private set; }
+
+    public int Z { get; init; }
+
+    public string A = string.Empty;
+
+    protected double B;
+
+    private string C = string.Empty;
+
+    // private readonly string D = string.Empty;
+
+    public void Prepare()
+    {
+        this.X = 1;
+        this.Y = 2;
+        typeof(CopyTestClass).GetMethod("set_Z", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.Invoke(this, [3]);
+        this.A = "3";
+        this.B = 4.44;
+        this.C = "5";
+        // Unsafe.AsRef<string>(in this.D) = "99";
+    }
+}
+
 class Program
 {
     static void Main(string[] args)
     {
+        var tc = new CopyTestClass();
+        tc.Prepare();
+
+        var copyDelegate = GhostCopy.CreateDelegate<CopyTestClass>();
+        var tc2 = new CopyTestClass();
+        copyDelegate(ref tc, ref tc2);
+
         /*var c = Radio.Open<ITestService>(new TestService());
 
         var result = Radio.Send<ITestService>().Test2(2);
