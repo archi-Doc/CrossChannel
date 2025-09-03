@@ -6,8 +6,17 @@ using FastExpressionCompiler;
 
 namespace CrossChannel;
 
+/// <summary>
+/// Provides functionality to copy all fields (including private/readonly/backing fields) from one class instance to another.
+/// </summary>
 public static class GhostCopy
 {
+    /// <summary>
+    /// Delegate for copying fields from one instance to another.
+    /// </summary>
+    /// <typeparam name="T">The class type to copy.</typeparam>
+    /// <param name="from">The source instance.</param>
+    /// <param name="to">The destination instance.</param>
     public delegate void CopyDelegate<T>(ref T from, ref T to)
         where T : class;
 
@@ -18,12 +27,23 @@ public static class GhostCopy
         helperSetReadonly = typeof(GhostCopy).GetMethod(nameof(SetReadonlyFieldViaReflection), BindingFlags.Static | BindingFlags.NonPublic)!;
     }
 
+    /// <summary>
+    /// Copies all fields from one instance to another, including private/readonly/backing fields.
+    /// </summary>
+    /// <typeparam name="T">The class type to copy.</typeparam>
+    /// <param name="from">The source instance.</param>
+    /// <param name="to">The destination instance.</param>
     public static void Copy<T>(ref T from, ref T to)
         where T : class
     {
         CopyDelegateCache<T>.CopyDelegate(ref from, ref to);
     }
 
+    /// <summary>
+    /// Creates a delegate that copies all fields from one instance to another.
+    /// </summary>
+    /// <typeparam name="T">The class type to copy.</typeparam>
+    /// <returns>A delegate that copies fields from one instance to another.</returns>
     public static CopyDelegate<T> CreateDelegate<T>()
         where T : class
     {
