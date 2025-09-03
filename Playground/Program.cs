@@ -69,7 +69,7 @@ public class CopyTestClass
 
     public int Y { get; private set; }
 
-    public int Z { get; init; }
+    // public int Z { get; init; }
 
     public string A = string.Empty;
 
@@ -77,17 +77,20 @@ public class CopyTestClass
 
     private string C = string.Empty;
 
-    // private readonly string D = string.Empty;
+    private readonly string D = string.Empty;
+
+    private readonly CopyTestClass E = default!;
 
     public void Prepare()
     {
         this.X = 1;
         this.Y = 2;
-        typeof(CopyTestClass).GetMethod("set_Z", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.Invoke(this, [3]);
+        // typeof(CopyTestClass).GetMethod("set_Z", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.Invoke(this, [3]);
         this.A = "3";
         this.B = 4.44;
         this.C = "5";
-        // Unsafe.AsRef<string>(in this.D) = "99";
+        Unsafe.AsRef<string>(in this.D) = "99";
+        Unsafe.AsRef(in this.E) = this;
     }
 }
 
