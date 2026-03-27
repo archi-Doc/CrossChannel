@@ -33,7 +33,7 @@ public abstract class Channel
     /// Gets the broker object associated with the channel.
     /// </summary>
     /// <returns>The broker object.</returns>
-    public abstract object GetSender();
+    public abstract object GetBroker();
 }
 
 public class Channel<TService> : Channel, IChannel<TService>
@@ -317,7 +317,7 @@ public class Channel<TService> : Channel, IChannel<TService>
 
     public (Link?[] Array, int CountHint) InternalGetList() => this.list.GetValuesAndCountHint();
 
-    public override TService GetSender() => this.Broker;
+    public override TService GetBroker() => this.Broker;
 
     private void Remove(Link link)
     {
