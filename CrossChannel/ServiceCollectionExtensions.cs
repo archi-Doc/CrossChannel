@@ -10,16 +10,27 @@ public static class ServiceCollectionExtensions
     /// Adds the CrossChannel services to the specified <see cref="IServiceCollection"/>.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
-    public static void AddCrossChannel(this IServiceCollection services)
+    /// <param name="useRadioClass">If true,use the non-static RadioClass; otherwise, use the static Radio.</param>
+    public static void AddCrossChannel(this IServiceCollection services, bool useRadioClass = false)
     {
-        foreach (var x in ChannelRegistry.Channels)
-        {
-            // Radio
-            services.Add(new(x.ServiceType, a => Radio.GetChannel(x.ServiceType).GetBroker(), ServiceLifetime.Singleton)); // ISomeService
-            services.Add(new(typeof(IChannel<>).MakeGenericType(x.ServiceType), a => Radio.GetChannel(x.ServiceType), ServiceLifetime.Singleton)); // IChannel<ISomeService>
-            services.Add(new(typeof(IBrokerProvider<>).MakeGenericType(x.ServiceType), a => Activator.CreateInstance(typeof(BrokerProvider<>).MakeGenericType(x.ServiceType))!, ServiceLifetime.Singleton)); // ISender<ISomeService>
-
-            // In the future, we might add an option to switch to RadioClass.
+        if (useRadioClass)
+        {// Use a RadioClass instance.
+            services.AddSingleton<RadioClass>();
+            foreach (var x in ChannelRegistry.Channels)
+            {
+                services.Add(new(typeof(IChannel<>).MakeGenericType(x.ServiceType), sp => sp.GetRequiredService<RadioClass>().GetChannel(x.ServiceType), ServiceLifetime.Singleton)); // IChannel<ISomeService> -> Channel
+                services.Add(new(x.ServiceType, sp => sp.GetRequiredService<RadioClass>().GetChannel(x.ServiceType).GetBroker(), ServiceLifetime.Singleton)); // ISomeService -> Broker
+                services.AddSingleton(typeof(IBrokerProvider<>), typeof(NonStaticBrokerProvider<>));
+            }
+        }
+        else
+        {// Use the static Radio.
+            foreach (var x in ChannelRegistry.Channels)
+            {
+                services.Add(new(typeof(IChannel<>).MakeGenericType(x.ServiceType), sp => Radio.GetChannel(x.ServiceType), ServiceLifetime.Singleton)); // IChannel<ISomeService> -> Channel
+                services.Add(new(x.ServiceType, sp => Radio.GetChannel(x.ServiceType).GetBroker(), ServiceLifetime.Singleton)); // ISomeService -> Broker
+                services.Add(new(typeof(IBrokerProvider<>).MakeGenericType(x.ServiceType), sp => Activator.CreateInstance(typeof(StaticBrokerProvider<>).MakeGenericType(x.ServiceType))!, ServiceLifetime.Singleton)); // IBrokerProvider<ISomeService> -> BrokerProvider<ISomeService>
+            }
         }
     }
 }

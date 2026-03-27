@@ -27,13 +27,10 @@ public interface IBrokerProvider<TService>
         where TKey : notnull;
 }
 
-internal class BrokerProvider<TService> : IBrokerProvider<TService>
+internal class StaticBrokerProvider<TService> : IBrokerProvider<TService>
     where TService : class, IRadioService
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BrokerProvider{TService}"/> class.
-    /// </summary>
-    public BrokerProvider()
+    public StaticBrokerProvider()
     {
     }
 
@@ -45,4 +42,24 @@ internal class BrokerProvider<TService> : IBrokerProvider<TService>
     public TService GetWithKey<TKey>(TKey key)
         where TKey : notnull
         => Radio.SendWithKey<TService, TKey>(key);
+}
+
+internal class NonStaticBrokerProvider<TService> : IBrokerProvider<TService>
+    where TService : class, IRadioService
+{
+    private readonly RadioClass radio;
+
+    public NonStaticBrokerProvider(RadioClass radio)
+    {
+        this.radio = radio;
+    }
+
+    /// <inheritdoc/>
+    public TService Get()
+        => this.radio.Send<TService>();
+
+    /// <inheritdoc/>
+    public TService GetWithKey<TKey>(TKey key)
+        where TKey : notnull
+        => this.radio.SendWithKey<TService, TKey>(key);
 }

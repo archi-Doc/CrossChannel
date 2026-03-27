@@ -113,7 +113,7 @@ class Program
         result = Radio.Send<ITestService>().Test2(2);*/
 
         var collection = new ServiceCollection();
-        collection.AddCrossChannel();
+        collection.AddCrossChannel(true);
         var provider = collection.BuildServiceProvider();
 
         var testService = provider.GetRequiredService<ITestService>();
@@ -127,8 +127,10 @@ class Program
         var brokerProvider = provider.GetRequiredService<IBrokerProvider<ITestService>>();
         brokerProvider.Get().Test1("Broker");
 
+        var radio = provider.GetRequiredService<RadioClass>();
+        radio.Send<ITestService>().Test1("RadioClass");
+
         link?.Close();
         testService.Test1("Closed");// No service
-
     }
 }
