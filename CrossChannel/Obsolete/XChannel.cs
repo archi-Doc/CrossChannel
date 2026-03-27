@@ -3,9 +3,9 @@
 using System;
 using System.Collections.Concurrent;
 
-namespace CrossChannel.Obsolete;
+/*namespace CrossChannel.Obsolete;
 
-/*/// <summary>
+/// <summary>
 /// Channel class to receive a message.<br/>
 /// You need to call <see cref="XChannel.Dispose()"/> when the channel is no longer necessary, unless the weak reference is specified.
 /// </summary>

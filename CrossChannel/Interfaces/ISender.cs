@@ -14,7 +14,7 @@ public interface ISender<TService>
     /// When a broker function is called, the methods of the registered instances are invoked.
     /// </summary>
     /// <returns>The broker instance.</returns>
-    TService Send();
+    TService Get();
 
     /// <summary>
     /// Gets a broker instance corresponding to a specific service type.<br/>
@@ -23,26 +23,43 @@ public interface ISender<TService>
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <param name="key">The key.</param>
     /// <returns>The broker instance.</returns>
-    TService SendWithKey<TKey>(TKey key)
+    TService GetWithKey<TKey>(TKey key)
         where TKey : notnull;
 }
 
-internal class Sender<TService> : ISender<TService>
+internal class StaticBrokerProvider<TService> : ISender<TService>
     where TService : class, IRadioService
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Sender{TService}"/> class.
-    /// </summary>
-    public Sender()
+    public StaticBrokerProvider()
     {
     }
 
     /// <inheritdoc/>
-    public TService Send()
+    public TService Get()
         => Radio.Send<TService>();
 
     /// <inheritdoc/>
-    public TService SendWithKey<TKey>(TKey key)
+    public TService GetWithKey<TKey>(TKey key)
         where TKey : notnull
         => Radio.SendWithKey<TService, TKey>(key);
+}
+
+internal class NonStaticBrokerProvider<TService> : ISender<TService>
+    where TService : class, IRadioService
+{
+    private readonly RadioClass radio;
+
+    public NonStaticBrokerProvider(RadioClass radio)
+    {
+        this.radio = radio;
+    }
+
+    /// <inheritdoc/>
+    public TService Get()
+        => this.radio.Send<TService>();
+
+    /// <inheritdoc/>
+    public TService GetWithKey<TKey>(TKey key)
+        where TKey : notnull
+        => this.radio.SendWithKey<TService, TKey>(key);
 }

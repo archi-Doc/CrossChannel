@@ -24,7 +24,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
     public static readonly DiagnosticDescriptor Error_IRadioService = new DiagnosticDescriptor(
-        id: "CCG002", title: "IRadioService", messageFormat: "Types with the RadioServiceInterface attribute must derive from IRadioService",
+        id: "CCG002", title: "IRadioService", messageFormat: "Types with the RadioService attribute must derive from IRadioService",
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
     public static readonly DiagnosticDescriptor Error_MethodReturnType = new DiagnosticDescriptor(

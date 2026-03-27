@@ -7,7 +7,7 @@ using Xunit;
 
 namespace XUnitTest;
 
-[RadioServiceInterface(MaxLinks = 1)]
+[RadioService(MaxLinks = 1)]
 public interface ISingleService : IRadioService
 {
     RadioResult<int> Double(int x);

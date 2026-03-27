@@ -9,7 +9,7 @@ using PubSub;
 
 namespace Benchmark;
 
-[RadioServiceInterface]
+[RadioService]
 public interface ISimpleService : IRadioService
 {
     void Test(int x);
@@ -22,7 +22,7 @@ public class SimpleService : ISimpleService
     }
 }
 
-[RadioServiceInterface]
+[RadioService]
 public interface ISimpleServiceB : IRadioService
 {
     RadioResult<int> Test(int x);
@@ -57,71 +57,20 @@ public class H2HBenchmark
     private ISimpleService simpleService7 = new SimpleService();
     private ISimpleService simpleService8 = new SimpleService();
 
+    private readonly RadioClass radio;
+
     public H2HBenchmark()
     {
         var sc = new ServiceCollection();
         sc.AddMessagePipe();
         this.Provider = sc.BuildServiceProvider();
+        this.radio = new RadioClass();
     }
 
     [GlobalSetup]
     public void Setup()
     {
     }
-
-    /*[Benchmark]
-    public void CC_OpenSend()
-    {
-        using (ObsoleteRadio.Open<int>(x => { }))
-        {
-            ObsoleteRadio.Send<int>(1);
-        }
-
-        return;
-    }
-
-    [Benchmark]
-    public void CC_OpenSend8()
-    {
-        using (ObsoleteRadio.Open<int>(x => { }))
-        {
-            ObsoleteRadio.Send<int>(1);
-            ObsoleteRadio.Send<int>(2);
-            ObsoleteRadio.Send<int>(3);
-            ObsoleteRadio.Send<int>(4);
-            ObsoleteRadio.Send<int>(5);
-            ObsoleteRadio.Send<int>(6);
-            ObsoleteRadio.Send<int>(7);
-            ObsoleteRadio.Send<int>(8);
-        }
-
-        return;
-    }
-
-    [Benchmark]
-    public void CC_OpenSend88()
-    {
-        using (ObsoleteRadio.Open<int>(x => { }))
-        using (ObsoleteRadio.Open<int>(x => { }))
-        using (ObsoleteRadio.Open<int>(x => { }))
-        using (ObsoleteRadio.Open<int>(x => { }))
-        using (ObsoleteRadio.Open<int>(x => { }))
-        using (ObsoleteRadio.Open<int>(x => { }))
-        using (ObsoleteRadio.Open<int>(x => { }))
-        using (ObsoleteRadio.Open<int>(x => { }))
-        {
-            ObsoleteRadio.Send<int>(1);
-            ObsoleteRadio.Send<int>(2);
-            ObsoleteRadio.Send<int>(3);
-            ObsoleteRadio.Send<int>(4);
-            ObsoleteRadio.Send<int>(5);
-            ObsoleteRadio.Send<int>(6);
-            ObsoleteRadio.Send<int>(7);
-            ObsoleteRadio.Send<int>(8);
-        }
-
-        return;
-    }*/
 
     [Benchmark]
     public void CC_OpenSend()
@@ -172,6 +121,60 @@ public class H2HBenchmark
             Radio.Send<ISimpleService>().Test(6);
             Radio.Send<ISimpleService>().Test(7);
             Radio.Send<ISimpleService>().Test(8);
+        }
+
+        return;
+    }
+
+    [Benchmark]
+    public void CC2_OpenSend()
+    {
+        using (this.radio.Open(this.simpleService1))
+        {
+            this.radio.Send<ISimpleService>().Test(1);
+        }
+
+        return;
+    }
+
+    [Benchmark]
+    public void CC2_OpenSend8()
+    {
+        using (this.radio.Open(this.simpleService1))
+        {
+            this.radio.Send<ISimpleService>().Test(1);
+            this.radio.Send<ISimpleService>().Test(2);
+            this.radio.Send<ISimpleService>().Test(3);
+            this.radio.Send<ISimpleService>().Test(4);
+            this.radio.Send<ISimpleService>().Test(5);
+            this.radio.Send<ISimpleService>().Test(6);
+            this.radio.Send<ISimpleService>().Test(7);
+            this.radio.Send<ISimpleService>().Test(8);
+        }
+
+        return;
+    }
+
+    [Benchmark]
+    public void CC2_OpenSend88()
+    {
+        using (this.radio.Open(this.simpleService1))
+        using (this.radio.Open(this.simpleService2))
+        using (this.radio.Open(this.simpleService3))
+        using (this.radio.Open(this.simpleService4))
+        using (this.radio.Open(this.simpleService5))
+        using (this.radio.Open(this.simpleService6))
+        using (this.radio.Open(this.simpleService7))
+        using (this.radio.Open(this.simpleService8))
+        {
+            this.radio.Send<ISimpleService>().Test(1);
+            this.radio.Send<ISimpleService>().Test(2);
+            this.radio.Send<ISimpleService>().Test(3);
+            this.radio.Send<ISimpleService>().Test(4);
+            this.radio.Send<ISimpleService>().Test(5);
+            this.radio.Send<ISimpleService>().Test(6);
+            this.radio.Send<ISimpleService>().Test(7);
+            this.radio.Send<ISimpleService>().Test(8);
         }
 
         return;

@@ -46,7 +46,7 @@ First, define an interface to be shared between the Publisher(Sender) and Subscr
 
 ```csharp
 // First, define a common interface to be used by both the receiver and the sender.
-[RadioServiceInterface] // Add the RadioServiceInterface attribute.
+[RadioService] // Add the RadioService attribute.
 public interface IMessageService : IRadioService
 {// The target interface must derive from IRadioService.
     void Message(string message);
@@ -114,23 +114,28 @@ using (radio.Open<IMessageService>(new MessageService("Local: ")))
 
 Performance is the top priority. This is a benchmark with other Pub/Sub libraries.
 
-CC: [archi-Doc/CrossChannel](https://github.com/archi-Doc/CrossChannel)
+CC: [archi-Doc/CrossChannel](https://github.com/archi-Doc/CrossChannel) (Static Radio)
+
+CC2: [archi-Doc/CrossChannel](https://github.com/archi-Doc/CrossChannel) (Non-static Radio, slightly slower than the static Radio, but still very fast.)
 
 MP: [Cysharp/MessagePipe](https://github.com/Cysharp/MessagePipe)
 
 PS: [upta/pubsub](https://github.com/upta/pubsub)
 
-| Method        |        Mean |     Error |     StdDev |   Gen0 | Allocated |
-| ------------- | ----------: | --------: | ---------: | -----: | --------: |
-| CC_OpenSend   |    41.91 ns |  0.650 ns |   0.972 ns | 0.0038 |      48 B |
-| CC_OpenSend8  |    54.13 ns |  0.909 ns |   1.274 ns | 0.0038 |      48 B |
-| CC_OpenSend88 |   365.16 ns |  4.738 ns |   7.091 ns | 0.0305 |     384 B |
-| MP_OpenSend   |    89.58 ns |  0.938 ns |   1.404 ns | 0.0044 |      56 B |
-| MP_OpenSend8  |    98.55 ns |  1.161 ns |   1.702 ns | 0.0044 |      56 B |
-| MP_OpenSend88 |   805.17 ns | 12.591 ns |  18.845 ns | 0.0353 |     448 B |
-| PS_OpenSend   |   267.89 ns | 13.514 ns |  20.228 ns | 0.0381 |     480 B |
-| PS_OpenSend8  |   672.32 ns | 65.482 ns |  95.982 ns | 0.1268 |    1600 B |
-| PS_OpenSend88 | 2,921.00 ns | 99.322 ns | 145.584 ns | 0.3586 |    4544 B |
+| Method         |        Mean |     Error |    StdDev |      Median |   Gen0 | Allocated |
+| -------------- | ----------: | --------: | --------: | ----------: | -----: | --------: |
+| CC_OpenSend    |    29.57 ns |  0.502 ns |  0.751 ns |    29.21 ns | 0.0025 |      48 B |
+| CC_OpenSend8   |    34.50 ns |  0.876 ns |  1.283 ns |    34.24 ns | 0.0025 |      48 B |
+| CC_OpenSend88  |   279.59 ns |  3.614 ns |  5.184 ns |   281.12 ns | 0.0200 |     384 B |
+| CC2_OpenSend   |    29.70 ns |  0.203 ns |  0.304 ns |    29.68 ns | 0.0025 |      48 B |
+| CC2_OpenSend8  |    56.28 ns |  0.227 ns |  0.333 ns |    56.21 ns | 0.0025 |      48 B |
+| CC2_OpenSend88 |   346.41 ns |  1.120 ns |  1.676 ns |   346.32 ns | 0.0200 |     384 B |
+| MP_OpenSend    |    65.33 ns |  0.121 ns |  0.174 ns |    65.34 ns | 0.0029 |      56 B |
+| MP_OpenSend8   |    67.14 ns |  0.125 ns |  0.175 ns |    67.13 ns | 0.0029 |      56 B |
+| MP_OpenSend88  |   595.81 ns | 14.852 ns | 22.230 ns |   596.29 ns | 0.0229 |     448 B |
+| PS_OpenSend    |   154.14 ns |  3.246 ns |  4.859 ns |   153.97 ns | 0.0229 |     432 B |
+| PS_OpenSend8   |   382.60 ns | 14.223 ns | 21.288 ns |   369.83 ns | 0.0734 |    1384 B |
+| PS_OpenSend88  | 2,756.65 ns | 49.612 ns | 72.721 ns | 2,788.00 ns | 0.2060 |    3904 B |
 
 The [benchmark code](/Benchmark/Benchmarks/H2HBenchmark.cs) is simple: open a channel (subscribe), send a message (publish), and close the channel (unsubscribe).
 
@@ -139,7 +144,7 @@ The [benchmark code](/Benchmark/Benchmarks/H2HBenchmark.cs) is simple: open a ch
 ## Cheat sheet
 
 ```csharp
-[RadioServiceInterface] // RadioServiceInterface attribute is required.
+[RadioService] // RadioService attribute is required.
 public interface ITestService : IRadioService // The target interface must derive from IRadioService
 {// The return type of the interface function must be either void, Task, RadioResult<T>, Task<RadioResult<T>>.
 

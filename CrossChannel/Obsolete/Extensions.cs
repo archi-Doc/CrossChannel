@@ -3,9 +3,9 @@
 using System;
 using System.Threading.Tasks;
 
-namespace CrossChannel.Obsolete;
+/*namespace CrossChannel.Obsolete;
 
-/*internal static partial class Extensions
+internal static partial class Extensions
 {
     internal static int Send<TMessage>(this FastList<XChannel_Message<TMessage>> list, TMessage message)
     {// Thread safe
