@@ -6,7 +6,7 @@ namespace CrossChannel;
 /// Represents an interface that delegates function execution to the registered (opened) instance via a broker.
 /// </summary>
 /// <typeparam name="TService">The type of the service.</typeparam>
-public interface IBrokerProvider<TService>
+public interface ISender<TService>
     where TService : class, IRadioService
 {
     /// <summary>
@@ -27,7 +27,7 @@ public interface IBrokerProvider<TService>
         where TKey : notnull;
 }
 
-internal class StaticBrokerProvider<TService> : IBrokerProvider<TService>
+internal class StaticBrokerProvider<TService> : ISender<TService>
     where TService : class, IRadioService
 {
     public StaticBrokerProvider()
@@ -44,7 +44,7 @@ internal class StaticBrokerProvider<TService> : IBrokerProvider<TService>
         => Radio.SendWithKey<TService, TKey>(key);
 }
 
-internal class NonStaticBrokerProvider<TService> : IBrokerProvider<TService>
+internal class NonStaticBrokerProvider<TService> : ISender<TService>
     where TService : class, IRadioService
 {
     private readonly RadioClass radio;

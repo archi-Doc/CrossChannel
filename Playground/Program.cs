@@ -105,13 +105,6 @@ class Program
         var tc2 = new CopyTestClass();
         copyDelegate(ref tc, ref tc2);
 
-        /*var c = Radio.Open<ITestService>(new TestService());
-
-        var result = Radio.Send<ITestService>().Test2(2);
-        c.Close();
-
-        result = Radio.Send<ITestService>().Test2(2);*/
-
         var collection = new ServiceCollection();
         collection.AddCrossChannel(true);
         var provider = collection.BuildServiceProvider();
@@ -124,8 +117,8 @@ class Program
 
         testService.Test1("Open");
 
-        var brokerProvider = provider.GetRequiredService<IBrokerProvider<ITestService>>();
-        brokerProvider.Get().Test1("Broker");
+        var sender = provider.GetRequiredService<ISender<ITestService>>();
+        sender.Get().Test1("Broker");
 
         var radio = provider.GetRequiredService<RadioClass>();
         radio.Send<ITestService>().Test1("RadioClass");
