@@ -10,7 +10,7 @@ namespace Playground;
 [RadioServiceInterface]
 public interface ITestService : IRadioService
 {
-    void Test1();
+    void Test1(string text);
 
     RadioResult<int> Test2(int x);
 
@@ -30,9 +30,9 @@ public partial class TestService : ITestService
         }
     }
 
-    void ITestService.Test1()
+    void ITestService.Test1(string text)
     {
-        Console.WriteLine("Test1");
+        Console.WriteLine($"Test1: {text}");
     }
 
     RadioResult<int> ITestService.Test2(int x)
@@ -117,18 +117,18 @@ class Program
         var provider = collection.BuildServiceProvider();
 
         var testService = provider.GetRequiredService<ITestService>();
-        testService.Test1(); // No service
+        testService.Test1("No service"); // No service
 
         var channel = provider.GetRequiredService<IChannel<ITestService>>();
         var link = channel.Open((ITestService)new TestService());
 
-        testService.Test1();
+        testService.Test1("Open");
 
-        var sender = provider.GetRequiredService<ISender<ITestService>>();
-        sender.Send().Test1();
+        var brokerProvider = provider.GetRequiredService<IBrokerProvider<ITestService>>();
+        brokerProvider.Get().Test1("Broker");
 
         link?.Close();
-        testService.Test1();// No service
+        testService.Test1("Closed");// No service
 
     }
 }
