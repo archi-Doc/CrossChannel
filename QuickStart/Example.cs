@@ -8,7 +8,7 @@ using CrossChannel;
 namespace QuickStart;
 
 // First, define a common interface to be used by both the receiver and the sender.
-[RadioServiceInterface] // Add the RadioServiceInterface attribute.
+[RadioService] // Add the RadioService attribute.
 public interface IMessageService : IRadioService
 {// The target interface must derive from IRadioService.
     void Message(string message);
@@ -25,7 +25,7 @@ public class MessageService : IMessageService
         => Console.WriteLine(this.prefix + message);
 }
 
-[RadioServiceInterface] // RadioServiceInterface attribute is required.
+[RadioService] // RadioService attribute is required.
 public interface ITestService : IRadioService // The target interface must derive from IRadioService
 {// The return type of the interface function must be either void, Task, RadioResult<T>, Task<RadioResult<T>>.
 
@@ -133,7 +133,7 @@ internal static class Example
 }
 
 
-[RadioServiceInterface]
+[RadioService]
 public interface IExampleService : IRadioService
 {
     RadioResult<int> Double(int x); // Define a function with a return value. To share the return value on the receiving side as well, the type must be either void, Task, RadioResult<T>, or Task<RadioResult<T>>.

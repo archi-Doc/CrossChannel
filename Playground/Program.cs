@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Playground;
 
-[RadioServiceInterface]
+[RadioService]
 public interface ITestService : IRadioService
 {
     void Test1(string text);
@@ -23,7 +23,7 @@ public partial class TestService : ITestService
 {
     private partial class NestedClass
     {
-        [RadioServiceInterface]
+        [RadioService]
         interface INestedService : IRadioService
         {
             Task Message(string t);

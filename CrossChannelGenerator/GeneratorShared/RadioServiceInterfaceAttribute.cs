@@ -5,13 +5,13 @@ using Microsoft.CodeAnalysis;
 
 namespace CrossChannel;
 
-public sealed class RadioServiceInterfaceAttributeMock
+public sealed class RadioServiceAttributeMock
 {
-    public static readonly string SimpleName = "RadioServiceInterface";
+    public static readonly string SimpleName = "RadioService";
     public static readonly string StandardName = SimpleName + "Attribute";
     public static readonly string FullName = "CrossChannel." + StandardName;
 
-    public RadioServiceInterfaceAttributeMock(Location location)
+    public RadioServiceAttributeMock(Location location)
     {
         this.Location = location;
     }
@@ -20,9 +20,9 @@ public sealed class RadioServiceInterfaceAttributeMock
 
     public int MaxLinks { get; set; } = int.MaxValue;
 
-    public static RadioServiceInterfaceAttributeMock FromArray(Location location, object?[] constructorArguments, KeyValuePair<string, object?>[] namedArguments)
+    public static RadioServiceAttributeMock FromArray(Location location, object?[] constructorArguments, KeyValuePair<string, object?>[] namedArguments)
     {
-        var attribute = new RadioServiceInterfaceAttributeMock(location);
+        var attribute = new RadioServiceAttributeMock(location);
 
         object? val;
         val = VisceralHelper.GetValue(-1, nameof(MaxLinks), constructorArguments, namedArguments);

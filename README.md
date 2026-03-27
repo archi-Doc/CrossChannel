@@ -46,7 +46,7 @@ First, define an interface to be shared between the Publisher(Sender) and Subscr
 
 ```csharp
 // First, define a common interface to be used by both the receiver and the sender.
-[RadioServiceInterface] // Add the RadioServiceInterface attribute.
+[RadioService] // Add the RadioService attribute.
 public interface IMessageService : IRadioService
 {// The target interface must derive from IRadioService.
     void Message(string message);
@@ -139,7 +139,7 @@ The [benchmark code](/Benchmark/Benchmarks/H2HBenchmark.cs) is simple: open a ch
 ## Cheat sheet
 
 ```csharp
-[RadioServiceInterface] // RadioServiceInterface attribute is required.
+[RadioService] // RadioService attribute is required.
 public interface ITestService : IRadioService // The target interface must derive from IRadioService
 {// The return type of the interface function must be either void, Task, RadioResult<T>, Task<RadioResult<T>>.
 

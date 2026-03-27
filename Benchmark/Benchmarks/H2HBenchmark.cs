@@ -9,7 +9,7 @@ using PubSub;
 
 namespace Benchmark;
 
-[RadioServiceInterface]
+[RadioService]
 public interface ISimpleService : IRadioService
 {
     void Test(int x);
@@ -22,7 +22,7 @@ public class SimpleService : ISimpleService
     }
 }
 
-[RadioServiceInterface]
+[RadioService]
 public interface ISimpleServiceB : IRadioService
 {
     RadioResult<int> Test(int x);

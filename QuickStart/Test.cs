@@ -5,7 +5,7 @@ using CrossChannel;
 
 namespace QuickStart;
 
-[RadioServiceInterface] // Add the RadioServiceInterface attribute.
+[RadioService] // Add the RadioService attribute.
 public interface IDelayService : IRadioService
 {
     Task Delay(int milliseconds, CancellationToken cancellationToken);

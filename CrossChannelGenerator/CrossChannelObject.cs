@@ -24,7 +24,7 @@ public enum CrossChannelObjectFlag
     Checked = 1 << 2,
     InitializerGenerated = 1 << 3,
 
-    RadioServiceInterface = 1 << 10, // RadioServiceInterface
+    RadioService = 1 << 10, // RadioService
 }
 
 public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
@@ -37,7 +37,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
     public CrossChannelObjectFlag ObjectFlag { get; private set; }
 
-    public RadioServiceInterfaceAttributeMock? RadioServiceInterfaceAttribute { get; private set; }
+    public RadioServiceAttributeMock? RadioServiceInterfaceAttribute { get; private set; }
 
     public List<CrossChannelObject>? Children { get; private set; } // The opposite of ContainingObject
 
@@ -95,10 +95,10 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
         foreach (var x in this.AllAttributes)
         {
-            if (x.FullName == RadioServiceInterfaceAttributeMock.FullName)
-            {// [RadioServiceInterface]
-                this.RadioServiceInterfaceAttribute = RadioServiceInterfaceAttributeMock.FromArray(x.Location, x.ConstructorArguments, x.NamedArguments);
-                this.ObjectFlag |= CrossChannelObjectFlag.RadioServiceInterface;
+            if (x.FullName == RadioServiceAttributeMock.FullName)
+            {// [RadioService]
+                this.RadioServiceInterfaceAttribute = RadioServiceAttributeMock.FromArray(x.Location, x.ConstructorArguments, x.NamedArguments);
+                this.ObjectFlag |= CrossChannelObjectFlag.RadioService;
             }
         }
 
@@ -188,8 +188,8 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
         this.ObjectFlag |= CrossChannelObjectFlag.Checked;
 
-        if (this.ObjectFlag.HasFlag(CrossChannelObjectFlag.RadioServiceInterface))
-        {// [RadioServiceInterface]
+        if (this.ObjectFlag.HasFlag(CrossChannelObjectFlag.RadioService))
+        {// [RadioService]
             // Must be derived from IRadioService
             if (!this.AllInterfaces.Any(x => x == IRadioService.FullName))
             {

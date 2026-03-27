@@ -3,7 +3,7 @@
 using CrossChannel;
 
 // Global namespace
-[RadioServiceInterface(MaxLinks = 1)]
+[RadioService(MaxLinks = 1)]
 public interface IConductorPresentationService : IRadioService
 {
     void ActivateWindow(bool force = false);

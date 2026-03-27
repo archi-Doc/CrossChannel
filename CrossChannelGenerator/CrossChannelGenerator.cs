@@ -50,8 +50,8 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                                 {// [CrossChannelGeneratorOptionAttribute]
                                     return syntax;
                                 }
-                                else if (name.EndsWith(RadioServiceInterfaceAttributeMock.StandardName) ||
-                                    name.EndsWith(RadioServiceInterfaceAttributeMock.SimpleName))
+                                else if (name.EndsWith(RadioServiceAttributeMock.StandardName) ||
+                                    name.EndsWith(RadioServiceAttributeMock.SimpleName))
                                 {// [RadioServiceInterfaceAttribute]
                                     return syntax;
                                 }
@@ -94,7 +94,7 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
             return;
         }
 
-        var radioServiceInterface = compilation.GetTypeByMetadataName(RadioServiceInterfaceAttributeMock.FullName);
+        var radioServiceInterface = compilation.GetTypeByMetadataName(RadioServiceAttributeMock.FullName);
         if (radioServiceInterface == null)
         {
             return;
@@ -141,7 +141,7 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                         this.TargetFolder = Path.Combine(Path.GetDirectoryName(x.SyntaxTree.FilePath), "Generated");
                     }
                     else if (SymbolEqualityComparer.Default.Equals(y.AttributeClass, radioServiceInterface))
-                    {// [RadioServiceInterface]
+                    {// [RadioService]
                         body.Add(symbol);
                         // if (symbol.AllInterfaces.Any(z => SymbolEqualityComparer.Default.Equals(z, iRadioService))) // IRadioService (check later)
                     }

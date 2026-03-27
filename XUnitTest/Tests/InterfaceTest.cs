@@ -10,7 +10,7 @@ using Xunit;
 
 namespace XUnitTest;
 
-[RadioServiceInterface]
+[RadioService]
 public interface ITestInterface : IRadioService
 {
     Task<RadioResult<ulong>> Double(ulong x);
