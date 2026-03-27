@@ -113,7 +113,7 @@ class Program
         result = Radio.Send<ITestService>().Test2(2);*/
 
         var collection = new ServiceCollection();
-        var builder = collection.AddCrossChannel();
+        collection.AddCrossChannel();
         var provider = collection.BuildServiceProvider();
 
         var testService = provider.GetRequiredService<ITestService>();

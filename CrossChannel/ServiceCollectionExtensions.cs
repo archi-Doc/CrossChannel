@@ -10,8 +10,7 @@ public static class ServiceCollectionExtensions
     /// Adds the CrossChannel services to the specified <see cref="IServiceCollection"/>.
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
-    /// <returns>An instance of <see cref="ICrossChannelBuilder"/> that can be used to further configure the CrossChannel services.</returns>
-    public static ICrossChannelBuilder AddCrossChannel(this IServiceCollection services)
+    public static void AddCrossChannel(this IServiceCollection services)
     {
         foreach (var x in ChannelRegistry.Channels)
         {
@@ -22,12 +21,10 @@ public static class ServiceCollectionExtensions
 
             // In the future, we might add an option to switch to RadioClass.
         }
-
-        return new CrossChannelBuilder(services);
     }
 }
 
-public interface ICrossChannelBuilder
+/*public interface ICrossChannelBuilder
 {
     IServiceCollection Services { get; }
 }
@@ -40,4 +37,4 @@ public class CrossChannelBuilder : ICrossChannelBuilder
     {
         this.Services = services;
     }
-}
+}*/

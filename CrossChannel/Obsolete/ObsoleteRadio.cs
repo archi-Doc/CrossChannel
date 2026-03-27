@@ -1,8 +1,8 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
-namespace CrossChannel.Obsolete;
+/*namespace CrossChannel.Obsolete;
 
-/*/// <summary>
+/// <summary>
 /// Radio is a static class for pub/sub service.<br/>
 /// It's easy to use.<br/>
 /// 1. Open a channel (register a subscriber) : <see cref="Open{TMessage}(Action{TMessage}, object?)"/>.<br/>

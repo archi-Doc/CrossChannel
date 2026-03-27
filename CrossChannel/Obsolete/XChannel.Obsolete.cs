@@ -7,9 +7,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
+/*
 namespace CrossChannel.Obsolete;
 
-/*internal class XChannel_Key<TKey, TMessage> : XChannel
+internal class XChannel_Key<TKey, TMessage> : XChannel
     where TKey : notnull
 {
     public XChannel_Key(Dictionary<TKey, FastList<XChannel_Key<TKey, TMessage>>> map, TKey key, object? weakReference, Action<TMessage> method)
