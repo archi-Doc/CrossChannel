@@ -19,8 +19,8 @@ public static class ServiceCollectionExtensions
             foreach (var x in ChannelRegistry.Channels)
             {
                 services.Add(new(typeof(IChannel<>).MakeGenericType(x.ServiceType), sp => sp.GetRequiredService<RadioClass>().GetChannel(x.ServiceType), ServiceLifetime.Singleton)); // IChannel<ISomeService> -> Channel
-                services.Add(new(x.ServiceType, sp => sp.GetRequiredService<RadioClass>().GetChannel(x.ServiceType).GetBroker(), ServiceLifetime.Singleton)); // ISomeService -> Broker
-                services.AddSingleton(typeof(ISender<>), typeof(NonStaticBrokerProvider<>));
+                services.Add(new(x.ServiceType, sp => sp.GetRequiredService<RadioClass>().GetChannel(x.ServiceType).GetSender(), ServiceLifetime.Singleton)); // ISomeService -> Broker
+                services.AddSingleton(typeof(ISender<>), typeof(NonStaticBrokerProvider<>)); // ISender<ISomeService> -> NonStaticBrokerProvider<ISomeService>
             }
         }
         else
@@ -28,8 +28,8 @@ public static class ServiceCollectionExtensions
             foreach (var x in ChannelRegistry.Channels)
             {
                 services.Add(new(typeof(IChannel<>).MakeGenericType(x.ServiceType), sp => Radio.GetChannel(x.ServiceType), ServiceLifetime.Singleton)); // IChannel<ISomeService> -> Channel
-                services.Add(new(x.ServiceType, sp => Radio.GetChannel(x.ServiceType).GetBroker(), ServiceLifetime.Singleton)); // ISomeService -> Broker
-                services.Add(new(typeof(ISender<>).MakeGenericType(x.ServiceType), sp => Activator.CreateInstance(typeof(StaticBrokerProvider<>).MakeGenericType(x.ServiceType))!, ServiceLifetime.Singleton)); // IBrokerProvider<ISomeService> -> BrokerProvider<ISomeService>
+                services.Add(new(x.ServiceType, sp => Radio.GetChannel(x.ServiceType).GetSender(), ServiceLifetime.Singleton)); // ISomeService -> Broker
+                services.Add(new(typeof(ISender<>).MakeGenericType(x.ServiceType), sp => Activator.CreateInstance(typeof(StaticBrokerProvider<>).MakeGenericType(x.ServiceType))!, ServiceLifetime.Singleton)); // ISender<ISomeService> -> StaticBrokerProvider<ISomeService>
             }
         }
     }
