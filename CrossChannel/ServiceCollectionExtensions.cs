@@ -11,7 +11,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
     /// <param name="useRadioClass">If true,use the non-static RadioClass; otherwise, use the static Radio.</param>
-    public static void AddCrossChannel(this IServiceCollection services, bool useRadioClass = false)
+    public static void AddCrossChannel(this IServiceCollection services, bool useRadioClass = true)
     {
         if (useRadioClass)
         {// Use a RadioClass instance.
