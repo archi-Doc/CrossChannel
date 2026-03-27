@@ -116,7 +116,7 @@ Performance is the top priority. This is a benchmark with other Pub/Sub librarie
 
 CC: [archi-Doc/CrossChannel](https://github.com/archi-Doc/CrossChannel) (Static Radio)
 
-CC2: [archi-Doc/CrossChannel](https://github.com/archi-Doc/CrossChannel) (Non-static Radio)
+CC2: [archi-Doc/CrossChannel](https://github.com/archi-Doc/CrossChannel) (Non-static Radio, slightly slower than the static Radio, but still very fast.)
 
 MP: [Cysharp/MessagePipe](https://github.com/Cysharp/MessagePipe)
 
