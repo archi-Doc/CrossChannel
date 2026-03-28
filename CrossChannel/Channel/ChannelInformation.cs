@@ -35,6 +35,12 @@ public class ChannelInformation
     public int MaxLinks { get; private set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the radio service interface and sender<br/>
+    /// should be automatically registered in dependency injection (default is true).
+    /// </summary>
+    public bool AutoRegisterRadioServiceAndSender { get; set; } = true;
+
+    /// <summary>
     /// Gets an empty channel.
     /// </summary>
     public Channel EmptyChannel
@@ -61,12 +67,14 @@ public class ChannelInformation
     /// <param name="newChannel">The function that creates a new channel.</param>
     /// <param name="newChannel2">The function that creates a new channel with an unordered map.</param>
     /// <param name="maxLinks">The maximum number of links for the channel.</param>
-    public ChannelInformation(Type serviceType, Func<Channel, object> newBroker, Func<Channel> newChannel, Func<IUnorderedMapWithLock, Channel> newChannel2, int maxLinks)
+    /// <param name="autoRegisterRadioServiceAndSender">A value indicating whether the radio service interface and sender should be automatically registered in dependency injection.</param>
+    public ChannelInformation(Type serviceType, Func<Channel, object> newBroker, Func<Channel> newChannel, Func<IUnorderedMapWithLock, Channel> newChannel2, int maxLinks, bool autoRegisterRadioServiceAndSender)
     {
         this.ServiceType = serviceType;
         this.NewBroker = newBroker;
         this.NewChannel = newChannel;
         this.NewChannel2 = newChannel2;
         this.MaxLinks = maxLinks;
+        this.AutoRegisterRadioServiceAndSender = autoRegisterRadioServiceAndSender;
     }
 }
