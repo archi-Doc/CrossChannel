@@ -21,4 +21,10 @@ public sealed class RadioServiceAttribute : Attribute
     /// Gets or sets the maximum number of links of the channel (default is <see cref="int.MaxValue"/>).
     /// </summary>
     public int MaxLinks { get; set; } = int.MaxValue;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the radio service interface and sender<br/>
+    /// should be automatically registered in dependency injection (default is true).
+    /// </summary>
+    public bool AutoRegisterRadioServiceAndSender { get; set; } = true;
 }

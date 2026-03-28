@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using CrossChannel;
@@ -7,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Playground;
 
-[RadioService]
+[RadioService(AutoRegisterRadioServiceAndSender = true)]
 public interface ITestService : IRadioService
 {
     void Test1(string text);
