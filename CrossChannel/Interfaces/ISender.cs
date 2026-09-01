@@ -3,63 +3,71 @@
 namespace CrossChannel;
 
 /// <summary>
-/// Represents an interface that delegates function execution to the registered (opened) instance via a broker.
+/// Provides the sending (publishing) side of a radio service, so that a class can send messages
+/// without depending on <see cref="Radio"/> or <see cref="RadioClass"/> directly.<br/>
+/// Registered in dependency injection by <see cref="ServiceCollectionExtensions.AddCrossChannel"/>.
 /// </summary>
 /// <typeparam name="TService">The type of the service.</typeparam>
 public interface ISender<TService>
     where TService : class, IRadioService
 {
     /// <summary>
-    /// Gets a broker instance corresponding to a specific service type.<br/>
-    /// When a broker function is called, the methods of the registered instances are invoked.
+    /// Gets the broker of the channel. Calling a method of the broker invokes that method on every subscribed instance.
     /// </summary>
-    /// <returns>The broker instance.</returns>
-    TService Get();
+    /// <returns>The broker.</returns>
+    TService Send();
 
     /// <summary>
-    /// Gets a broker instance corresponding to a specific service type.<br/>
-    /// When a broker function is called, the methods of the registered instances are invoked.
+    /// Gets the broker of the channel associated with the specified key.
     /// </summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <param name="key">The key.</param>
-    /// <returns>The broker instance.</returns>
-    TService GetWithKey<TKey>(TKey key)
+    /// <returns>The broker, or the broker of an empty channel if no channel is associated with the key.</returns>
+    TService SendWithKey<TKey>(TKey key)
         where TKey : notnull;
 }
 
-internal class StaticBrokerProvider<TService> : ISender<TService>
+/// <summary>
+/// An <see cref="ISender{TService}"/> which sends through the static <see cref="Radio"/>.
+/// </summary>
+/// <typeparam name="TService">The type of the service.</typeparam>
+internal sealed class StaticRadioSender<TService> : ISender<TService>
     where TService : class, IRadioService
 {
-    public StaticBrokerProvider()
+    public StaticRadioSender()
     {
     }
 
     /// <inheritdoc/>
-    public TService Get()
+    public TService Send()
         => Radio.Send<TService>();
 
     /// <inheritdoc/>
-    public TService GetWithKey<TKey>(TKey key)
+    public TService SendWithKey<TKey>(TKey key)
         where TKey : notnull
         => Radio.SendWithKey<TService, TKey>(key);
 }
 
-internal class NonStaticBrokerProvider<TService> : ISender<TService>
+/// <summary>
+/// An <see cref="ISender{TService}"/> which sends through a <see cref="RadioClass"/> instance.
+/// </summary>
+/// <typeparam name="TService">The type of the service.</typeparam>
+internal sealed class RadioClassSender<TService> : ISender<TService>
     where TService : class, IRadioService
 {
     private readonly RadioClass radio;
 
-    public NonStaticBrokerProvider(RadioClass radio)
+    public RadioClassSender(RadioClass radio)
     {
         this.radio = radio;
     }
 
     /// <inheritdoc/>
-    public TService Get()
+    public TService Send()
         => this.radio.Send<TService>();
 
     /// <inheritdoc/>
-    public TService GetWithKey<TKey>(TKey key)
+    public TService SendWithKey<TKey>(TKey key)
         where TKey : notnull
         => this.radio.SendWithKey<TService, TKey>(key);
 }

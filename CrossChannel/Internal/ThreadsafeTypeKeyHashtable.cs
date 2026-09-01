@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace CrossChannel.Internal;
 
-internal class ThreadsafeTypeKeyHashtable<TValue>
+internal sealed class ThreadsafeTypeKeyHashtable<TValue>
 {
     private const double LoadFactor = 0.75d;
 
@@ -15,7 +15,7 @@ internal class ThreadsafeTypeKeyHashtable<TValue>
     private Entry[] buckets;
     private int size; // only use in writer lock
 
-    private class Entry
+    private sealed class Entry
     {
         public Entry(Type key, TValue value, int hash)
         {

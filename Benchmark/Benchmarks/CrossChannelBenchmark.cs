@@ -106,7 +106,7 @@ public class CrossChannelBenchmark
         }
     }
 
-    [Benchmark]
+    /*[Benchmark]
     public void OpenSend8_Key()
     {
         using (Radio.OpenWithKey<ISimpleService, int>(this.simpleService1, 1))
@@ -214,5 +214,5 @@ public class CrossChannelBenchmark
             this.TestRadio.SendWithKey<ISimpleService, int>(1).Test(1);
             this.TestRadio.SendWithKey<ISimpleService, int>(1).Test(1);
         }
-    }
+    }*/
 }

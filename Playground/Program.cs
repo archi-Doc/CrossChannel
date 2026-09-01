@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Playground;
 
-[RadioService(AutoRegisterRadioServiceAndSender = true)]
+[RadioService(AutoRegisterServiceAndSender = true)]
 public interface ITestService : IRadioService
 {
     void Test1(string text);
@@ -117,7 +117,7 @@ class Program
         testService.Test1("Open");
 
         var sender = provider.GetRequiredService<ISender<ITestService>>();
-        sender.Get().Test1("Broker");
+        sender.Send().Test1("Broker");
 
         var radio = provider.GetRequiredService<RadioClass>();
         radio.Send<ITestService>().Test1("RadioClass");

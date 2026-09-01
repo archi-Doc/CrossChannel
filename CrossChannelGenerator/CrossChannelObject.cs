@@ -360,7 +360,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
             return;
         }
 
-        var autoRegisterRadioServiceAndSender = this.RadioServiceInterfaceAttribute.AutoRegisterRadioServiceAndSender ? "true" : "false";
-        ssb.AppendLine($"ChannelRegistry.Register(new(typeof({this.FullName}), x => new {this.ClassName}(x), () => new Channel<{this.FullName}>(), (a) => new Channel<{this.FullName}>(a), {this.RadioServiceInterfaceAttribute.MaxLinks.ToString()}, {autoRegisterRadioServiceAndSender}));");
+        var autoRegisterServiceAndSender = this.RadioServiceInterfaceAttribute.AutoRegisterServiceAndSender ? "true" : "false";
+        ssb.AppendLine($"ChannelRegistry.Register(new(typeof({this.FullName}), static x => new {this.ClassName}(x), static () => new Channel<{this.FullName}>(), {this.RadioServiceInterfaceAttribute.MaxLinks.ToString()}, {autoRegisterServiceAndSender}));");
     }
 }

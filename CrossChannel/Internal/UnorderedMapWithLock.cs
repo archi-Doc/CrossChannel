@@ -6,16 +6,16 @@ using Arc.Collections;
 namespace CrossChannel;
 
 /// <summary>
-/// Represents an interface specific to unordered map with Lock.
+/// Represents the non-generic part of a keyed channel map.<br/>
+/// A keyed <see cref="Channel{TService}"/> shares <see cref="LockObject"/> with its map,
+/// so that the map node and the links of the channel are updated atomically.
 /// </summary>
-public interface IUnorderedMapWithLock
+internal interface IUnorderedMapWithLock
 {
-    Lock LockObject { get; }
-
     /// <summary>
-    /// Clears the map.
+    /// Gets the lock which protects both the map and the channels it contains.
     /// </summary>
-    void Clear();
+    Lock LockObject { get; }
 
     /// <summary>
     /// Removes the node at the specified index.
@@ -29,7 +29,8 @@ public interface IUnorderedMapWithLock
 /// </summary>
 /// <typeparam name="TKey">The type of keys in the collection.</typeparam>
 /// <typeparam name="TValue">The type of values in the collection.</typeparam>
-internal class UnorderedMapWithLock<TKey, TValue> : UnorderedMap<TKey, TValue>, IUnorderedMapWithLock
+internal sealed class UnorderedMapWithLock<TKey, TValue> : UnorderedMap<TKey, TValue>, IUnorderedMapWithLock
 {
+    /// <inheritdoc/>
     public Lock LockObject { get; } = new Lock();
 }

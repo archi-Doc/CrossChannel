@@ -3,9 +3,10 @@
 namespace CrossChannel;
 
 /// <summary>
-/// Represents a base interface used as a Radio service.<br/>
-/// The requirements are to add the <see cref="RadioServiceAttribute" /> and to derive from the <see cref="IRadioService" />.<br/>
-/// The return type of the interface function must be either <see cref="void"/>, <see cref="Task"/>, <see cref="RadioResult{T}"/>, <see cref="Task{T}"/>(where TResult is <see cref="RadioResult{T}"/>).
+/// The marker interface every radio service must derive from.<br/>
+/// The interface must also carry the <see cref="RadioServiceAttribute"/>, and the return type of each of its
+/// methods must be <see cref="void"/>, <see cref="Task"/>, <see cref="RadioResult{T}"/>,
+/// or <see cref="Task{TResult}"/> of <see cref="RadioResult{T}"/>.
 /// </summary>
 public interface IRadioService
 {
