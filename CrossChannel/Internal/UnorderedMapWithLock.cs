@@ -29,7 +29,7 @@ public interface IUnorderedMapWithLock
 /// </summary>
 /// <typeparam name="TKey">The type of keys in the collection.</typeparam>
 /// <typeparam name="TValue">The type of values in the collection.</typeparam>
-internal class UnorderedMapWithLock<TKey, TValue> : UnorderedMap<TKey, TValue>, IUnorderedMapWithLock
+internal sealed class UnorderedMapWithLock<TKey, TValue> : UnorderedMap<TKey, TValue>, IUnorderedMapWithLock
 {
     public Lock LockObject { get; } = new Lock();
 }

@@ -25,7 +25,7 @@ public class RadioClass
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public Channel<TService> GetChannel<TService>()
         where TService : class, IRadioService
-        => (Channel<TService>)this.typeToChannel.GetOrAdd(typeof(TService), a => ChannelRegistry.Get<TService>().NewChannel());
+        => (Channel<TService>)this.typeToChannel.GetOrAdd(typeof(TService), static _ => ChannelRegistry.Get<TService>().NewChannel());
 
     /// <summary>
     /// Gets the channel for the specified service type.
@@ -34,7 +34,7 @@ public class RadioClass
     /// <returns>The channel for the specified service type.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public Channel GetChannel(Type serviceType)
-        => (Channel)this.typeToChannel.GetOrAdd(serviceType, a => ChannelRegistry.Get(serviceType).NewChannel());
+        => (Channel)this.typeToChannel.GetOrAdd(serviceType, static a => ChannelRegistry.Get(a).NewChannel());
 
     /// <summary>
     /// Tries to get the channel for the specified service type and key.
@@ -92,7 +92,7 @@ public class RadioClass
         where TService : class, IRadioService
         where TKey : notnull
     {
-        return RadioHelper.GetOrAddChannelWithKey(this.twoTypeToMap, instance, key).Open(instance, weakReference);
+        return RadioHelper.GetOrAddChannelWithKey<TService, TKey>(this.twoTypeToMap, key).Open(instance, weakReference);
     }
 
     /// <summary>

@@ -36,12 +36,12 @@ public abstract class Channel
     public abstract object GetBroker();
 }
 
-public class Channel<TService> : Channel, IChannel<TService>
+public sealed class Channel<TService> : Channel, IChannel<TService>
     where TService : class, IRadioService
 {
     #region Link
 
-    public class Link : IDisposable
+    public sealed class Link : IDisposable
     {
 #pragma warning disable SA1401 // Fields should be private
         internal int Index = -1; // The index of FastList<T>, lock() required.
@@ -64,13 +64,9 @@ public class Channel<TService> : Channel, IChannel<TService>
             }
         }
 
-        internal Link(Channel<TService> channel)
-        {// Invalid link
-            this.channel = channel;
-        }
-
         public bool IsValid => this.Index != -1;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetInstance([MaybeNullWhen(false)] out TService instance)
         {
             if (this.strongReference is not null)
@@ -95,7 +91,7 @@ public class Channel<TService> : Channel, IChannel<TService>
 
     #region FastList
 
-    private sealed class FastList : IDisposable
+    private sealed class FastList
     {
         private const int InitialCapacity = 4;
         private const int MinShrinkStart = 8;
@@ -113,19 +109,11 @@ public class Channel<TService> : Channel, IChannel<TService>
 
         public Link?[] GetValues() => this.values; // no lock, safe for iterate
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public (Link?[] Array, int CountHint) GetValuesAndCountHint() => (this.values, this.count); // no lock, safe for iterate
-
-        public bool IsDisposed => this.freeIndex == null;
-
-        public bool IsEmpty => this.count == 0;
 
         public int Add(Link value)
         {
-            if (this.IsDisposed)
-            {
-                throw new ObjectDisposedException(nameof(FastList));
-            }
-
             if (this.freeIndex.Count != 0)
             {
                 var index = this.freeIndex.Dequeue();
@@ -146,7 +134,7 @@ public class Channel<TService> : Channel, IChannel<TService>
 
                 var index = this.freeIndex.Dequeue();
                 value.Index = index;
-                newValues[this.values.Length] = value;
+                newValues[index] = value;
                 this.count++;
                 Volatile.Write(ref this.values, newValues);
                 return index;
@@ -155,11 +143,6 @@ public class Channel<TService> : Channel, IChannel<TService>
 
         public void Remove(Link value)
         {
-            if (this.IsDisposed)
-            {
-                return;
-            }
-
             var index = value.Index;
             ref var v = ref this.values[index];
             if (v == null)
@@ -208,19 +191,20 @@ public class Channel<TService> : Channel, IChannel<TService>
             newLength = (newLength < InitialCapacity) ? InitialCapacity : newLength;
             var newValues = new Link[newLength];
 
+            var oldValues = this.values;
             var oldIndex = 0;
             var i = 0;
             for (i = 0; i < this.count; i++)
             {
-                while (this.values[oldIndex] == null)
+                while (oldValues[oldIndex] is null)
                 {
                     oldIndex++;
                 }
 
-                ref var v = ref this.values[oldIndex]!;
-                newValues[i] = v;
-                v.Index = i;
-                v = default(Link);
+                // The old array is not cleared, since it may be being enumerated by other threads (send).
+                var link = oldValues[oldIndex++]!;
+                newValues[i] = link;
+                link.Index = i;
             }
 
             this.freeIndex = new FastIntQueue(newLength);
@@ -232,18 +216,6 @@ public class Channel<TService> : Channel, IChannel<TService>
             Volatile.Write(ref this.values, newValues);
 
             return false;
-        }
-
-        public void Dispose()
-        {
-            if (this.IsDisposed)
-            {
-                return;
-            }
-
-            this.freeIndex = null!;
-            this.values = Array.Empty<Link?>();
-            this.count = 0;
         }
 
         private void Initialize()
@@ -264,18 +236,16 @@ public class Channel<TService> : Channel, IChannel<TService>
 
     internal TService Broker { get; }
 
-    internal Lock LockObject => this.NodeIndex == -1 ? (Lock)this.dualObject : ((IUnorderedMapWithLock)this.dualObject).LockObject;
+    internal Lock LockObject { get; }
 
-    private readonly object dualObject; // nodeIndex == -1 ? new Lock() : IUnorderedMapWithLock;
+    private readonly IUnorderedMapWithLock? map; // Not null if the channel is registered in a keyed map.
     private readonly FastList list = new();
     private int trimCount;
     private int checkReferenceCount;
 
     public Channel()
     {
-#pragma warning disable CS9216 // A value of type 'System.Threading.Lock' converted to a different type will use likely unintended monitor-based locking in 'lock' statement.
-        this.dualObject = new Lock();
-#pragma warning restore CS9216 // A value of type 'System.Threading.Lock' converted to a different type will use likely unintended monitor-based locking in 'lock' statement.
+        this.LockObject = new Lock();
         this.NodeIndex = -1;
 
         var info = ChannelRegistry.Get<TService>();
@@ -285,14 +255,16 @@ public class Channel<TService> : Channel, IChannel<TService>
 
     public Channel(IUnorderedMapWithLock map)
     {
-        this.dualObject = map;
+        this.map = map;
+        this.LockObject = map.LockObject; // Shared with the map (the node is added/removed while holding this lock).
+        this.NodeIndex = -1;
 
         var info = ChannelRegistry.Get<TService>();
         this.MaxLinks = info.MaxLinks;
         this.Broker = (TService)info.NewBroker(this);
     }
 
-    public Link? Open(TService instance, bool weakReference)
+    public Link? Open(TService instance, bool weakReference = false)
     {
         using (this.LockObject.EnterScope())
         {
@@ -315,6 +287,7 @@ public class Channel<TService> : Channel, IChannel<TService>
 
     public int Count => this.list.Count;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public (Link?[] Array, int CountHint) InternalGetList() => this.list.GetValuesAndCountHint();
 
     public override TService GetBroker() => this.Broker;
@@ -328,10 +301,11 @@ public class Channel<TService> : Channel, IChannel<TService>
                 this.list.Remove(link); // this.Index is set to -1
             }
 
-            if (this.NodeIndex != -1 &&
+            if (this.map is not null &&
+                this.NodeIndex != -1 &&
                 this.Count == 0)
             {
-                ((IUnorderedMapWithLock)this.dualObject).RemoveNode(this.NodeIndex);
+                this.map.RemoveNode(this.NodeIndex);
                 this.NodeIndex = -1;
             }
         }

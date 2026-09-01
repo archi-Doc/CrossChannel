@@ -34,7 +34,7 @@ internal static class RadioHelper
     public static bool TryGetChannelWithKey<TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, Type serviceType, TKey key, [MaybeNullWhen(false)] out Channel channel)
         where TKey : notnull
     {
-        if (twoTypeToMap.TryGetValue(serviceType, typeof(TKey), out var obj) ||
+        if (!twoTypeToMap.TryGetValue(serviceType, typeof(TKey), out var obj) ||
             obj is not UnorderedMapWithLock<TKey, object> map)
         {
             channel = default;
@@ -54,11 +54,11 @@ internal static class RadioHelper
         }
     }
 
-    public static Channel<TService> GetOrAddChannelWithKey<TService, TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, TService instance, TKey key)
+    public static Channel<TService> GetOrAddChannelWithKey<TService, TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, TKey key)
         where TService : class, IRadioService
         where TKey : notnull
     {
-        var map = (UnorderedMapWithLock<TKey, object>)twoTypeToMap.GetOrAdd(typeof(TService), typeof(TKey), (x, y) => new UnorderedMapWithLock<TKey, object>());
+        var map = (UnorderedMapWithLock<TKey, object>)twoTypeToMap.GetOrAdd(typeof(TService), typeof(TKey), static (x, y) => new UnorderedMapWithLock<TKey, object>());
 
         using (map.LockObject.EnterScope())
         {

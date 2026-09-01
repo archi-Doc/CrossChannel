@@ -25,15 +25,10 @@ public static class Radio
     internal static class ChannelCache<TService>
         where TService : class, IRadioService
     {
-        private static readonly Channel<TService> channel;
-
-        static ChannelCache()
-        {
-            // channel = new();
-            channel = (Channel<TService>)typeToChannel.GetOrAdd(typeof(TService), a => ChannelRegistry.Get<TService>().NewChannel());
-        }
-
-        public static Channel<TService> Channel => channel;
+        // A field initializer (instead of a static constructor) keeps the type 'beforefieldinit',
+        // so the JIT can elide the class initialization check on the hot path.
+        public static readonly Channel<TService> Channel =
+            (Channel<TService>)typeToChannel.GetOrAdd(typeof(TService), static _ => ChannelRegistry.Get<TService>().NewChannel());
     }
 
     private static readonly ThreadsafeTypeKeyHashtable<Channel> typeToChannel = new();
@@ -47,6 +42,7 @@ public static class Radio
     /// <typeparam name="TService">The type of the service.</typeparam>
     /// <returns>The channel for the specified service type.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Channel<TService> GetChannel<TService>()
         where TService : class, IRadioService
         => ChannelCache<TService>.Channel;
@@ -58,7 +54,7 @@ public static class Radio
     /// <returns>The channel for the specified service type.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public static Channel GetChannel(Type serviceType)
-        => typeToChannel.GetOrAdd(serviceType, a => ChannelRegistry.Get(serviceType).NewChannel());
+        => typeToChannel.GetOrAdd(serviceType, static a => ChannelRegistry.Get(a).NewChannel());
 
     /// <summary>
     /// Tries to get the channel for the specified service type and key.
@@ -116,7 +112,7 @@ public static class Radio
         where TService : class, IRadioService
         where TKey : notnull
     {
-        return RadioHelper.GetOrAddChannelWithKey(twoTypeToMap, instance, key).Open(instance, weakReference);
+        return RadioHelper.GetOrAddChannelWithKey<TService, TKey>(twoTypeToMap, key).Open(instance, weakReference);
     }
 
     /// <summary>
@@ -126,6 +122,7 @@ public static class Radio
     /// <typeparam name="TService">The type of the service.</typeparam>
     /// <returns>The broker of the channel for the specified service type.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TService Send<TService>()
         where TService : class, IRadioService
     {

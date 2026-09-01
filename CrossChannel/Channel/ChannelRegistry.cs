@@ -6,29 +6,22 @@ namespace CrossChannel;
 
 public static class ChannelRegistry
 {
-    private static ConcurrentDictionary<Type, ChannelInformation> typeToInformation = new();
+    private static readonly ConcurrentDictionary<Type, ChannelInformation> TypeToInformation = new();
 
     private static class InformationCache<TService>
         where TService : class, IRadioService
     {
-        public static readonly ChannelInformation Information;
-
-        static InformationCache()
-        {
-            if (!typeToInformation.TryGetValue(typeof(TService), out var information))
-            {
-                throw new InvalidOperationException($"ChannelInformation for type {typeof(TService).FullName} has not been registered.");
-            }
-
-            Information = information;
-        }
+        // A field initializer (instead of a static constructor) keeps the type 'beforefieldinit',
+        // so the JIT can elide the class initialization check on the hot path.
+        public static readonly ChannelInformation Information = Get(typeof(TService));
     }
 
     public static bool Register(ChannelInformation information)
     {
-        return typeToInformation.TryAdd(information.ServiceType, information);
+        return TypeToInformation.TryAdd(information.ServiceType, information);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ChannelInformation Get<TService>()
         where TService : class, IRadioService
     {
@@ -37,7 +30,7 @@ public static class ChannelRegistry
 
     public static ChannelInformation Get(Type serviceType)
     {
-        if (typeToInformation.TryGetValue(serviceType, out var information))
+        if (TypeToInformation.TryGetValue(serviceType, out var information))
         {
             return information;
         }
@@ -51,5 +44,5 @@ public static class ChannelRegistry
         where TService : class, IRadioService
         => (Channel<TService>)InformationCache<TService>.Information.EmptyChannel;
 
-    public static ICollection<ChannelInformation> Channels => typeToInformation.Values;
+    public static ICollection<ChannelInformation> Channels => TypeToInformation.Values;
 }

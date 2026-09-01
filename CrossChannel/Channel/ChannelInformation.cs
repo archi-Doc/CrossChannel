@@ -1,6 +1,6 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
-using Arc.Collections;
+using System.Threading;
 
 namespace CrossChannel;
 
@@ -25,11 +25,6 @@ public class ChannelInformation
     public Func<Channel> NewChannel { get; }
 
     /// <summary>
-    /// Gets the function that creates a new keyed channel.
-    /// </summary>
-    public Func<IUnorderedMapWithLock, Channel> NewChannel2 { get; }
-
-    /// <summary>
     /// Gets the maximum number of links for the channel.
     /// </summary>
     public int MaxLinks { get; private set; }
@@ -41,21 +36,10 @@ public class ChannelInformation
     public bool AutoRegisterRadioServiceAndSender { get; set; } = true;
 
     /// <summary>
-    /// Gets an empty channel.
+    /// Gets an empty channel (a channel which does not accept any link).
     /// </summary>
     public Channel EmptyChannel
-    {
-        get
-        {
-            if (this.emptyChannel is null)
-            {
-                this.emptyChannel = this.NewChannel();
-                this.emptyChannel.MaxLinks = 0;
-            }
-
-            return this.emptyChannel;
-        }
-    }
+        => this.emptyChannel ?? this.PrepareEmptyChannel();
 
     private Channel? emptyChannel;
 
@@ -65,16 +49,21 @@ public class ChannelInformation
     /// <param name="serviceType">The service type associated with the channel.</param>
     /// <param name="newBroker">The function that creates a new broker for the channel.</param>
     /// <param name="newChannel">The function that creates a new channel.</param>
-    /// <param name="newChannel2">The function that creates a new channel with an unordered map.</param>
     /// <param name="maxLinks">The maximum number of links for the channel.</param>
     /// <param name="autoRegisterRadioServiceAndSender">A value indicating whether the radio service interface and sender should be automatically registered in dependency injection.</param>
-    public ChannelInformation(Type serviceType, Func<Channel, object> newBroker, Func<Channel> newChannel, Func<IUnorderedMapWithLock, Channel> newChannel2, int maxLinks, bool autoRegisterRadioServiceAndSender)
+    public ChannelInformation(Type serviceType, Func<Channel, object> newBroker, Func<Channel> newChannel, int maxLinks, bool autoRegisterRadioServiceAndSender)
     {
         this.ServiceType = serviceType;
         this.NewBroker = newBroker;
         this.NewChannel = newChannel;
-        this.NewChannel2 = newChannel2;
         this.MaxLinks = maxLinks;
         this.AutoRegisterRadioServiceAndSender = autoRegisterRadioServiceAndSender;
+    }
+
+    private Channel PrepareEmptyChannel()
+    {
+        var channel = this.NewChannel();
+        channel.MaxLinks = 0; // Set before publishing the instance.
+        return Interlocked.CompareExchange(ref this.emptyChannel, channel, null) ?? channel;
     }
 }

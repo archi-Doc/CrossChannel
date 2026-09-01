@@ -27,7 +27,7 @@ public interface ISender<TService>
         where TKey : notnull;
 }
 
-internal class StaticBrokerProvider<TService> : ISender<TService>
+internal sealed class StaticBrokerProvider<TService> : ISender<TService>
     where TService : class, IRadioService
 {
     public StaticBrokerProvider()
@@ -44,7 +44,7 @@ internal class StaticBrokerProvider<TService> : ISender<TService>
         => Radio.SendWithKey<TService, TKey>(key);
 }
 
-internal class NonStaticBrokerProvider<TService> : ISender<TService>
+internal sealed class NonStaticBrokerProvider<TService> : ISender<TService>
     where TService : class, IRadioService
 {
     private readonly RadioClass radio;

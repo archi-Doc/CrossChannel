@@ -12,8 +12,7 @@ public partial class CrossChannelObject
 {
     internal void GenerateBrokerClass(ScopingStringBuilder ssb)
     {
-        // var accessModifier = this.ContainingObject is null ? "internal" : "private";
-        using (ssb.ScopeBrace($"private class {this.ClassName} : {this.LocalName}"))
+        using (ssb.ScopeBrace($"private sealed class {this.ClassName} : {this.LocalName}"))
         {
             ssb.AppendLine($"private readonly Channel<{this.LocalName}> channel;");
             using (ssb.ScopeBrace($"public {this.ClassName}(object channel)"))
@@ -58,6 +57,7 @@ public partial class CrossChannelObject
     private void GenerateBrokerMethod_Void(ScopingStringBuilder ssb, ServiceMethod method)
     {// void
         this.Generate_GetList(ssb);
+        ssb.AppendLine("if (countHint == 0) return;");
 
         var forScope = this.Generate_ForEach(ssb);
         ssb.AppendLine($"instance.{method.SimpleName}({method.GetParameterNames()});");
@@ -68,6 +68,7 @@ public partial class CrossChannelObject
     private void GenerateBrokerMethod_RadioResult(ScopingStringBuilder ssb, ServiceMethod method)
     {// RadioResult<T>
         this.Generate_GetList(ssb);
+        ssb.AppendLine("if (countHint == 0) return default;");
         ssb.AppendLine($"{method.ResultName} firstResult = default!;");
         ssb.AppendLine($"{method.ResultName}[]? results = default;");
         ssb.AppendLine("var count = 0;");
@@ -105,6 +106,7 @@ public partial class CrossChannelObject
     private void GenerateBrokerMethod_Task(ScopingStringBuilder ssb, ServiceMethod method)
     {// Task
         this.Generate_GetList(ssb);
+        ssb.AppendLine("if (countHint == 0) return;");
         ssb.AppendLine($"var tasks = new Task[countHint];");
         ssb.AppendLine("var count = 0;");
 
@@ -114,15 +116,16 @@ public partial class CrossChannelObject
 
         forScope.Dispose();
 
-        ssb.AppendLine("if (countHint != count) Array.Resize(ref tasks, count);");
         ssb.AppendLine("if (count == 0) return;");
-        ssb.AppendLine("else if (count == 1) await tasks[0].ConfigureAwait(false);");
-        ssb.AppendLine("else await Task.WhenAll(tasks).ConfigureAwait(false);");
+        ssb.AppendLine("else if (count == 1) { await tasks[0].ConfigureAwait(false); return; }");
+        ssb.AppendLine("if (countHint != count) Array.Resize(ref tasks, count);");
+        ssb.AppendLine("await Task.WhenAll(tasks).ConfigureAwait(false);");
     }
 
     private void GenerateBrokerMethod_TaskRadioResult(ScopingStringBuilder ssb, ServiceMethod method)
     {// Task<RadioResult<T>>
         this.Generate_GetList(ssb);
+        ssb.AppendLine("if (countHint == 0) return default;");
         ssb.AppendLine($"var tasks = new {method.ReturnObject.FullName}[countHint];");
         ssb.AppendLine("var count = 0;");
 
@@ -132,10 +135,21 @@ public partial class CrossChannelObject
 
         forScope.Dispose();
 
-        ssb.AppendLine("if (countHint != count) Array.Resize(ref tasks, count);");
         ssb.AppendLine("if (count == 0) return default;");
         ssb.AppendLine("else if (count == 1) return await tasks[0].ConfigureAwait(false);");
-        ssb.AppendLine("else return new((await Task.WhenAll(tasks).ConfigureAwait(false)).Select(x => x.TryGetSingleResult(out var r) ? r : default).ToArray());");
+        ssb.AppendLine("if (countHint != count) Array.Resize(ref tasks, count);");
+        ssb.AppendLine("var radioResults = await Task.WhenAll(tasks).ConfigureAwait(false);");
+        ssb.AppendLine($"var results = new {method.ResultName}[radioResults.Length];");
+        ssb.AppendLine("count = 0;");
+        using (ssb.ScopeBrace("foreach (var x in radioResults)"))
+        {
+            ssb.AppendLine("if (x.TryGetSingleResult(out var r)) results[count++] = r;");
+        }
+
+        ssb.AppendLine("if (count == 0) return default;");
+        ssb.AppendLine("else if (count == 1) return new(results[0]);");
+        ssb.AppendLine("if (results.Length != count) Array.Resize(ref results, count);");
+        ssb.AppendLine("return new(results);");
     }
 
     private void Generate_GetList(ScopingStringBuilder ssb)
@@ -146,7 +160,6 @@ public partial class CrossChannelObject
         var scope = ssb.ScopeBrace("foreach (var x in array)");
         ssb.AppendLine("if (x is null) continue;");
         ssb.AppendLine("if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }");
-        // ssb.AppendLine("var instance = x.Instance;");
 
         return scope;
     }

@@ -7,13 +7,7 @@ using System.Threading;
 
 namespace CrossChannel.Internal;
 
-/*public readonly record struct TwoTypeKey(Type Key, Type Key2)
-{
-    public override int GetHashCode()
-        => HashCode.Combine(this.Key, this.Key2);
-}*/
-
-internal class ThreadsafeTwoTypeKeyHashtable<TValue>
+internal sealed class ThreadsafeTwoTypeKeyHashtable<TValue>
 {
     private const double LoadFactor = 0.75d;
 
@@ -21,7 +15,7 @@ internal class ThreadsafeTwoTypeKeyHashtable<TValue>
     private Entry[] buckets;
     private int size; // only use in writer lock
 
-    private class Entry
+    private sealed class Entry
     {
         public Entry(Type key, Type key2, TValue value, int hash)
         {

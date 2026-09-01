@@ -2,7 +2,7 @@
 
 namespace CrossChannel;
 
-internal class FastIntQueue
+internal sealed class FastIntQueue
 {
     private int[] array;
     private int head;
