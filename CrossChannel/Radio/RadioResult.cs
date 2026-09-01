@@ -12,11 +12,13 @@ namespace CrossChannel;
 /// </summary>
 /// <typeparam name="T">The type of the message.</typeparam>
 public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<RadioResult<T>>
-{// It feels a bit forced, but I like this structure.
-    private const ulong SingleResultValue = 0x0000_0000_0000_0001;
+{
+    // resultArray: null -> Empty, Length == 0 (Array.Empty<T>()) -> Single, Length > 1 -> Array.
+    // A zero-length array is never stored as a real result, so it can safely be used as the "single" marker.
+    private static readonly T[] SingleMarker = Array.Empty<T>();
 
     private readonly T result;
-    private readonly T[]? resultArray; // 0:Empty, 1:Single, >1:Valid array
+    private readonly T[]? resultArray;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RadioResult{T}"/> struct with a single result.
@@ -25,7 +27,7 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     public RadioResult(T result)
     {
         this.result = result;
-        Unsafe.As<T[]?, ulong>(ref this.resultArray) = SingleResultValue;
+        this.resultArray = SingleMarker;
     }
 
     /// <summary>
@@ -42,7 +44,7 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
         else if (resultArray.Length == 1)
         {
             this.result = resultArray[0];
-            Unsafe.As<T[]?, ulong>(ref this.resultArray) = SingleResultValue;
+            this.resultArray = SingleMarker;
         }
         else
         {
@@ -50,6 +52,11 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
             this.resultArray = resultArray;
         }
     }
+
+    /// <summary>
+    /// Gets an empty <see cref="RadioResult{T}"/>.
+    /// </summary>
+    public static RadioResult<T> Empty => default;
 
     /// <summary>
     /// Gets a value indicating whether the <see cref="RadioResult{T}"/> is empty.
@@ -60,21 +67,41 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     /// <summary>
     /// Gets the number of results in the <see cref="RadioResult{T}"/>.
     /// </summary>
-    public int Count => this.resultArray is null ? 0 : (this.HasSingleResult ? 1 : this.resultArray.Length);
+    public int Count => this.resultArray is null ? 0 : (this.resultArray.Length == 0 ? 1 : this.resultArray.Length);
 
     /// <summary>
-    /// Tries to get the single result from the <see cref="RadioResult{T}"/>.
+    /// Creates a <see cref="RadioResult{T}"/> that holds a single result.<br/>
+    /// Use this method instead of the constructor when the constructor overload is ambiguous
+    /// (e.g. <typeparamref name="T"/> is a reference type and the value is <c>null</c>, or <typeparamref name="T"/> is an array type).
     /// </summary>
-    /// <param name="result">The single result.</param>
-    /// <returns><c>true</c> if the single result is successfully retrieved; otherwise, <c>false</c>.</returns>
+    /// <param name="value">The single result.</param>
+    /// <returns>A <see cref="RadioResult{T}"/> with a single result.</returns>
+    public static RadioResult<T> Single(T value)
+        => new RadioResult<T>(value);
+
+    /// <summary>
+    /// Creates a <see cref="RadioResult{T}"/> from an array of results.<br/>
+    /// An empty array becomes an empty result, and an array with a single element becomes a single result.
+    /// </summary>
+    /// <param name="array">The array of results.</param>
+    /// <returns>A <see cref="RadioResult{T}"/> with the specified results.</returns>
+    public static RadioResult<T> FromArray(T[] array)
+        => new RadioResult<T>(array);
+
+    /// <summary>
+    /// Tries to get the single result from the <see cref="RadioResult{T}"/>.<br/>
+    /// If the <see cref="RadioResult{T}"/> holds multiple results, the first one is returned.
+    /// </summary>
+    /// <param name="result">The single result (the first one if multiple results are held).</param>
+    /// <returns><c>true</c> if the <see cref="RadioResult{T}"/> is not empty and a result is retrieved; otherwise, <c>false</c>.</returns>
     public bool TryGetSingleResult([MaybeNullWhen(false)] out T result)
     {
-        if (this.IsEmpty)
+        if (this.resultArray is null)
         {
             result = default!;
             return false;
         }
-        else if (this.HasSingleResult)
+        else if (this.resultArray.Length == 0)
         {
             result = this.result;
             return true;
@@ -93,71 +120,94 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     /// <returns><c>true</c> if the specified <see cref="RadioResult{T}"/> is equal to the current <see cref="RadioResult{T}"/>; otherwise, <c>false</c>.</returns>
     public bool Equals(RadioResult<T> other)
     {
-        if (this.IsEmpty)
+        if (this.resultArray is null)
         {// 0: Empty
-            return other.IsEmpty;
+            return other.resultArray is null;
         }
-        else if (this.HasSingleResult)
+        else if (this.resultArray.Length == 0)
         {// 1: Single
-            return other.HasSingleResult && EqualityComparer<T>.Default.Equals(this.result, other.result);
+            return other.resultArray is { Length: 0 } &&
+                EqualityComparer<T>.Default.Equals(this.result, other.result);
         }
         else
         {// >1: Array
-            return other.resultArray != null && this.resultArray!.SequenceEqual(other.resultArray!);
+            return other.resultArray is { Length: > 1 } &&
+                this.resultArray.AsSpan().SequenceEqual(other.resultArray.AsSpan());
         }
     }
 
     /// <inheritdoc/>
+    public override bool Equals(object? obj)
+        => obj is RadioResult<T> other && this.Equals(other);
+
+    /// <summary>
+    /// Determines whether two <see cref="RadioResult{T}"/> instances are equal.
+    /// </summary>
+    /// <param name="left">The left operand.</param>
+    /// <param name="right">The right operand.</param>
+    /// <returns><c>true</c> if the instances are equal; otherwise, <c>false</c>.</returns>
+    public static bool operator ==(RadioResult<T> left, RadioResult<T> right) => left.Equals(right);
+
+    /// <summary>
+    /// Determines whether two <see cref="RadioResult{T}"/> instances are not equal.
+    /// </summary>
+    /// <param name="left">The left operand.</param>
+    /// <param name="right">The right operand.</param>
+    /// <returns><c>true</c> if the instances are not equal; otherwise, <c>false</c>.</returns>
+    public static bool operator !=(RadioResult<T> left, RadioResult<T> right) => !left.Equals(right);
+
+    /// <inheritdoc/>
     public override int GetHashCode()
     {
-        if (this.IsEmpty)
+        if (this.resultArray is null)
         {// 0: Empty
             return 0;
         }
-        else if (this.HasSingleResult)
+        else if (this.resultArray.Length == 0)
         {// 1: Single
-            return this.result!.GetHashCode();
+            return this.result is null ? 0 : EqualityComparer<T>.Default.GetHashCode(this.result);
         }
         else
         {// >1: Array
-            var hash = 0;
-            foreach (var item in this.resultArray!)
+            var hash = default(HashCode);
+            foreach (var item in this.resultArray)
             {
-                hash ^= item!.GetHashCode();
+                hash.Add(item);
             }
 
-            return hash;
+            return hash.ToHashCode();
         }
     }
 
     /// <inheritdoc/>
     public override string ToString()
     {
-        if (this.IsEmpty)
+        if (this.resultArray is null)
         {// 0: Empty
             return "[]";
         }
-        else if (this.HasSingleResult)
+        else if (this.resultArray.Length == 0)
         {// 1: Single
-            return $"[{this.result!.ToString()}]";
+            return $"[{this.result?.ToString()}]";
         }
         else
         {// >1: Array
             var sb = new StringBuilder();
             sb.Append('[');
-            foreach (var item in this.resultArray!)
+            for (var i = 0; i < this.resultArray.Length; i++)
             {
-                sb.Append($"{item?.ToString()}, ");
+                if (i > 0)
+                {
+                    sb.Append(", ");
+                }
+
+                sb.Append(this.resultArray[i]?.ToString());
             }
 
             sb.Append(']');
             return sb.ToString();
         }
     }
-
-#pragma warning disable CS9195 // Argument should be passed with the 'in' keyword
-    private bool HasSingleResult => Unsafe.As<T[]?, ulong>(ref Unsafe.AsRef(this.resultArray)) == SingleResultValue;
-#pragma warning restore CS9195 // Argument should be passed with the 'in' keyword
 
     #region Enumerator
 
@@ -195,38 +245,15 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
         /// <inheritdoc/>
         public bool MoveNext()
         {
-            if (this.total == 0)
-            {// 0: Empty
+            if (this.index >= this.total)
+            {
+                this.current = default(T);
                 return false;
             }
-            else if (this.total == 1)
-            {// 1: Single
-                if (this.index == 0)
-                {
-                    this.current = this.result.result;
-                    this.index = 1;
-                    return true;
-                }
-                else
-                {
-                    this.current = default(T);
-                    return false;
-                }
-            }
-            else
-            {// >1: Array
-                if (this.index < this.total)
-                {
-                    this.current = this.result.resultArray![this.index];
-                    this.index++;
-                    return true;
-                }
-                else
-                {
-                    this.current = default(T);
-                    return false;
-                }
-            }
+
+            this.current = this.total == 1 ? this.result.result : this.result.resultArray![this.index];
+            this.index++;
+            return true;
         }
 
         /// <inheritdoc/>
@@ -239,7 +266,7 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
             {
                 if (this.index == 0 || this.index > this.total)
                 {
-                    throw new IndexOutOfRangeException();
+                    throw new InvalidOperationException();
                 }
 
                 return this.Current!;
