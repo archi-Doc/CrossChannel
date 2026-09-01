@@ -37,6 +37,21 @@ public class CounterService : ICounterService
     }
 }
 
+[RadioService(MaxLinks = 1)]
+public interface ISingleLinkCounterService : IRadioService
+{
+    void Increment();
+}
+
+public class SingleLinkCounterService : ISingleLinkCounterService
+{
+    private int count;
+
+    public int Count => Volatile.Read(ref this.count);
+
+    void ISingleLinkCounterService.Increment() => Interlocked.Increment(ref this.count);
+}
+
 public class ConcurrencyTest
 {
     private const int Threads = 4;
@@ -203,28 +218,41 @@ public class ConcurrencyTest
     }
 
     [Fact]
-    public void ConcurrentKeyedChannelsWithASharedKey()
-    {// Opening and closing the same key from several threads must not throw, and must leave no channel behind.
+    public async Task ConcurrentKeyedChannelsWithASharedKey()
+    {// OpenWithKey must be atomic: a link must never be attached to a channel which was just detached from the map.
+        const int key = 1;
         var radio = new RadioClass();
+        var threadCount = Math.Max(8, Environment.ProcessorCount);
 
-        Parallel.For(0, Threads, t =>
+        void OpenAndClose()
         {
-            for (var i = 0; i < 500; i++)
+            for (var i = 0; i < 5_000; i++)
             {
-                var key = i % 4;
-                using (radio.OpenWithKey<ICounterService, int>(new CounterService(), key))
+                var service = new SingleLinkCounterService();
+
+                // MaxLinks is 1, so this link is always the only one of its channel and the delivery
+                // is deterministic. Closing it empties the channel, which detaches it from the map:
+                // exactly the window in which a non-atomic OpenWithKey would produce an orphan.
+                using (var link = radio.OpenWithKey<ISingleLinkCounterService, int>(service, key))
                 {
-                    radio.SendWithKey<ICounterService, int>(key).Increment();
-                    radio.SendWithKey<ICounterService, int>(key).One();
+                    if (link is null)
+                    {// Another thread currently holds the single link.
+                        continue;
+                    }
+
+                    radio.SendWithKey<ISingleLinkCounterService, int>(key).Increment();
+                    service.Count.Is(1);
                 }
             }
-        });
-
-        for (var key = 0; key < 4; key++)
-        {
-            radio.TryGetChannelWithKey<ICounterService, int>(key, out _).IsFalse();
-            radio.SendWithKey<ICounterService, int>(key).One().IsEmpty.IsTrue();
         }
+
+        var tasks = Enumerable.Range(0, threadCount)
+            .Select(_ => Task.Factory.StartNew(OpenAndClose, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default))
+            .ToArray();
+        await Task.WhenAll(tasks);
+
+        // The channel is detached once the last link is closed.
+        radio.TryGetChannelWithKey<ISingleLinkCounterService, int>(key, out _).IsFalse();
     }
 
     [Fact]

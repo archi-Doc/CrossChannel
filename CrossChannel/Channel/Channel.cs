@@ -275,21 +275,33 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
     {
         using (this.LockObject.EnterScope())
         {
-            if (this.list.Count >= this.MaxLinks)
-            {// Invalid link
-                return default; // new(this);
-            }
-
-            var link = new Link(this, instance, weakReference);
-            this.list.Add(link);
-            if (this.trimCount++ >= TrimThreshold)
-            {
-                this.trimCount = 0;
-                this.TrimInternal();
-            }
-
-            return link;
+            return this.OpenInternal(instance, weakReference);
         }
+    }
+
+    /// <summary>
+    /// Registers the instance. <see cref="LockObject"/> must be held by the caller.<br/>
+    /// A keyed channel shares the lock with its map, so the caller can add the node and the link atomically.
+    /// </summary>
+    /// <param name="instance">The instance to register.</param>
+    /// <param name="weakReference">Indicates whether to use a weak reference for the instance.</param>
+    /// <returns>A link to the opened channel, or null if the channel is full.</returns>
+    internal Link? OpenInternal(TService instance, bool weakReference)
+    {// using (this.LockObject.EnterScope()) is required
+        if (this.list.Count >= this.MaxLinks)
+        {// Invalid link
+            return default; // new(this);
+        }
+
+        var link = new Link(this, instance, weakReference);
+        this.list.Add(link);
+        if (this.trimCount++ >= TrimThreshold)
+        {
+            this.trimCount = 0;
+            this.TrimInternal();
+        }
+
+        return link;
     }
 
     public int Count => this.list.Count;

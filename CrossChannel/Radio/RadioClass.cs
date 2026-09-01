@@ -92,7 +92,7 @@ public class RadioClass
         where TService : class, IRadioService
         where TKey : notnull
     {
-        return RadioHelper.GetOrAddChannelWithKey<TService, TKey>(this.twoTypeToMap, key).Open(instance, weakReference);
+        return RadioHelper.OpenWithKey<TService, TKey>(this.twoTypeToMap, key, instance, weakReference);
     }
 
     /// <summary>
