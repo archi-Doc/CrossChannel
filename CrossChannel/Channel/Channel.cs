@@ -1,46 +1,56 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
+using System.ComponentModel;
 using System.Threading;
 
 namespace CrossChannel;
 
 /// <summary>
-/// Represents an abstract channel.
+/// Represents the non-generic base of <see cref="Channel{TService}"/>.
 /// </summary>
 public abstract class Channel
 {
     /// <summary>
-    /// The threshold value for trimming the channel list.
+    /// The number of open operations between two trim operations.
     /// </summary>
     public const int TrimThreshold = 32;
 
     /// <summary>
-    /// The threshold value for checking weak references in the channel list.
+    /// The number of trim operations between two sweeps for dead weak references.
     /// </summary>
-    public const int CheckReferenceThreshold = 32;
+    public const int WeakReferenceCheckThreshold = 32;
 
     /// <summary>
-    /// Gets the maximum number of links allowed in the channel.
+    /// Gets the maximum number of links the channel can hold.
     /// </summary>
     public int MaxLinks { get; internal set; }
 
     /// <summary>
-    /// Gets or sets the index of the node in the channel.
+    /// Gets or sets the index of the node of this channel in its keyed map, or -1 if it is not in a map.
     /// </summary>
     internal int NodeIndex { get; set; }
 
     /// <summary>
-    /// Gets the broker object associated with the channel.
+    /// Gets the broker of the channel. Calling a method of the broker invokes that method on every linked instance.
     /// </summary>
-    /// <returns>The broker object.</returns>
+    /// <returns>The broker.</returns>
     public abstract object GetBroker();
 }
 
+/// <summary>
+/// Delivers messages to the instances linked to it.<br/>
+/// Instances subscribe with <see cref="Open(TService, bool)"/>, and messages are sent through <see cref="GetBroker"/>.
+/// </summary>
+/// <typeparam name="TService">The type of the service.</typeparam>
 public sealed class Channel<TService> : Channel, IChannel<TService>
     where TService : class, IRadioService
 {
     #region Link
 
+    /// <summary>
+    /// Represents the registration of a single instance in a <see cref="Channel{TService}"/>.<br/>
+    /// Disposing the link unsubscribes the instance.
+    /// </summary>
     public sealed class Link : IDisposable
     {
 #pragma warning disable SA1401 // Fields should be private
@@ -64,8 +74,16 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
             }
         }
 
+        /// <summary>
+        /// Gets a value indicating whether the link is still registered in the channel.
+        /// </summary>
         public bool IsValid => this.Index != -1;
 
+        /// <summary>
+        /// Tries to get the linked instance. Fails when the instance was held by a weak reference and has been collected.
+        /// </summary>
+        /// <param name="instance">When this method returns, contains the linked instance, if it is still alive.</param>
+        /// <returns><see langword="true"/> if the instance was retrieved; otherwise, <see langword="false"/>.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetInstance([MaybeNullWhen(false)] out TService instance)
         {
@@ -80,9 +98,13 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
             }
         }
 
+        /// <summary>
+        /// Unsubscribes the instance. Equivalent to <see cref="Dispose"/> and safe to call more than once.
+        /// </summary>
         public void Close()
             => this.channel.Remove(this);
 
+        /// <inheritdoc/>
         public void Dispose()
             => this.channel.Remove(this);
     }
@@ -250,27 +272,32 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
     private int trimCount;
     private int checkReferenceCount;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Channel{TService}"/> class.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The service type is not registered.</exception>
     public Channel()
     {
         this.LockObject = new Lock();
         this.NodeIndex = -1;
 
-        var info = ChannelRegistry.Get<TService>();
-        this.MaxLinks = info.MaxLinks;
-        this.Broker = (TService)info.NewBroker(this);
+        var registration = ChannelRegistry.GetRegistration<TService>();
+        this.MaxLinks = registration.MaxLinks;
+        this.Broker = (TService)registration.CreateBroker(this);
     }
 
-    public Channel(IUnorderedMapWithLock map)
+    internal Channel(IUnorderedMapWithLock map)
     {
         this.map = map;
         this.LockObject = map.LockObject; // Shared with the map (the node is added/removed while holding this lock).
         this.NodeIndex = -1;
 
-        var info = ChannelRegistry.Get<TService>();
-        this.MaxLinks = info.MaxLinks;
-        this.Broker = (TService)info.NewBroker(this);
+        var registration = ChannelRegistry.GetRegistration<TService>();
+        this.MaxLinks = registration.MaxLinks;
+        this.Broker = (TService)registration.CreateBroker(this);
     }
 
+    /// <inheritdoc/>
     public Link? Open(TService instance, bool weakReference = false)
     {
         using (this.LockObject.EnterScope())
@@ -304,11 +331,23 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         return link;
     }
 
+    /// <summary>
+    /// Gets the number of links in the channel.
+    /// </summary>
     public int Count => this.list.Count;
 
+    /// <summary>
+    /// Gets the internal link array together with a hint of the number of links it holds.<br/>
+    /// Intended for the generated broker code: the array is shared, must be treated as read-only,
+    /// and contains null entries for the unused slots. CountHint never under-reports the number of
+    /// links held by the returned array, but links may be added or removed concurrently.
+    /// </summary>
+    /// <returns>The link array, and the number of links it holds.</returns>
+    [EditorBrowsable(EditorBrowsableState.Never)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public (Link?[] Array, int CountHint) InternalGetList() => this.list.GetValuesAndCountHint();
+    public (Link?[] Links, int CountHint) UnsafeGetLinks() => this.list.GetValuesAndCountHint();
 
+    /// <inheritdoc/>
     public override TService GetBroker() => this.Broker;
 
     private void Remove(Link link)
@@ -332,7 +371,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
 
     private void TrimInternal()
     {// using (this.LockObject.EnterScope()) is required
-        if (this.checkReferenceCount++ >= CheckReferenceThreshold)
+        if (this.checkReferenceCount++ >= WeakReferenceCheckThreshold)
         {
             this.checkReferenceCount = 0;
 

@@ -7,7 +7,7 @@ using Xunit;
 
 namespace XUnitTest;
 
-[RadioService(AutoRegisterRadioServiceAndSender = false)]
+[RadioService(AutoRegisterServiceAndSender = false)]
 public interface IManualRegistrationService : IRadioService
 {
     void Test(int x);
@@ -25,48 +25,48 @@ public class ChannelRegistryTest
     [Fact]
     public void GetInformation()
     {
-        var information = ChannelRegistry.Get<ITestService>();
-        information.ServiceType.Is(typeof(ITestService));
-        information.MaxLinks.Is(int.MaxValue);
-        information.AutoRegisterRadioServiceAndSender.IsTrue();
+        var registration = ChannelRegistry.GetRegistration<ITestService>();
+        registration.ServiceType.Is(typeof(ITestService));
+        registration.MaxLinks.Is(int.MaxValue);
+        registration.AutoRegisterServiceAndSender.IsTrue();
 
         // The generic and the Type-based overloads must return the same instance.
-        ReferenceEquals(information, ChannelRegistry.Get(typeof(ITestService))).IsTrue();
-        ReferenceEquals(information, ChannelRegistry.Get<ITestService>()).IsTrue();
+        ReferenceEquals(registration, ChannelRegistry.GetRegistration(typeof(ITestService))).IsTrue();
+        ReferenceEquals(registration, ChannelRegistry.GetRegistration<ITestService>()).IsTrue();
     }
 
     [Fact]
     public void AttributeArguments()
     {
-        ChannelRegistry.Get<ISingleService>().MaxLinks.Is(1);
-        ChannelRegistry.Get<IConductorPresentationService>().MaxLinks.Is(1);
-        ChannelRegistry.Get<IManualRegistrationService>().AutoRegisterRadioServiceAndSender.IsFalse();
-        ChannelRegistry.Get<IVoidService>().AutoRegisterRadioServiceAndSender.IsTrue();
+        ChannelRegistry.GetRegistration<ISingleService>().MaxLinks.Is(1);
+        ChannelRegistry.GetRegistration<IConductorPresentationService>().MaxLinks.Is(1);
+        ChannelRegistry.GetRegistration<IManualRegistrationService>().AutoRegisterServiceAndSender.IsFalse();
+        ChannelRegistry.GetRegistration<IVoidService>().AutoRegisterServiceAndSender.IsTrue();
     }
 
     [Fact]
     public void GetUnregisteredType()
     {
-        Assert.Throws<InvalidOperationException>(() => ChannelRegistry.Get(typeof(IDisposable)));
+        Assert.Throws<InvalidOperationException>(() => ChannelRegistry.GetRegistration(typeof(IDisposable)));
     }
 
     [Fact]
     public void RegisterDuplicate()
     {
-        var information = ChannelRegistry.Get<ITestService>();
+        var registration = ChannelRegistry.GetRegistration<ITestService>();
 
         // A service type which is already registered must not be replaced.
         var result = ChannelRegistry.Register(new(typeof(ITestService), static x => throw new NotSupportedException(), static () => throw new NotSupportedException(), 12, false));
         result.IsFalse();
 
-        ReferenceEquals(information, ChannelRegistry.Get<ITestService>()).IsTrue();
-        ChannelRegistry.Get<ITestService>().MaxLinks.Is(int.MaxValue);
+        ReferenceEquals(registration, ChannelRegistry.GetRegistration<ITestService>()).IsTrue();
+        ChannelRegistry.GetRegistration<ITestService>().MaxLinks.Is(int.MaxValue);
     }
 
     [Fact]
     public void Channels()
     {
-        var channels = ChannelRegistry.Channels;
+        var channels = ChannelRegistry.Registrations;
 
         // Every service declared in this assembly must be registered by the module initializer.
         channels.Any(x => x.ServiceType == typeof(ITestService)).IsTrue();
@@ -82,15 +82,15 @@ public class ChannelRegistryTest
     }
 
     [Fact]
-    public void NewChannelAndNewBroker()
+    public void CreateChannelAndCreateBroker()
     {
-        var information = ChannelRegistry.Get<ITestService>();
+        var registration = ChannelRegistry.GetRegistration<ITestService>();
 
-        var channel = information.NewChannel();
+        var channel = registration.CreateChannel();
         channel.IsInstanceOf<Channel<ITestService>>();
-        ReferenceEquals(channel, information.NewChannel()).IsFalse();
+        ReferenceEquals(channel, registration.CreateChannel()).IsFalse();
 
-        var broker = information.NewBroker(channel);
+        var broker = registration.CreateBroker(channel);
         (broker is ITestService).IsTrue();
         ReferenceEquals(broker, channel.GetBroker()).IsFalse(); // A brand new broker instance.
     }

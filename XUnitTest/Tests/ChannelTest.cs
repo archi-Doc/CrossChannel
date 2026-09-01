@@ -167,17 +167,17 @@ public class ChannelTest
     }
 
     [Fact]
-    public void InternalGetList()
+    public void UnsafeGetLinks()
     {
         var radio = new RadioClass();
         var channel = radio.GetChannel<ITestService>();
 
-        var (array, countHint) = channel.InternalGetList();
+        var (array, countHint) = channel.UnsafeGetLinks();
         countHint.Is(0);
         array.Count(x => x is not null).Is(0);
 
         var links = Enumerable.Range(0, 10).Select(_ => channel.Open(new TestService())!).ToArray();
-        (array, countHint) = channel.InternalGetList();
+        (array, countHint) = channel.UnsafeGetLinks();
         countHint.Is(10);
 
         // CountHint must never exceed the number of links held by the array.
@@ -185,7 +185,7 @@ public class ChannelTest
 
         links[3].Dispose();
         links[7].Dispose();
-        (array, countHint) = channel.InternalGetList();
+        (array, countHint) = channel.UnsafeGetLinks();
         countHint.Is(8);
         array.Count(x => x is not null).Is(countHint);
 

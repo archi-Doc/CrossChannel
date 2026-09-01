@@ -16,7 +16,9 @@ namespace CrossChannel;
 #pragma warning disable SA1311 // Static readonly fields should begin with upper-case letter
 
 /// <summary>
-/// Represents a static radio class for facilitating communication between instances through an interface.
+/// The process-wide radio: instances subscribe to a service interface with <see cref="Open{TService}(TService, bool)"/>
+/// and messages are sent through <see cref="Send{TService}"/>.<br/>
+/// Use <see cref="RadioClass"/> when several independent radios are needed.
 /// </summary>
 public static class Radio
 {// CrossChannel by Romeo
@@ -28,7 +30,7 @@ public static class Radio
         // A field initializer (instead of a static constructor) keeps the type 'beforefieldinit',
         // so the JIT can elide the class initialization check on the hot path.
         public static readonly Channel<TService> Channel =
-            (Channel<TService>)typeToChannel.GetOrAdd(typeof(TService), static _ => ChannelRegistry.Get<TService>().NewChannel());
+            (Channel<TService>)typeToChannel.GetOrAdd(typeof(TService), static _ => ChannelRegistry.GetRegistration<TService>().CreateChannel());
     }
 
     private static readonly ThreadsafeTypeKeyHashtable<Channel> typeToChannel = new();
@@ -54,7 +56,7 @@ public static class Radio
     /// <returns>The channel for the specified service type.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public static Channel GetChannel(Type serviceType)
-        => typeToChannel.GetOrAdd(serviceType, static a => ChannelRegistry.Get(a).NewChannel());
+        => typeToChannel.GetOrAdd(serviceType, static a => ChannelRegistry.GetRegistration(a).CreateChannel());
 
     /// <summary>
     /// Tries to get the channel for the specified service type and key.
@@ -88,8 +90,11 @@ public static class Radio
     /// </summary>
     /// <typeparam name="TService">The type of the service.</typeparam>
     /// <param name="instance">The instance to register.</param>
-    /// <param name="weakReference">Indicates whether to use a weak reference for the instance.</param>
-    /// <returns>A link to the opened channel.</returns>
+    /// <param name="weakReference">
+    /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
+    /// automatically once the instance is garbage collected.
+    /// </param>
+    /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full (see <see cref="RadioServiceAttribute.MaxLinks"/>).</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public static Channel<TService>.Link? Open<TService>(TService instance, bool weakReference = false)
         where TService : class, IRadioService
@@ -105,8 +110,11 @@ public static class Radio
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <param name="instance">The instance to register.</param>
     /// <param name="key">The key.</param>
-    /// <param name="weakReference">Indicates whether to use a weak reference for the instance.</param>
-    /// <returns>A link to the opened channel.</returns>
+    /// <param name="weakReference">
+    /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
+    /// automatically once the instance is garbage collected.
+    /// </param>
+    /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full (see <see cref="RadioServiceAttribute.MaxLinks"/>).</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public static Channel<TService>.Link? OpenWithKey<TService, TKey>(TService instance, TKey key, bool weakReference = false)
         where TService : class, IRadioService

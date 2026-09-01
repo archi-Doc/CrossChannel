@@ -11,18 +11,18 @@ namespace XUnitTest;
 public class RadioTaskTest
 {
     [Fact]
-    public async Task Empty()
+    public async Task EmptyResult()
     {
-        var task = RadioTask.Empty<int>();
+        var task = RadioTask.EmptyResult<int>();
         task.IsCompletedSuccessfully.IsTrue();
         (await task).IsEmpty.IsTrue();
 
         // The task is cached per result type.
-        ReferenceEquals(task, RadioTask.Empty<int>()).IsTrue();
-        ReferenceEquals(task, RadioTask.Empty<long>()).IsFalse();
+        ReferenceEquals(task, RadioTask.EmptyResult<int>()).IsTrue();
+        ReferenceEquals(task, RadioTask.EmptyResult<long>()).IsFalse();
 
-        (await RadioTask.Empty<string>()).IsEmpty.IsTrue();
-        (await RadioTask.Empty<string?>()).IsEmpty.IsTrue();
+        (await RadioTask.EmptyResult<string>()).IsEmpty.IsTrue();
+        (await RadioTask.EmptyResult<string?>()).IsEmpty.IsTrue();
     }
 
     [Fact]

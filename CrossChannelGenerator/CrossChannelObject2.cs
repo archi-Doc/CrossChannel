@@ -126,7 +126,7 @@ public partial class CrossChannelObject
     private void GenerateBrokerMethod_TaskRadioResult(ScopingStringBuilder ssb, ServiceMethod method)
     {// Task<RadioResult<T>>
         var taskName = method.ReturnName; // System.Threading.Tasks.Task<CrossChannel.RadioResult<T>>
-        var emptyTask = $"CrossChannel.RadioTask.Empty<{method.ResultName}>()";
+        var emptyTask = $"CrossChannel.RadioTask.EmptyResult<{method.ResultName}>()";
 
         this.Generate_GetList(ssb);
         ssb.AppendLine($"if (countHint == 0) return {emptyTask};");
@@ -155,7 +155,7 @@ public partial class CrossChannelObject
     }
 
     private void Generate_GetList(ScopingStringBuilder ssb)
-        => ssb.AppendLine("var (array, countHint) = this.channel.InternalGetList();");
+        => ssb.AppendLine("var (array, countHint) = this.channel.UnsafeGetLinks();");
 
     /// <summary>
     /// Enumerates the links of the channel.<br/>

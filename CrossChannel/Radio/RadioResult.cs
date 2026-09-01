@@ -5,12 +5,11 @@ using System.Text;
 namespace CrossChannel;
 
 /// <summary>
-/// A structure that represents the return value of a radio message.<br/>
-/// The return value on the receiving side (the processing side) is singular, <br/>
-/// but since the number of return values on the sending side can be zero or more, <br/>
-/// please use this structure for the return value.
+/// Holds the results of a radio message.<br/>
+/// A receiver returns a single value, but a sender collects one value per receiver, so the number of
+/// results is zero or more. The zero and one result cases do not allocate.
 /// </summary>
-/// <typeparam name="T">The type of the message.</typeparam>
+/// <typeparam name="T">The type of the result.</typeparam>
 public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<RadioResult<T>>
 {
     // resultArray: null -> Empty, Length == 0 (Array.Empty<T>()) -> Single, Length > 1 -> Array.
@@ -33,28 +32,28 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     /// <summary>
     /// Initializes a new instance of the <see cref="RadioResult{T}"/> struct with an array of results.
     /// </summary>
-    /// <param name="resultArray">The array of results.</param>
-    public RadioResult(T[] resultArray)
+    /// <param name="results">The array of results.</param>
+    public RadioResult(T[] results)
     {
-        if (resultArray.Length == 0)
+        if (results.Length == 0)
         {
             this.result = default!;
             this.resultArray = null;
         }
-        else if (resultArray.Length == 1)
+        else if (results.Length == 1)
         {
-            this.result = resultArray[0];
+            this.result = results[0];
             this.resultArray = SingleMarker;
         }
         else
         {
             this.result = default!;
-            this.resultArray = resultArray;
+            this.resultArray = results;
         }
     }
 
     /// <summary>
-    /// Gets an empty <see cref="RadioResult{T}"/>.
+    /// Gets an empty <see cref="RadioResult{T}"/> (no receiver responded).
     /// </summary>
     public static RadioResult<T> Empty => default;
 
@@ -83,17 +82,18 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     /// Creates a <see cref="RadioResult{T}"/> from an array of results.<br/>
     /// An empty array becomes an empty result, and an array with a single element becomes a single result.
     /// </summary>
-    /// <param name="array">The array of results.</param>
+    /// <param name="results">The array of results.</param>
     /// <returns>A <see cref="RadioResult{T}"/> with the specified results.</returns>
-    public static RadioResult<T> FromArray(T[] array)
-        => new RadioResult<T>(array);
+    public static RadioResult<T> FromArray(T[] results)
+        => new RadioResult<T>(results);
 
     /// <summary>
-    /// Tries to get the single result from the <see cref="RadioResult{T}"/>.<br/>
-    /// If the <see cref="RadioResult{T}"/> holds multiple results, the first one is returned.
+    /// Tries to get the result. This is the usual way to read the response of a single receiver.<br/>
+    /// When several receivers responded, the first result is returned; enumerate the
+    /// <see cref="RadioResult{T}"/> to read all of them.
     /// </summary>
-    /// <param name="result">The single result (the first one if multiple results are held).</param>
-    /// <returns><c>true</c> if the <see cref="RadioResult{T}"/> is not empty and a result is retrieved; otherwise, <c>false</c>.</returns>
+    /// <param name="result">When this method returns, contains the result, if there is at least one.</param>
+    /// <returns><see langword="true"/> if a result was retrieved; <see langword="false"/> if the <see cref="RadioResult{T}"/> is empty.</returns>
     public bool TryGetSingleResult([MaybeNullWhen(false)] out T result)
     {
         if (this.resultArray is null)
@@ -211,6 +211,10 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
 
     #region Enumerator
 
+    /// <summary>
+    /// Returns an enumerator which iterates over the results.
+    /// </summary>
+    /// <returns>An enumerator.</returns>
     public Enumerator GetEnumerator() => new Enumerator(this);
 
     /// <inheritdoc/>

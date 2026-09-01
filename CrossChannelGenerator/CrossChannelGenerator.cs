@@ -137,7 +137,6 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
 
                         this.AttachDebugger = generatorOption.AttachDebugger;
                         this.GenerateToFile = generatorOption.GenerateToFile;
-                        this.CustomNamespace = generatorOption.CustomNamespace;
                         this.TargetFolder = Path.Combine(Path.GetDirectoryName(x.SyntaxTree.FilePath), "Generated");
                     }
                     else if (SymbolEqualityComparer.Default.Equals(y.AttributeClass, radioServiceInterface))

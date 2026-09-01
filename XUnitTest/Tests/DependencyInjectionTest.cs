@@ -26,15 +26,15 @@ public class DependencyInjectionTest
         var sender = provider.GetRequiredService<ISender<ITestService>>();
         provider.GetServices<ISender<ITestService>>().Count().Is(1);
 
-        sender.Get().Double(1).IsEmpty.IsTrue();
+        sender.Send().Double(1).IsEmpty.IsTrue();
 
         using (channel.Open(new TestService()))
         {
-            sender.Get().Double(1).SequenceEqual([2,]).IsTrue();
+            sender.Send().Double(1).SequenceEqual([2,]).IsTrue();
             provider.GetRequiredService<ITestService>().Double(2).SequenceEqual([4,]).IsTrue();
         }
 
-        sender.Get().Double(1).IsEmpty.IsTrue();
+        sender.Send().Double(1).IsEmpty.IsTrue();
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class DependencyInjectionTest
 
         using (Radio.Open<ITestService>(new TestService()))
         {
-            sender.Get().Double(1).SequenceEqual([2,]).IsTrue();
+            sender.Send().Double(1).SequenceEqual([2,]).IsTrue();
         }
     }
 }

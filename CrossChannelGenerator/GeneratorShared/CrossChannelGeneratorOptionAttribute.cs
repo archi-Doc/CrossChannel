@@ -15,10 +15,6 @@ public sealed class CrossChannelGeneratorOptionAttributeMock : Attribute
 
     public bool GenerateToFile { get; set; } = false;
 
-    public string? CustomNamespace { get; set; }
-
-    public bool UseModuleInitializer { get; set; } = true;
-
     public CrossChannelGeneratorOptionAttributeMock()
     {
     }
@@ -38,18 +34,6 @@ public sealed class CrossChannelGeneratorOptionAttributeMock : Attribute
         if (val != null)
         {
             attribute.GenerateToFile = (bool)val;
-        }
-
-        val = VisceralHelper.GetValue(-1, nameof(CustomNamespace), constructorArguments, namedArguments);
-        if (val != null)
-        {
-            attribute.CustomNamespace = (string)val;
-        }
-
-        val = VisceralHelper.GetValue(-1, nameof(UseModuleInitializer), constructorArguments, namedArguments);
-        if (val != null)
-        {
-            attribute.UseModuleInitializer = (bool)val;
         }
 
         return attribute;

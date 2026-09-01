@@ -16,13 +16,13 @@ public class ServiceRegistrationTest
         var services = new ServiceCollection();
         services.AddCrossChannel();
 
-        foreach (var x in ChannelRegistry.Channels)
+        foreach (var x in ChannelRegistry.Registrations)
         {
             var channelType = typeof(IChannel<>).MakeGenericType(x.ServiceType);
             services.Count(y => y.ServiceType == channelType).Is(1);
 
             var senderType = typeof(ISender<>).MakeGenericType(x.ServiceType);
-            var expected = x.AutoRegisterRadioServiceAndSender ? 1 : 0;
+            var expected = x.AutoRegisterServiceAndSender ? 1 : 0;
             services.Count(y => y.ServiceType == senderType).Is(expected);
             services.Count(y => y.ServiceType == x.ServiceType).Is(expected);
         }
@@ -37,7 +37,7 @@ public class ServiceRegistrationTest
         // IChannel<T> is always registered.
         services.Count(x => x.ServiceType == typeof(IChannel<IManualRegistrationService>)).Is(1);
 
-        // The service and the sender are not, because AutoRegisterRadioServiceAndSender is false.
+        // The service and the sender are not, because AutoRegisterServiceAndSender is false.
         services.Count(x => x.ServiceType == typeof(ISender<IManualRegistrationService>)).Is(0);
         services.Count(x => x.ServiceType == typeof(IManualRegistrationService)).Is(0);
 
@@ -58,12 +58,12 @@ public class ServiceRegistrationTest
         var sender = provider.GetRequiredService<ISender<IVoidService>>();
 
         ReferenceEquals(channel, radio.GetChannel<IVoidService>()).IsTrue();
-        ReferenceEquals(sender.Get(), radio.Send<IVoidService>()).IsTrue();
+        ReferenceEquals(sender.Send(), radio.Send<IVoidService>()).IsTrue();
 
         var service = new VoidService();
         using (channel.Open(service))
         {
-            sender.Get().Add(3);
+            sender.Send().Add(3);
             provider.GetRequiredService<IVoidService>().Add(4);
             service.Sum.Is(7);
         }
@@ -80,17 +80,17 @@ public class ServiceRegistrationTest
         var sender = provider.GetRequiredService<ISender<ITestService>>();
 
         // An unknown key must return the broker of the empty channel.
-        sender.GetWithKey(1).Double(1).IsEmpty.IsTrue();
+        sender.SendWithKey(1).Double(1).IsEmpty.IsTrue();
 
         using (radio.OpenWithKey((ITestService)new TestService(), 1))
         {
-            sender.GetWithKey(1).Double(2).SequenceEqual([4,]).IsTrue();
-            sender.GetWithKey(2).Double(2).IsEmpty.IsTrue();
-            sender.GetWithKey("1").Double(2).IsEmpty.IsTrue(); // A different key type.
-            sender.Get().Double(2).IsEmpty.IsTrue(); // The keyless channel is a different one.
+            sender.SendWithKey(1).Double(2).SequenceEqual([4,]).IsTrue();
+            sender.SendWithKey(2).Double(2).IsEmpty.IsTrue();
+            sender.SendWithKey("1").Double(2).IsEmpty.IsTrue(); // A different key type.
+            sender.Send().Double(2).IsEmpty.IsTrue(); // The keyless channel is a different one.
         }
 
-        sender.GetWithKey(1).Double(2).IsEmpty.IsTrue();
+        sender.SendWithKey(1).Double(2).IsEmpty.IsTrue();
     }
 
     [Fact]
@@ -119,6 +119,6 @@ public class ServiceRegistrationTest
         ReferenceEquals(channel, Radio.GetChannel<ITestService>()).IsTrue();
 
         var sender = provider.GetRequiredService<ISender<ITestService>>();
-        ReferenceEquals(sender.Get(), Radio.Send<ITestService>()).IsTrue();
+        ReferenceEquals(sender.Send(), Radio.Send<ITestService>()).IsTrue();
     }
 }

@@ -20,7 +20,7 @@ public sealed class RadioServiceAttributeMock
 
     public int MaxLinks { get; set; } = int.MaxValue;
 
-    public bool AutoRegisterRadioServiceAndSender { get; set; } = true;
+    public bool AutoRegisterServiceAndSender { get; set; } = true;
 
     public static RadioServiceAttributeMock FromArray(Location location, object?[] constructorArguments, KeyValuePair<string, object?>[] namedArguments)
     {
@@ -33,10 +33,10 @@ public sealed class RadioServiceAttributeMock
             attribute.MaxLinks = (int)val;
         }
 
-        val = VisceralHelper.GetValue(-1, nameof(AutoRegisterRadioServiceAndSender), constructorArguments, namedArguments);
+        val = VisceralHelper.GetValue(-1, nameof(AutoRegisterServiceAndSender), constructorArguments, namedArguments);
         if (val != null)
         {
-            attribute.AutoRegisterRadioServiceAndSender = (bool)val;
+            attribute.AutoRegisterServiceAndSender = (bool)val;
         }
 
         return attribute;
