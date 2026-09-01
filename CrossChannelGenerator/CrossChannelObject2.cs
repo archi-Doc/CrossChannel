@@ -33,7 +33,7 @@ public partial class CrossChannelObject
 
                     // The broker methods are deliberately not 'async': the common cases (no receiver,
                     // a single receiver) complete without allocating an async state machine.
-                    using (ssb.ScopeBrace($"{x.ReturnObject.FullName} {this.LocalName}.{x.SimpleName}({x.GetParameters()})"))
+                    using (ssb.ScopeBrace($"{x.ReturnName} {x.DeclaringName}.{x.SimpleName}({x.GetParameters()})"))
                     {
                         if (x.ReturnType == ServiceMethod.Type.Void)
                         {
@@ -93,7 +93,7 @@ public partial class CrossChannelObject
 
     private void GenerateBrokerMethod_Task(ScopingStringBuilder ssb, ServiceMethod method)
     {// Task
-        var taskName = method.ReturnObject.FullName; // System.Threading.Tasks.Task
+        var taskName = method.ReturnName; // System.Threading.Tasks.Task
 
         this.Generate_GetList(ssb);
         ssb.AppendLine($"if (countHint == 0) return {TaskName}.CompletedTask;");
@@ -125,7 +125,7 @@ public partial class CrossChannelObject
 
     private void GenerateBrokerMethod_TaskRadioResult(ScopingStringBuilder ssb, ServiceMethod method)
     {// Task<RadioResult<T>>
-        var taskName = method.ReturnObject.FullName; // System.Threading.Tasks.Task<CrossChannel.RadioResult<T>>
+        var taskName = method.ReturnName; // System.Threading.Tasks.Task<CrossChannel.RadioResult<T>>
         var emptyTask = $"CrossChannel.RadioTask.Empty<{method.ResultName}>()";
 
         this.Generate_GetList(ssb);

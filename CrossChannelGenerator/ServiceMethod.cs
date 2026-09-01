@@ -73,18 +73,62 @@ public class ServiceMethod
             return null;
         }
 
-        var serviceMethod = new ServiceMethod(method, returnObject, returnType, resultObject);
+        var serviceMethod = new ServiceMethod(obj, method, returnObject, returnType, resultObject);
         return serviceMethod;
     }
 
-    public ServiceMethod(CrossChannelObject method, CrossChannelObject returnObject, Type returnType, CrossChannelObject? resultObject)
+    public ServiceMethod(CrossChannelObject obj, CrossChannelObject method, CrossChannelObject returnObject, Type returnType, CrossChannelObject? resultObject)
     {
         this.method = method;
+
+        // An explicit interface implementation has to be qualified with the interface which declares the method,
+        // which is not necessarily the service interface itself (the method may be inherited from a base interface).
+        var declaringObject = method.ContainingObject;
+        this.DeclaringName = declaringObject is null || declaringObject == obj ? obj.LocalName : declaringObject.FullName;
+
         this.ReturnObject = returnObject;
         this.ReturnType = returnType;
         this.ResultObject = resultObject;
 
+        // CrossChannelObject.FullName drops the nullable annotations, but the generated broker
+        // implements the interface explicitly, so the annotations have to match exactly.
+        this.method.GetRawInformation(out var symbol, out _, out _);
+        if (symbol is IMethodSymbol ms)
+        {
+            this.ReturnName = this.method.Body.SymbolToFullName(ms.ReturnType, true);
+            if (GetResultSymbol(ms.ReturnType, returnType) is { } resultSymbol)
+            {
+                this.ResultName = this.method.Body.SymbolToFullName(resultSymbol, true);
+            }
+        }
+        else
+        {
+            this.ReturnName = returnObject.FullName;
+            this.ResultName = resultObject?.FullName ?? string.Empty;
+        }
+
         // this.CancellationTokenIndex = this.method.Method_Parameters.IndexOf(CancellationTokenName);
+
+        static ITypeSymbol? GetResultSymbol(ITypeSymbol returnSymbol, Type returnType)
+        {// RadioResult<T> -> T, Task<RadioResult<T>> -> T
+            if (returnSymbol is not INamedTypeSymbol nts ||
+                nts.TypeArguments.Length != 1)
+            {
+                return null;
+            }
+
+            if (returnType == Type.RadioResult)
+            {
+                return nts.TypeArguments[0];
+            }
+            else if (returnType == Type.TaskRadioResult)
+            {
+                return nts.TypeArguments[0] is INamedTypeSymbol inner && inner.TypeArguments.Length == 1 ?
+                    inner.TypeArguments[0] : null;
+            }
+
+            return null;
+        }
     }
 
     public Location Location => this.method.Location;
@@ -93,17 +137,30 @@ public class ServiceMethod
 
     public string LocalName => this.method.LocalName;
 
+    /// <summary>
+    /// Gets the name of the interface which declares the method (used to qualify the explicit interface implementation).
+    /// </summary>
+    public string DeclaringName { get; private set; }
+
     // public WithNullable<CrossChannelObject>? ReturnObject { get; internal set; }
 
     public string ParameterType { get; private set; } = string.Empty;
 
     public CrossChannelObject ReturnObject { get; private set; }
 
+    /// <summary>
+    /// Gets the full name of the return type, including the nullable annotations (e.g. CrossChannel.RadioResult&lt;string?&gt;).
+    /// </summary>
+    public string ReturnName { get; private set; }
+
     public Type ReturnType { get; private set; }
 
     public CrossChannelObject? ResultObject { get; private set; }
 
-    public string ResultName => this.ResultObject?.FullName ?? string.Empty;
+    /// <summary>
+    /// Gets the full name of the result type T, including the nullable annotations (e.g. string?).
+    /// </summary>
+    public string ResultName { get; private set; } = string.Empty;
 
     // public int CancellationTokenIndex { get; private set; }
 
