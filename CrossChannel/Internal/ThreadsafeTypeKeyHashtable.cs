@@ -7,6 +7,11 @@ using System.Threading;
 
 namespace CrossChannel.Internal;
 
+/// <summary>
+/// A hashtable keyed by <see cref="Type"/> which is lock-free for readers and locked for writers.<br/>
+/// Entries are never removed, so a reader can safely walk a bucket while another thread adds to it.
+/// </summary>
+/// <typeparam name="TValue">The type of the value.</typeparam>
 internal sealed class ThreadsafeTypeKeyHashtable<TValue>
 {
     private const double LoadFactor = 0.75d;
@@ -24,9 +29,9 @@ internal sealed class ThreadsafeTypeKeyHashtable<TValue>
             this.Hash = hash;
         }
 
-        internal Type Key;
-        internal TValue Value;
-        internal int Hash;
+        internal readonly Type Key;
+        internal readonly TValue Value;
+        internal readonly int Hash;
         internal Entry? Next;
     }
 
@@ -44,8 +49,7 @@ internal sealed class ThreadsafeTypeKeyHashtable<TValue>
 
     public TValue GetOrAdd(Type key, Func<Type, TValue> valueFactory)
     {
-        TValue? v;
-        if (this.TryGetValue(key, out v))
+        if (this.TryGetValue(key, out var v))
         {
             return v;
         }
@@ -57,11 +61,10 @@ internal sealed class ThreadsafeTypeKeyHashtable<TValue>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetValue(Type key, [MaybeNullWhen(false)] out TValue value)
     {
-        Entry[] table = this.buckets;
-        var hash = key.GetHashCode();
-        Entry? entry = table[hash & table.Length - 1];
+        var table = this.buckets;
+        var entry = table[key.GetHashCode() & (table.Length - 1)];
 
-        while (entry != null)
+        while (entry is not null)
         {
             if (entry.Key == key)
             {
@@ -85,12 +88,61 @@ internal sealed class ThreadsafeTypeKeyHashtable<TValue>
             capacity <<= 1;
         }
 
-        if (capacity < 8)
+        return capacity < 8 ? 8 : capacity;
+    }
+
+    /// <summary>
+    /// Appends the entry to the specified table, which must not be published to readers yet.
+    /// </summary>
+    /// <param name="buckets">The table to append to.</param>
+    /// <param name="entry">The entry to append.</param>
+    private static void Append(Entry[] buckets, Entry entry)
+    {
+        ref var bucket = ref buckets[entry.Hash & (buckets.Length - 1)];
+        if (bucket is null)
         {
-            return 8;
+            bucket = entry;
+            return;
         }
 
-        return capacity;
+        var last = bucket;
+        while (last.Next is not null)
+        {
+            last = last.Next;
+        }
+
+        last.Next = entry;
+    }
+
+    private static bool AddToBuckets(Entry[] buckets, Type newKey, Func<Type, TValue> valueFactory, out TValue resultingValue)
+    {
+        var hash = newKey.GetHashCode();
+        ref var bucket = ref buckets[hash & (buckets.Length - 1)];
+        if (bucket is null)
+        {
+            resultingValue = valueFactory(newKey);
+            Volatile.Write(ref bucket, new Entry(newKey, resultingValue, hash));
+            return true;
+        }
+
+        var last = bucket;
+        while (true)
+        {
+            if (last.Key == newKey)
+            {
+                resultingValue = last.Value;
+                return false;
+            }
+
+            if (last.Next is null)
+            {
+                resultingValue = valueFactory(newKey);
+                Volatile.Write(ref last.Next, new Entry(newKey, resultingValue, hash));
+                return true;
+            }
+
+            last = last.Next;
+        }
     }
 
     private bool TryAddInternal(Type key, Func<Type, TValue> valueFactory, out TValue resultingValue)
@@ -101,24 +153,22 @@ internal sealed class ThreadsafeTypeKeyHashtable<TValue>
 
             if (this.buckets.Length < nextCapacity)
             {
-                // rehash
+                // Rehash. A fresh Entry is allocated for every existing one, so that rewiring 'Next'
+                // does not disturb the readers which are still walking the current table.
                 var nextBucket = new Entry[nextCapacity];
-                for (int i = 0; i < this.buckets.Length; i++)
+                foreach (var bucket in this.buckets)
                 {
-                    Entry? e = this.buckets[i];
-                    while (e != null)
+                    for (var e = bucket; e is not null; e = e.Next)
                     {
-                        var newEntry = new Entry(e.Key, e.Value, e.Hash);
-                        this.AddToBuckets(nextBucket, key, newEntry, null!, out resultingValue);
-                        e = e.Next;
+                        Append(nextBucket, new Entry(e.Key, e.Value, e.Hash));
                     }
                 }
 
-                // add entry(if failed to add, only do resize)
-                var successAdd = this.AddToBuckets(nextBucket, key, null, valueFactory, out resultingValue);
+                // Add the entry (if the key is already present, only the resize is performed).
+                var successAdd = AddToBuckets(nextBucket, key, valueFactory, out resultingValue);
 
-                // replace field(threadsafe for read)
-                System.Threading.Volatile.Write(ref this.buckets, nextBucket);
+                // Replace the field (thread-safe for readers).
+                Volatile.Write(ref this.buckets, nextBucket);
 
                 if (successAdd)
                 {
@@ -129,8 +179,8 @@ internal sealed class ThreadsafeTypeKeyHashtable<TValue>
             }
             else
             {
-                // add entry(insert last is thread safe for read)
-                var successAdd = this.AddToBuckets(this.buckets, key, null, valueFactory, out resultingValue);
+                // Add the entry (appending to the end of a bucket is thread-safe for readers).
+                var successAdd = AddToBuckets(this.buckets, key, valueFactory, out resultingValue);
                 if (successAdd)
                 {
                     this.size++;
@@ -139,55 +189,5 @@ internal sealed class ThreadsafeTypeKeyHashtable<TValue>
                 return successAdd;
             }
         }
-    }
-
-    private bool AddToBuckets(Entry[] buckets, Type newKey, Entry? newEntryOrNull, Func<Type, TValue> valueFactory, out TValue resultingValue)
-    {
-        var h = (newEntryOrNull != null) ? newEntryOrNull.Hash : newKey.GetHashCode();
-        if (buckets[h & (buckets.Length - 1)] == null)
-        {
-            if (newEntryOrNull != null)
-            {
-                resultingValue = newEntryOrNull.Value;
-                System.Threading.Volatile.Write(ref buckets[h & (buckets.Length - 1)], newEntryOrNull);
-            }
-            else
-            {
-                resultingValue = valueFactory(newKey);
-                System.Threading.Volatile.Write(ref buckets[h & (buckets.Length - 1)], new Entry(newKey, resultingValue, h));
-            }
-        }
-        else
-        {
-            Entry searchLastEntry = buckets[h & (buckets.Length - 1)];
-            while (true)
-            {
-                if (searchLastEntry.Key == newKey)
-                {
-                    resultingValue = searchLastEntry.Value;
-                    return false;
-                }
-
-                if (searchLastEntry.Next == null)
-                {
-                    if (newEntryOrNull != null)
-                    {
-                        resultingValue = newEntryOrNull.Value;
-                        System.Threading.Volatile.Write(ref searchLastEntry.Next!, newEntryOrNull);
-                    }
-                    else
-                    {
-                        resultingValue = valueFactory(newKey);
-                        System.Threading.Volatile.Write(ref searchLastEntry.Next!, new Entry(newKey, resultingValue, h));
-                    }
-
-                    break;
-                }
-
-                searchLastEntry = searchLastEntry.Next;
-            }
-        }
-
-        return true;
     }
 }
