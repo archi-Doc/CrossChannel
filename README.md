@@ -389,7 +389,25 @@ dotnet publish -c Release -r linux-x64 -p:PublishAot=true
 
 Everything works unchanged, including keyed channels, `ISender<TService>`, and the `AddCrossChannel` dependency injection registrations. `AotTest` in this repository is a smoke test which exercises all of them from a Native AOT binary.
 
-The one API which needs dynamic code is `GhostCopy`. When the runtime supports it, the copy runs through a delegate compiled once per type; under Native AOT an equivalent reflection-based delegate is used instead, and the expression-tree path is trimmed away entirely.
+`GhostCopy` uses a delegate compiled once per type when dynamic code is available. Under Native AOT, a reflection-based delegate is used instead, and the expression-tree path and its helper cache are trimmed away. Both paths copy instance fields across the inheritance hierarchy, including private, readonly, and backing fields. `Copy<T>` and `CreateDelegate<T>` share the same cached delegate. The `AllFields` trimming annotation preserves inherited private fields as well; generic wrappers around these APIs must propagate that annotation to their type parameter.
+
+To run this repository's smoke test on Windows (with the [Native AOT prerequisites](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/#prerequisites) installed):
+
+```powershell
+dotnet publish AotTest/AotTest.csproj -c Release -r win-x64 -warnaserror
+./AotTest/bin/Release/net10.0/win-x64/publish/AotTest.exe --require-no-dynamic-code
+```
+
+`AotTest` declares `PublishAot` in its project file so that the setting does not propagate to the `netstandard2.0` source generator project. CI publishes and runs the native binary on both Windows and Linux, covering DI (including struct keys and registration opt-out), synchronous/asynchronous delivery, and field copying.
+
+Without a native linker, the trimming and reflection fallback can also be checked separately:
+
+```powershell
+dotnet publish AotTest/AotTest.csproj -c Release -r win-x64 -p:PublishAot=false -p:DynamicCodeSupport=false --self-contained true -o artifacts/trimmed-reflection -warnaserror
+./artifacts/trimmed-reflection/AotTest.exe --require-no-dynamic-code
+```
+
+This fallback check still runs on CoreCLR; it does not replace publishing and executing the Native AOT binary.
 
 
 

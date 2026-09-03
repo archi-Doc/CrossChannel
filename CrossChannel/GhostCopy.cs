@@ -19,10 +19,9 @@ public static class GhostCopy
     /// <summary>
     /// The members of the copied type which must survive trimming.
     /// </summary>
-    private const DynamicallyAccessedMemberTypes CopiedMembers =
-        DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields;
+    private const DynamicallyAccessedMemberTypes CopiedMembers = DynamicallyAccessedMemberTypes.AllFields;
 
-    private const BindingFlags InstanceFields = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+    private const BindingFlags InstanceFields = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
 
     /// <summary>
     /// Delegate for copying fields from one instance to another.
@@ -32,9 +31,6 @@ public static class GhostCopy
     /// <param name="to">The destination instance.</param>
     public delegate void CopyDelegate<T>(ref T from, ref T to)
         where T : class;
-
-    private static readonly MethodInfo SetReadonlyMethodInfo = typeof(GhostCopy).GetMethod(nameof(SetReadonlyField), BindingFlags.Static | BindingFlags.NonPublic)!;
-    private static readonly ConcurrentDictionary<Type, MethodInfo> SetReadonlyMethodCache = new();
 
     /// <summary>
     /// Copies all fields from one instance to another, including private/readonly/backing fields.
@@ -52,13 +48,18 @@ public static class GhostCopy
     /// <summary>
     /// Creates a delegate that copies all fields from one instance to another.
     /// </summary>
+    /// <remarks>The delegate is cached per type and shared with <see cref="Copy{T}(ref T, ref T)"/>.</remarks>
     /// <typeparam name="T">The class type to copy.</typeparam>
     /// <returns>A delegate that copies fields from one instance to another.</returns>
     public static CopyDelegate<T> CreateDelegate<[DynamicallyAccessedMembers(CopiedMembers)] T>()
         where T : class
+        => CopyDelegateCache<T>.CopyDelegate;
+
+    private static CopyDelegate<T> CreateDelegateCore<[DynamicallyAccessedMembers(CopiedMembers)] T>()
+        where T : class
     {
         // Do not copy properties, since the backing fields are copied directly.
-        var fields = typeof(T).GetFields(InstanceFields);
+        var fields = GetFields(typeof(T));
         if (fields.Length == 0)
         {
             return static (ref T from, ref T to) => { };
@@ -69,7 +70,25 @@ public static class GhostCopy
             CreateReflectionDelegate<T>(fields);
     }
 
-    [UnconditionalSuppressMessage("AOT", "IL3050:RequiresDynamicCode", Justification = "Only reached when RuntimeFeature.IsDynamicCodeSupported is true; CreateReflectionDelegate is used otherwise.")]
+    private static FieldInfo[] GetFields([DynamicallyAccessedMembers(CopiedMembers)] Type type)
+    {
+        var declaredFields = type.GetFields(InstanceFields);
+        if (type.BaseType is null || type.BaseType == typeof(object))
+        {
+            return declaredFields;
+        }
+
+        var fields = new List<FieldInfo>(declaredFields);
+        for (var current = type.BaseType; current is not null && current != typeof(object); current = current.BaseType)
+        {
+            // GetFields on a derived type omits private fields declared by its base classes.
+            fields.AddRange(current.GetFields(InstanceFields));
+        }
+
+        return fields.ToArray();
+    }
+
+    [RequiresDynamicCode("Compiles a field-copying delegate. Native AOT uses CreateReflectionDelegate instead.")]
     [UnconditionalSuppressMessage("Trimming", "IL2026:RequiresUnreferencedCode", Justification = "The expression tree only accesses the fields of T, which are preserved by the DynamicallyAccessedMembers annotation on T.")]
     [UnconditionalSuppressMessage("Trimming", "IL2060:MakeGenericMethod", Justification = "SetReadonlyField<T> is instantiated over the field types of T, which are preserved by the DynamicallyAccessedMembers annotation on T.")]
     private static CopyDelegate<T> CreateCompiledDelegate<T>(FieldInfo[] fields)
@@ -86,7 +105,7 @@ public static class GhostCopy
             var destinationField = Expression.Field(destination, field);
             if (field.IsInitOnly)
             {// Expression.Assign rejects init-only fields, so go through a ref-taking helper.
-                var method = SetReadonlyMethodCache.GetOrAdd(field.FieldType, static t => SetReadonlyMethodInfo.MakeGenericMethod(t));
+                var method = CompiledDelegateCache.SetReadonlyMethods.GetOrAdd(field.FieldType, static t => CompiledDelegateCache.SetReadonlyMethod.MakeGenericMethod(t));
                 expressionList.Add(Expression.Call(method, destinationField, sourceField));
             }
             else
@@ -121,6 +140,13 @@ public static class GhostCopy
     private static class CopyDelegateCache<[DynamicallyAccessedMembers(CopiedMembers)] T>
         where T : class
     {
-        public static readonly CopyDelegate<T> CopyDelegate = CreateDelegate<T>();
+        public static readonly CopyDelegate<T> CopyDelegate = CreateDelegateCore<T>();
+    }
+
+    private static class CompiledDelegateCache
+    {
+        // This cache is only referenced by the dynamic-code path and is removed by Native AOT.
+        public static readonly MethodInfo SetReadonlyMethod = typeof(GhostCopy).GetMethod(nameof(SetReadonlyField), BindingFlags.Static | BindingFlags.NonPublic)!;
+        public static readonly ConcurrentDictionary<Type, MethodInfo> SetReadonlyMethods = new();
     }
 }

@@ -82,4 +82,65 @@ public class GhostCopyTest
         GhostCopy.Copy(ref tc, ref tc2);
         tc.Compare(tc2).IsTrue();
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CopiesPrivateFieldsAcrossInheritance(bool createDelegate)
+    {
+        var from = new DerivedCopyTarget(42, "base", "derived");
+        var to = new DerivedCopyTarget(0, string.Empty, string.Empty);
+        var original = to;
+
+        if (createDelegate)
+        {
+            GhostCopy.CreateDelegate<DerivedCopyTarget>()(ref from, ref to);
+        }
+        else
+        {
+            GhostCopy.Copy(ref from, ref to);
+        }
+
+        Assert.Same(original, to);
+        Assert.Equal(42, to.Id);
+        Assert.Equal("base", to.BaseText);
+        Assert.Equal("derived", to.Text);
+    }
+
+    private class BaseCopyTarget
+    {
+        private readonly int id;
+        private readonly string text;
+
+        protected BaseCopyTarget(int id, string text)
+        {
+            this.id = id;
+            this.text = text;
+        }
+
+        public int Id => this.id;
+
+        public string BaseText => this.text;
+    }
+
+    private class MiddleCopyTarget : BaseCopyTarget
+    {
+        protected MiddleCopyTarget(int id, string text)
+            : base(id, text)
+        {
+        }
+    }
+
+    private sealed class DerivedCopyTarget : MiddleCopyTarget
+    {
+        private readonly string text;
+
+        public DerivedCopyTarget(int id, string baseText, string text)
+            : base(id, baseText)
+        {
+            this.text = text;
+        }
+
+        public string Text => this.text;
+    }
 }

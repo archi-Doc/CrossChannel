@@ -7,6 +7,7 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <!-- Set here rather than on the command line, so that the netstandard2.0 generator project is not dragged in. -->
     <PublishAot>true</PublishAot>
+    <PublishTrimmed>true</PublishTrimmed>
     <InvariantGlobalization>true</InvariantGlobalization>
     <!-- Report every trimming/AOT warning individually instead of one warning per assembly. -->
     <TrimmerSingleWarn>false</TrimmerSingleWarn>
