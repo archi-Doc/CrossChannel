@@ -135,11 +135,7 @@ public class ChannelTest
         var radio = new RadioClass();
         var channel = radio.GetChannel<ITestService>();
 
-        void OpenTemporaryInstance() => channel.Open(new TestService(), true);
-
-        OpenTemporaryInstance();
-        channel.Count.Is(1);
-        channel.GetBroker().Double(1).SequenceEqual([2,]).IsTrue();
+        OpenTemporaryInstance(channel);
 
         GC.Collect();
         GC.WaitForPendingFinalizers();
@@ -148,6 +144,17 @@ public class ChannelTest
         // The dead link is removed when it is found during the enumeration.
         channel.GetBroker().Double(1).IsEmpty.IsTrue();
         channel.Count.Is(0);
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        static void OpenTemporaryInstance(Channel<ITestService> channel)
+        {
+            var service = new TestService();
+            channel.Open(service, true);
+            channel.Count.Is(1);
+            channel.GetBroker().Double(1).SequenceEqual([2,]).IsTrue();
+            // Other tests may collect concurrently; keep the receiver alive until the first send.
+            GC.KeepAlive(service);
+        }
     }
 
     [Fact]
