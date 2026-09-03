@@ -23,6 +23,7 @@
   - [Maximum number of links](#maximum-number-of-links)
   - [Local radio](#local-radio)
   - [Dependency injection](#dependency-injection)
+  - [Native AOT](#native-aot)
 - [Behavior](#behavior)
 - [Diagnostics](#diagnostics)
 - [Benchmark](#benchmark)
@@ -375,6 +376,21 @@ public interface IManualService : IRadioService
     void Message(string message);
 }
 ```
+
+
+
+### Native AOT
+
+CrossChannel is compatible with **Native AOT** and trimming. The library is built with `IsAotCompatible`, so it carries no trimming or AOT warnings, and the delivery code is emitted by the source generator rather than by reflection or `Reflection.Emit`.
+
+```
+dotnet publish -c Release -r linux-x64 -p:PublishAot=true
+```
+
+Everything works unchanged, including keyed channels, `ISender<TService>`, and the `AddCrossChannel` dependency injection registrations. `AotTest` in this repository is a smoke test which exercises all of them from a Native AOT binary.
+
+The one API which needs dynamic code is `GhostCopy`. When the runtime supports it, the copy runs through a delegate compiled once per type; under Native AOT an equivalent reflection-based delegate is used instead, and the expression-tree path is trimmed away entirely.
+
 
 
 

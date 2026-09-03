@@ -134,11 +134,14 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public (Link?[] Array, int CountHint) GetValuesAndCountHint()
         {// no lock, safe for iterate
-            // 'count' is read before 'values' (acquire) so that CountHint can never under-report
-            // the number of links held by the returned array. Enumerators rely on this in order to
-            // stop as soon as CountHint links have been processed, instead of scanning the whole array.
+            // 'values' is read before 'count' (both with acquire semantics) so that CountHint can never
+            // under-report the number of links held by the returned array: 'count' is sampled after the
+            // array, so it already accounts for every link that array holds. Enumerators rely on this in
+            // order to stop as soon as CountHint links have been processed, instead of scanning the whole
+            // array. Over-reporting is harmless, since the enumerator simply runs out of links first.
+            var values = Volatile.Read(ref this.values);
             var countHint = Volatile.Read(ref this.count);
-            return (this.values, countHint);
+            return (values, countHint);
         }
 
         public int Add(Link value)

@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Enables the trimming/AOT/single-file analyzers, so that Native AOT incompatibilities are caught at build time. -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -25,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Arc.Collections" Version="1.44.0" />
+    <PackageReference Include="Arc.Collections" Version="1.45.0" />
     <PackageReference Include="FastExpressionCompiler" Version="5.4.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">

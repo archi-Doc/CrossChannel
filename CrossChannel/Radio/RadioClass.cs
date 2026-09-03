@@ -41,7 +41,7 @@ public class RadioClass
     /// <returns>The channel for the specified service type.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public Channel GetChannel(Type serviceType)
-        => (Channel)this.typeToChannel.GetOrAdd(serviceType, static a => ChannelRegistry.GetRegistration(a).CreateChannel());
+        => this.typeToChannel.GetOrAdd(serviceType, static a => ChannelRegistry.GetRegistration(a).CreateChannel());
 
     /// <summary>
     /// Tries to get the channel for the specified service type and key.
