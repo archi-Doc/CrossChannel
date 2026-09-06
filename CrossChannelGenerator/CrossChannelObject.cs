@@ -190,6 +190,30 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
         if (this.ObjectFlag.HasFlag(CrossChannelObjectFlag.RadioService))
         {// [RadioService]
+            this.GetRawInformation(out var rawSymbol, out _, out _);
+            if (rawSymbol is INamedTypeSymbol serviceSymbol)
+            {
+                for (var type = serviceSymbol; type is not null; type = type.ContainingType)
+                {
+                    if (type.IsGenericType)
+                    {
+                        this.Body.ReportDiagnostic(CrossChannelBody.Error_UnsupportedMember, this.Location);
+                        return;
+                    }
+                }
+
+                foreach (var type in serviceSymbol.AllInterfaces.Prepend(serviceSymbol))
+                {
+                    foreach (var member in type.GetMembers())
+                    {
+                        if (member is IPropertySymbol or IEventSymbol)
+                        {
+                            this.Body.ReportDiagnostic(CrossChannelBody.Error_UnsupportedMember, member.Locations.FirstOrDefault() ?? this.Location);
+                        }
+                    }
+                }
+            }
+
             // Must be derived from IRadioService
             if (!this.AllInterfaces.Any(x => x == IRadioService.FullName))
             {
@@ -275,10 +299,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
     }
 
     /// <summary>
-    /// The main code generation process for the target object include<br/>
-    /// 1. Generating specific code with GenerateOutObject() and GenerateInObject().<br/>
-    /// 2. Processing child objects.<br/>
-    /// 3. Generating an initializer with GenerateInitializer().
+    /// Generates the broker, nested declarations, and registration initializer.
     /// </summary>
     internal void GenerateObject(ScopingStringBuilder ssb)
     {

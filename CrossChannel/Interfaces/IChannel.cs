@@ -1,4 +1,4 @@
-﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
+// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 namespace CrossChannel;
 
@@ -17,8 +17,9 @@ public interface IChannel<TService>
     /// <param name="instance">The instance which receives the messages.</param>
     /// <param name="weakReference">
     /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
-    /// automatically once the instance is garbage collected.
+    /// during sending or subscription cleanup after the instance is collected.
     /// </param>
     /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="instance"/> is null.</exception>
     Channel<TService>.Link? Open(TService instance, bool weakReference = false);
 }

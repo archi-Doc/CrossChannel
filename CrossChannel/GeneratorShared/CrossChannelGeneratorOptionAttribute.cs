@@ -17,15 +17,14 @@ public sealed class CrossChannelGeneratorOptionAttribute : Attribute
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the generator attaches a debugger when it runs (default is <see langword="false"/>).<br/>
-    /// For debugging the generator itself.
+    /// Gets or sets a value indicating whether debugger attachment is requested. Reserved; currently ignored.
     /// </summary>
     public bool AttachDebugger { get; set; } = false;
 
     /// <summary>
-    /// Gets or sets a value indicating whether the generated code is written to a "Generated" folder
-    /// next to the annotated file instead of being added to the compilation in memory (default is <see langword="false"/>).<br/>
-    /// For inspecting the generated code.
+    /// Gets or sets a value indicating whether source is written to an existing "Generated" folder
+    /// beside the annotated file instead of added to the compilation in memory (default is false).
+    /// If the folder does not exist, source is added in memory. Include disk output in compilation when using this option.
     /// </summary>
     public bool GenerateToFile { get; set; } = false;
 }

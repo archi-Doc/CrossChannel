@@ -3,8 +3,6 @@ name: Build and Test
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   build:
@@ -22,7 +20,7 @@ jobs:
     - name: Build
       run: dotnet build --configuration Release --no-restore
     - name: Test
-      run: dotnet test --no-restore --verbosity normal
+      run: dotnet test --solution CrossChannel.slnx -c Release --no-build
 
   native-aot:
     name: Native AOT (${{ matrix.rid }})

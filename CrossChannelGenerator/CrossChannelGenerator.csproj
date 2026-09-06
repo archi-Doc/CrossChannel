@@ -39,6 +39,8 @@
 
   <ItemGroup>
     <Compile Remove="Generated\*" />
+    <!-- Keep the shared source archive, but omit helpers unused by this generator. -->
+    <Compile Remove="Arc.Visceral/FarmHash.Slim.cs;Arc.Visceral/VisceralDefaultValue.cs;Arc.Visceral/VisceralIdentifier.cs;Arc.Visceral/VisceralSample.cs;Arc.Visceral/VisceralTrie*.cs;Internal/ByteArrayComparer.cs" />
   </ItemGroup>
 
 </Project>

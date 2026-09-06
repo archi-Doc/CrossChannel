@@ -32,9 +32,11 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     /// <summary>
     /// Initializes a new instance of the <see cref="RadioResult{T}"/> struct with an array of results.
     /// </summary>
-    /// <param name="results">The array of results.</param>
+    /// <param name="results">The results. Arrays with two or more elements are retained without copying.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="results"/> is null.</exception>
     public RadioResult(T[] results)
     {
+        ArgumentNullException.ThrowIfNull(results);
         if (results.Length == 0)
         {
             this.result = default!;
@@ -82,8 +84,9 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     /// Creates a <see cref="RadioResult{T}"/> from an array of results.<br/>
     /// An empty array becomes an empty result, and an array with a single element becomes a single result.
     /// </summary>
-    /// <param name="results">The array of results.</param>
+    /// <param name="results">The results. Arrays with two or more elements are retained without copying.</param>
     /// <returns>A <see cref="RadioResult{T}"/> with the specified results.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="results"/> is null.</exception>
     public static RadioResult<T> FromArray(T[] results)
         => new RadioResult<T>(results);
 
@@ -251,6 +254,7 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
         {
             if (this.index >= this.total)
             {
+                this.index = this.total + 1;
                 this.current = default(T);
                 return false;
             }

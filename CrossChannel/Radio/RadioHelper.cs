@@ -58,6 +58,8 @@ internal static class RadioHelper
         where TService : class, IRadioService
         where TKey : notnull
     {
+        ArgumentNullException.ThrowIfNull(instance);
+        ArgumentNullException.ThrowIfNull(key);
         var map = (UnorderedMapWithLock<TKey, object>)twoTypeToMap.GetOrAdd(typeof(TService), typeof(TKey), static (x, y) => new UnorderedMapWithLock<TKey, object>());
 
         using (map.LockObject.EnterScope())
