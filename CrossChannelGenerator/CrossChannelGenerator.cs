@@ -44,14 +44,12 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                         {
                             foreach (var attribute in attributeList.Attributes)
                             {
-                                var name = attribute.Name.ToString();
-                                if (name.EndsWith(CrossChannelGeneratorOptionAttributeMock.StandardName) ||
-                                    name.EndsWith(CrossChannelGeneratorOptionAttributeMock.SimpleName))
+                                var name = context.SemanticModel.GetSymbolInfo(attribute).Symbol?.ContainingType.ToDisplayString();
+                                if (name == CrossChannelGeneratorOptionAttributeMock.FullName)
                                 {// [CrossChannelGeneratorOptionAttribute]
                                     return syntax;
                                 }
-                                else if (name.EndsWith(RadioServiceAttributeMock.StandardName) ||
-                                    name.EndsWith(RadioServiceAttributeMock.SimpleName))
+                                else if (name == RadioServiceAttributeMock.FullName)
                                 {// [RadioServiceInterfaceAttribute]
                                     return syntax;
                                 }
@@ -103,11 +101,12 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
         this.AssemblyName = compilation.AssemblyName ?? string.Empty;
         this.AssemblyId = this.AssemblyName.GetHashCode();
         this.OutputKind = compilation.Options.OutputKind;
+        this.AttachDebugger = false;
+        this.GenerateToFile = false;
+        this.TargetFolder = null;
 
         var body = new CrossChannelBody(context);
-#pragma warning disable RS1024 // Symbols should be compared for equality
-        var processed = new HashSet<INamedTypeSymbol?>();
-#pragma warning restore RS1024 // Symbols should be compared for equality
+        var processed = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
 
         var generatorOptionIsSet = false;
         foreach (var x in source.Types)
@@ -122,10 +121,8 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
             var model = compilation.GetSemanticModel(x.SyntaxTree);
             if (model.GetDeclaredSymbol(x) is INamedTypeSymbol symbol &&
                 symbol.TypeKind == TypeKind.Interface &&
-                !processed.Contains(symbol))
+                processed.Add(symbol))
             {
-                processed.Add(symbol);
-
                 foreach (var y in symbol.GetAttributes())
                 {
                     if (!generatorOptionIsSet &&

@@ -1,4 +1,6 @@
-## **Interface-based**, **fast**, and most advanced Pub/Sub library
+# CrossChannel
+
+A fast, interface-based Pub/Sub library for .NET 10.
 
 ![Nuget](https://img.shields.io/nuget/v/Arc.CrossChannel) ![Build and Test](https://github.com/archi-Doc/CrossChannel/workflows/Build%20and%20Test/badge.svg)
 
@@ -23,14 +25,20 @@
   - [Maximum number of links](#maximum-number-of-links)
   - [Local radio](#local-radio)
   - [Dependency injection](#dependency-injection)
+  - [Direct channels](#direct-channels)
+  - [Field copying](#field-copying)
   - [Native AOT](#native-aot)
 - [Behavior](#behavior)
+- [Generator options](#generator-options)
 - [Diagnostics](#diagnostics)
+- [Build and test](#build-and-test)
 - [Benchmark](#benchmark)
 
 
 
 ## Quick Start
+
+Requires the .NET 10 SDK. The NuGet package includes the source generator; no separate generator package is needed.
 
 Install **CrossChannel** using Package Manager Console.
 
@@ -129,7 +137,9 @@ using (radio.Open<IMessageService>(new MessageService("Local: ")))
 
 ## Performance
 
-Performance is the top priority. This is a benchmark with other Pub/Sub libraries.
+The following historical results compare earlier versions of CrossChannel with other Pub/Sub libraries. They are not measurements of the current implementation; runtime, hardware, and package versions affect the results.
+
+After initialization, `void` delivery and zero/single synchronous results allocate no delivery objects. Successfully completed `Task` responses need no aggregation array, even with multiple receivers. Multiple result values require an owned array; pending asynchronous responses may also require task aggregation. Receiver allocations are separate.
 
 CC: [archi-Doc/CrossChannel](https://github.com/archi-Doc/CrossChannel) (Static Radio)
 
@@ -251,11 +261,15 @@ var empty = radio.Send<ICalcService>().Double(2).IsEmpty; // true
 
 On the receiving side, return `default` to contribute nothing, or use `RadioResult<T>.Single(value)` when the constructor overload would be ambiguous (a `null` reference, or an array type).
 
+`FromArray` and the array constructor retain arrays with two or more elements without copying. Treat those arrays as immutable, especially when using a result as a dictionary key. Equality compares the ordered values. Direct `foreach` uses a struct enumerator; enumeration through `IEnumerable<T>` boxes it.
+
+Receivers should return zero or one value. Synchronous delivery and multi-receiver asynchronous aggregation take only the first value from each receiver. A single asynchronous receiver's task is passed through, including its entire result.
+
 
 
 ### Asynchronous methods
 
-`Task` and `Task<RadioResult<T>>` are supported. The returned task completes once every receiver has completed, and the results are aggregated in the same way as the synchronous version.
+`Task` and `Task<RadioResult<T>>` are supported. When all receiver invocations return normally, the returned task completes once every receiver task has completed.
 
 ```csharp
 [RadioService]
@@ -270,13 +284,15 @@ await radio.Send<IAsyncService>().Save();
 var results = await radio.Send<IAsyncService>().Load();
 ```
 
-Receivers are invoked one after another without awaiting, so their processing overlaps. When there is no subscriber, or exactly one, no task or state machine is allocated by the delivery code.
+Receivers are invoked one after another without awaiting, so their processing overlaps. In the normal zero/single receiver cases, the delivery code allocates no task or state machine. Successfully completed `Task` responses are skipped during aggregation. Faulted and canceled tasks are preserved.
 
 
 
 ### Weak reference
 
-Weak reference is quite useful for WPF program (e.g. view service).
+Weak subscriptions let a receiver be collected without disposing its link. Keep a strong reference while the receiver is needed, for example from its owning WPF view. Collection timing is nondeterministic.
+
+Dead links are removed when encountered during sending, during periodic subscription cleanup, or before a full channel rejects a new subscription. `Count` may include dead weak links until cleanup occurs.
 
 ```csharp
  // Test2: Open a channel which has a weak reference to the instance.
@@ -311,11 +327,13 @@ using (Radio.OpenWithKey<IMessageService, int>(new MessageService("Key: "), 1))
 
 A keyed channel is created on the first subscription and discarded once its last link is closed, so keys which come and go (a connection id, for example) do not accumulate. The key type is part of the lookup: key `1` and key `"1"` address different channels.
 
+Keys must be non-null and keep stable equality/hash codes while registered. A cached keyed broker remains bound to its original channel after that channel is detached. Call `SendWithKey` again to reach a replacement channel, and use `OpenWithKey` for new keyed subscriptions.
+
 
 
 ### Maximum number of links
 
-`MaxLinks` limits how many instances can subscribe to one channel. `Open` returns `null` once the limit is reached.
+`MaxLinks` limits how many instances can subscribe to one channel. `Open` reclaims dead weak links before returning `null` when the limit is reached. A nonpositive limit accepts no subscriptions.
 
 ```csharp
 [RadioService(MaxLinks = 1)]
@@ -346,7 +364,7 @@ using (radio.Open<IMessageService>(new MessageService("Local: ")))
 
 ### Dependency injection
 
-Add `CrossChannel` to the `ServiceCollection`. Every radio service of the process is registered.
+Add `CrossChannel` to the `ServiceCollection`. Services present in `ChannelRegistry` at that time are registered; load assemblies containing additional service interfaces before calling `AddCrossChannel`.
 
 ```csharp
 var collection = new ServiceCollection();
@@ -378,6 +396,18 @@ public interface IManualService : IRadioService
 ```
 
 
+
+### Direct channels
+
+Use `new Channel<TService>()` for a standalone channel independent of `Radio` and `RadioClass`. Subscribe with `Open` and send through `GetBroker()`. `Count` reports registered links; `MaxLinks` comes from the service attribute. Dispose each returned link to unsubscribe; `Close` is equivalent and both are idempotent.
+
+`ChannelRegistry.GetRegistration<TService>()` exposes generated factories and options. `GetEmptyChannel<TService>()` returns the shared channel that accepts no subscriptions. `UnsafeGetLinks()` is for generated code: its shared array is read-only to callers and its count is only an allocation hint.
+
+### Field copying
+
+`GhostCopy.Copy<T>(ref source, ref destination)` shallow-copies instance fields declared by `T` and its base types, including private, readonly, and auto-property backing fields. Reference fields keep referring to the same objects; properties are not invoked and fields declared only by a runtime subtype are not copied. Pass existing non-null instances.
+
+`GhostCopy.CreateDelegate<T>()` returns the same cached delegate used by `Copy<T>`. The JIT path allocates no objects per warmed copy; the Native AOT reflection fallback may box value-type fields.
 
 ### Native AOT
 
@@ -414,13 +444,20 @@ This fallback check still runs on CoreCLR; it does not replace publishing and ex
 
 ## Behavior
 
-- **Registration**: each assembly registers its services from a `[ModuleInitializer]`, so `ChannelRegistry` is already populated before any user code runs. An interface which derives from `IRadioService` but has no `RadioService` attribute is never registered, and using it throws `InvalidOperationException`.
+- **Registration**: generated module initializers register services when their modules initialize. Accessing an unregistered service through `GetChannel`, `Send`, or `GetRegistration` throws `InvalidOperationException`; a failed lookup does not prevent later registration. `TryGetChannelWithKey` returns `false` when no channel exists, including for an unregistered service.
 - **No subscriber**: sending is a no-op and returns an empty `RadioResult<T>` or a completed task.
 - **Order**: results are collected in the internal link order of the channel. Do not rely on a specific order.
-- **Exceptions**: a `void` or `RadioResult<T>` method propagates the exception to the sender immediately, and the remaining receivers are not invoked. A `Task` or `Task<RadioResult<T>>` method returns a faulted task instead, so the exception surfaces when the sender awaits it.
-- **Thread safety**: sending takes no lock; opening and closing links take a per-channel lock. A receiver may therefore be invoked from several threads at once, so make it thread-safe.
+- **Exceptions**: a synchronous receiver exception stops further invocations. `void` and `RadioResult<T>` propagate it immediately; task-returning methods capture it in a faulted task. Tasks started before a synchronous exception are not awaited by the broker. When invocations return tasks normally, aggregation waits for all of them and propagates faults or cancellation.
+- **Thread safety**: sending normally takes no lock; removing dead weak links takes the channel lock. Keyed lookup and subscription changes share a lock for each service/key-type map. Sending is not a snapshot: concurrent subscription changes may affect the current delivery. Disposal does not wait for callbacks already in progress. Receivers may run on multiple sending threads and must synchronize their own state.
 - **Interface inheritance**: a service interface may derive from other interfaces, and their methods are brokered as well.
 - **Nested interfaces**: every type enclosing a service interface must be declared `partial`.
+- **Supported declarations**: use non-generic service interfaces in non-generic enclosing types, with ordinary instance methods and value parameters. Properties, events, generic methods, static abstract members, `ref` returns, and `ref`/`in`/`out` parameters are unsupported. Concrete static helper methods are ignored. Attribute aliases and escaped method names are supported.
+
+## Generator options
+
+Place `[CrossChannelGeneratorOption]` on an interface to configure the project. At most one options attribute takes effect. `GenerateToFile = true` writes source files to an existing `Generated` directory beside the annotated file; otherwise code is added to the compilation in memory. Files written to disk must be included in compilation to use their brokers. Prefer the standard compiler option `EmitCompilerGeneratedFiles` when inspecting output without changing compilation behavior.
+
+`AttachDebugger` is reserved by the current generator and has no effect.
 
 
 
@@ -431,17 +468,44 @@ This fallback check still runs on CoreCLR; it does not replace publishing and ex
 | CCG001 | A type enclosing the service interface is not a partial class/struct. |
 | CCG002 | A type with the `RadioService` attribute does not derive from `IRadioService`. |
 | CCG003 | The return type of a method is not `void`, `Task`, `RadioResult<T>`, or `Task<RadioResult<T>>`. |
+| CCG004 | The service uses an unsupported generic declaration, member, or parameter modifier. |
+
+## Build and test
+
+```sh
+dotnet build CrossChannel.slnx -c Release -warnaserror
+dotnet test --solution CrossChannel.slnx -c Release --no-build
+```
+
+`XUnitTest` covers runtime delivery, subscription lifetimes, concurrency, DI, and field copying. `GeneratorTest` compiles generated code with Roslyn and verifies diagnostics for invalid declarations. `AotTest` separately checks the native executable.
+
+For coverage, install `dotnet-coverage`, build first, and run each test executable:
+
+```sh
+dotnet tool install --global dotnet-coverage
+dotnet-coverage collect -f cobertura -o TestResults/runtime.cobertura.xml dotnet XUnitTest/bin/Release/net10.0/XUnitTest.dll
+dotnet-coverage collect -f cobertura -o TestResults/generator.cobertura.xml dotnet GeneratorTest/bin/Release/net10.0/GeneratorTest.dll
+```
+
+Report runtime and generator coverage separately. Native AOT/reflection fallback coverage is exercised by the smoke test, not by the JIT unit-test coverage report. See [the review report](docs/code-review.md) for measurements and remaining gaps.
 
 
 
 ## Benchmark
 
-Here is a benchmark for each feature.
+Run the current allocation checks and focused benchmarks from the `Benchmark` directory:
+
+```sh
+dotnet run -c Release -- --allocation-check
+dotnet run -c Release -- --filter '*AllocationBenchmark*'
+```
+
+The following table is historical and is retained for reference. Re-run benchmarks on the target runtime and hardware before comparing performance.
 
 - `Radio` is the fastest since it uses static type caching.
 - `RadioClass` uses `ThreadsafeTypeKeyHashtable` which is a bit slower than static type caching, but still fast enough.
 - `Key` features cause slight performance degradation.
-- Opening a channel with weak reference is about 4x slower, but sending messages is not that slow.
+- Weak subscriptions allocate a weak-reference object in addition to their link.
 
 | Method               |       Mean |      Error |     StdDev |   Gen0 | Allocated |
 | -------------------- | ---------: | ---------: | ---------: | -----: | --------: |

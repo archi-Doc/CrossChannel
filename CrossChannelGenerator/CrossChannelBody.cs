@@ -31,6 +31,10 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         id: "CCG003", title: "Method return type", messageFormat: "The return type of the method must be void, Task, RadioResult<T>, Task<RadioResult<T>>",
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
+    public static readonly DiagnosticDescriptor Error_UnsupportedMember = new DiagnosticDescriptor(
+        id: "CCG004", title: "Unsupported service declaration", messageFormat: "Radio services require non-generic interfaces and instance methods with value parameters; properties, events, generic methods, and ref returns are not supported",
+        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
+
     public CrossChannelBody(SourceProductionContext context)
         : base(context)
     {
@@ -108,20 +112,20 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
                         y.GenerateRegister(ssb);
                     }
 
-                    foreach (var y in x.Value.Where(y => y.Kind == VisceralObjectKind.Class))
+                    foreach (var y in x.Value.Where(y => y.Kind != VisceralObjectKind.Interface))
                     {
                         ssb.AppendLine($"{y.FullName}.{InitializerName}();");
                     }
                 }
 
                 ssb.AppendLine();
-                foreach (var y in x.Value.Where(y => y.Kind != VisceralObjectKind.Class))
+                foreach (var y in x.Value.Where(y => y.Kind == VisceralObjectKind.Interface))
                 {
                     y.GenerateObject(ssb);
                 }
             }
 
-            foreach (var y in x.Value.Where(y => y.Kind == VisceralObjectKind.Class))
+            foreach (var y in x.Value.Where(y => y.Kind != VisceralObjectKind.Interface))
             {
                 y.GenerateObject(ssb);
             }

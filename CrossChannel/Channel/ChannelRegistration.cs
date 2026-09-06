@@ -43,7 +43,7 @@ public class ChannelRegistration
     /// Sending to its broker is a no-op, which is used when a keyed channel is not found.
     /// </summary>
     public Channel EmptyChannel
-        => this.emptyChannel ?? this.PrepareEmptyChannel();
+        => Volatile.Read(ref this.emptyChannel) ?? this.PrepareEmptyChannel();
 
     private Channel? emptyChannel;
 

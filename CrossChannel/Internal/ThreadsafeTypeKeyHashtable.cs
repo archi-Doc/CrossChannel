@@ -1,4 +1,4 @@
-﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
+// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 #pragma warning disable SA1214 // Readonly fields should appear before non-readonly fields
 #pragma warning disable SA1401 // Fields should be private
@@ -41,12 +41,6 @@ internal sealed class ThreadsafeTypeKeyHashtable<TValue>
         this.buckets = new Entry[tableSize];
     }
 
-    public bool TryAdd(Type key, TValue value)
-        => this.TryAdd(key, _ => value);
-
-    public bool TryAdd(Type key, Func<Type, TValue> valueFactory)
-        => this.TryAddInternal(key, valueFactory, out TValue _);
-
     public TValue GetOrAdd(Type key, Func<Type, TValue> valueFactory)
     {
         if (this.TryGetValue(key, out var v))
@@ -61,8 +55,8 @@ internal sealed class ThreadsafeTypeKeyHashtable<TValue>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetValue(Type key, [MaybeNullWhen(false)] out TValue value)
     {
-        var table = this.buckets;
-        var entry = table[key.GetHashCode() & (table.Length - 1)];
+        var table = Volatile.Read(ref this.buckets);
+        var entry = Volatile.Read(ref table[key.GetHashCode() & (table.Length - 1)]);
 
         while (entry is not null)
         {
@@ -72,7 +66,7 @@ internal sealed class ThreadsafeTypeKeyHashtable<TValue>
                 return true;
             }
 
-            entry = entry.Next;
+            entry = Volatile.Read(ref entry.Next);
         }
 
         value = default;

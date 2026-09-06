@@ -33,7 +33,7 @@ public partial class CrossChannelObject
 
                     // The broker methods are deliberately not 'async': the common cases (no receiver,
                     // a single receiver) complete without allocating an async state machine.
-                    using (ssb.ScopeBrace($"{x.ReturnName} {x.DeclaringName}.{x.SimpleName}({x.GetParameters()})"))
+                    using (ssb.ScopeBrace($"{x.ReturnName} {x.DeclaringName}.@{x.SimpleName}({x.GetParameters()})"))
                     {
                         if (x.ReturnType == ServiceMethod.Type.Void)
                         {
@@ -61,12 +61,10 @@ public partial class CrossChannelObject
     {// void
         this.Generate_GetList(ssb);
         ssb.AppendLine("if (countHint == 0) return;");
-        ssb.AppendLine("var count = 0;");
 
         using (this.Generate_ForEach(ssb))
         {
-            ssb.AppendLine($"instance.{method.SimpleName}({method.GetParameterNames()});");
-            ssb.AppendLine("if (++count >= countHint) break;");
+            ssb.AppendLine($"(({method.DeclaringName})instance).@{method.SimpleName}({method.GetParameterNames()});");
         }
     }
 
@@ -75,19 +73,19 @@ public partial class CrossChannelObject
         this.Generate_GetList(ssb);
         ssb.AppendLine("if (countHint == 0) return default;");
         ssb.AppendLine($"{method.ResultName} firstResult = default!;");
-        ssb.AppendLine($"{method.ResultName}[]? results = default;");
+        ssb.AppendLine($"var results = System.Array.Empty<{method.ResultName}>();");
         ssb.AppendLine("var count = 0;");
 
         using (this.Generate_ForEach(ssb))
         {
-            ssb.AppendLine($"if (!instance.{method.SimpleName}({method.GetParameterNames()}).TryGetSingleResult(out var r)) continue;");
+            ssb.AppendLine($"if (!(({method.DeclaringName})instance).@{method.SimpleName}({method.GetParameterNames()}).TryGetSingleResult(out var r)) continue;");
             this.Generate_AddValue(ssb, method.ResultName, "results", "firstResult", "r");
         }
 
         // 0 receivers: empty, 1 receiver: a single result (no array is allocated).
         ssb.AppendLine("if (count == 0) return default;");
         ssb.AppendLine("else if (count == 1) return new(firstResult);");
-        ssb.AppendLine("else if (count != countHint) System.Array.Resize(ref results, count);");
+        ssb.AppendLine("else if (count != results!.Length) System.Array.Resize(ref results, count);");
         ssb.AppendLine("return new(results!);");
     }
 
@@ -107,7 +105,8 @@ public partial class CrossChannelObject
         {
             using (this.Generate_ForEach(ssb))
             {
-                ssb.AppendLine($"var t = instance.{method.SimpleName}({method.GetParameterNames()});");
+                ssb.AppendLine($"var t = (({method.DeclaringName})instance).@{method.SimpleName}({method.GetParameterNames()});");
+                ssb.AppendLine("if (t.IsCompletedSuccessfully) continue;");
                 this.Generate_AddValue(ssb, taskName, "tasks", "firstTask", "t");
             }
         }
@@ -138,7 +137,7 @@ public partial class CrossChannelObject
         {
             using (this.Generate_ForEach(ssb))
             {
-                ssb.AppendLine($"var t = instance.{method.SimpleName}({method.GetParameterNames()});");
+                ssb.AppendLine($"var t = (({method.DeclaringName})instance).@{method.SimpleName}({method.GetParameterNames()});");
                 this.Generate_AddValue(ssb, taskName, "tasks", "firstTask", "t");
             }
         }
@@ -158,14 +157,13 @@ public partial class CrossChannelObject
         => ssb.AppendLine("var (array, countHint) = this.channel.UnsafeGetLinks();");
 
     /// <summary>
-    /// Enumerates the links of the channel.<br/>
-    /// The loop body is expected to increment 'count' and to break once it reaches 'countHint',
-    /// so that the unused part of the array is not scanned.
+    /// Enumerates the captured array without treating the concurrent count hint as a limit.
     /// </summary>
     private ScopingStringBuilder.IScope Generate_ForEach(ScopingStringBuilder ssb)
     {
-        var scope = ssb.ScopeBrace("foreach (var x in array)");
-        ssb.AppendLine("if (x is null) continue;");
+        var scope = ssb.ScopeBrace("for (var linkIndex = 0; linkIndex < array.Length; linkIndex++)");
+        ssb.AppendLine("var x = System.Threading.Volatile.Read(ref array[linkIndex]);");
+        ssb.AppendLine("if (x is null || !x.IsValid) continue;");
         ssb.AppendLine("if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }");
 
         return scope;
@@ -183,15 +181,20 @@ public partial class CrossChannelObject
 
         using (ssb.ScopeBrace("else"))
         {
-            using (ssb.ScopeBrace($"if ({arrayName} is null)"))
+            using (ssb.ScopeBrace($"if ({arrayName} is null || {arrayName}.Length == 0)"))
             {
-                ssb.AppendLine($"{arrayName} = new {elementName}[countHint];");
+                ssb.AppendLine($"{arrayName} = System.GC.AllocateUninitializedArray<{elementName}>(System.Math.Max(2, countHint));");
                 ssb.AppendLine($"{arrayName}[0] = {firstName}!;");
+            }
+
+            using (ssb.ScopeBrace($"else if (count == {arrayName}.Length)"))
+            {
+                ssb.AppendLine($"System.Array.Resize(ref {arrayName}, System.Math.Min(array.Length, {arrayName}.Length * 2));");
             }
 
             ssb.AppendLine($"{arrayName}[count] = {value};");
         }
 
-        ssb.AppendLine("if (++count >= countHint) break;");
+        ssb.AppendLine("count++;");
     }
 }

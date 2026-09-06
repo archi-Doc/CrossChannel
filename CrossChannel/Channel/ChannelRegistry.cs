@@ -1,13 +1,13 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace CrossChannel;
 
 /// <summary>
 /// Holds the <see cref="ChannelRegistration"/> of every radio service in the process.<br/>
-/// Each assembly registers its services from a generated module initializer, so the registry is
-/// already populated by the time user code runs.
+/// Generated module initializers add services as their modules initialize.
 /// </summary>
 public static class ChannelRegistry
 {
@@ -16,13 +16,26 @@ public static class ChannelRegistry
     private static class RegistrationCache<TService>
         where TService : class, IRadioService
     {
-        // A field initializer (instead of a static constructor) keeps the type 'beforefieldinit',
-        // so the JIT can elide the class initialization check on the hot path.
-        public static readonly ChannelRegistration Registration = GetRegistration(typeof(TService));
+        private static ChannelRegistration? registration;
+
+        public static ChannelRegistration Registration
+        {
+            get
+            {
+                var value = Volatile.Read(ref registration);
+                if (value is null)
+                {
+                    value = GetRegistration(typeof(TService));
+                    Volatile.Write(ref registration, value);
+                }
+
+                return value;
+            }
+        }
     }
 
     /// <summary>
-    /// Gets every registration in the process.
+    /// Gets a snapshot of the registrations currently in the process.
     /// </summary>
     public static ICollection<ChannelRegistration> Registrations => TypeToRegistration.Values;
 

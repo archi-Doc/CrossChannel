@@ -50,7 +50,6 @@ internal sealed class FastIntQueue
         }
 
         var removed = this.array[this.head];
-        this.array[this.head] = default!;
         this.size--;
 
         this.head++;

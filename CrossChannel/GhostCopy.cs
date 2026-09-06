@@ -8,11 +8,12 @@ using FastExpressionCompiler;
 namespace CrossChannel;
 
 /// <summary>
-/// Provides functionality to copy all fields (including private/readonly/backing fields) from one class instance to another.
+/// Shallow-copies instance fields declared by the specified class and its base types, including private and readonly fields.
 /// </summary>
 /// <remarks>
 /// When the runtime supports dynamic code (JIT), the copy is performed by a delegate compiled once per type.<br/>
 /// Under Native AOT, where no code can be emitted, an equivalent reflection-based delegate is used instead.
+/// Reference fields remain shared. Fields declared only by a runtime subtype are not copied.
 /// </remarks>
 public static class GhostCopy
 {

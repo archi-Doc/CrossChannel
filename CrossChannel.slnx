@@ -6,6 +6,7 @@
   <Project Path="Benchmark/Benchmark.csproj" />
   <Project Path="CrossChannel/CrossChannel.csproj" />
   <Project Path="CrossChannelGenerator/CrossChannelGenerator.csproj" />
+  <Project Path="GeneratorTest/GeneratorTest.csproj" />
   <Project Path="Playground/Playground.csproj" />
   <Project Path="QuickStart/QuickStart.csproj" />
   <Project Path="XUnitTest/XUnitTest.csproj" />

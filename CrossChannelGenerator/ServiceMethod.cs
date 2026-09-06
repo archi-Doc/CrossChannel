@@ -27,6 +27,22 @@ public class ServiceMethod
 
     public static ServiceMethod? Create(CrossChannelObject obj, CrossChannelObject method)
     {
+        method.GetRawInformation(out var rawSymbol, out _, out _);
+        if (rawSymbol is IMethodSymbol symbol)
+        {
+            if (symbol.IsStatic && !symbol.IsAbstract)
+            {
+                return null;
+            }
+
+            if (symbol.IsGenericMethod || symbol.IsStatic || symbol.ReturnsByRef || symbol.ReturnsByRefReadonly ||
+                symbol.Parameters.Any(x => x.RefKind != RefKind.None))
+            {
+                method.Body.ReportDiagnostic(CrossChannelBody.Error_UnsupportedMember, method.Location);
+                return null;
+            }
+        }
+
         var returnObject = method.Method_ReturnObject;
         if (returnObject == null)
         {

@@ -77,7 +77,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         /// <summary>
         /// Gets a value indicating whether the link is still registered in the channel.
         /// </summary>
-        public bool IsValid => this.Index != -1;
+        public bool IsValid => Volatile.Read(ref this.Index) != -1;
 
         /// <summary>
         /// Tries to get the linked instance. Fails when the instance was held by a weak reference and has been collected.
@@ -115,7 +115,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
 
     private sealed class FastList
     {
-        private const int InitialCapacity = 4;
+        private const int InitialCapacity = 1;
         private const int MinShrinkStart = 8;
 
         private Link?[] values = default!;
@@ -127,18 +127,15 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
             this.Initialize();
         }
 
-        public int Count => this.count; // It may lead to inconsistent results between 'count' and 'values'.
+        public int Count => Volatile.Read(ref this.count); // It may lead to inconsistent results between 'count' and 'values'.
 
         public Link?[] GetValues() => this.values; // no lock, safe for iterate
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public (Link?[] Array, int CountHint) GetValuesAndCountHint()
         {// no lock, safe for iterate
-            // 'values' is read before 'count' (both with acquire semantics) so that CountHint can never
-            // under-report the number of links held by the returned array: 'count' is sampled after the
-            // array, so it already accounts for every link that array holds. Enumerators rely on this in
-            // order to stop as soon as CountHint links have been processed, instead of scanning the whole
-            // array. Over-reporting is harmless, since the enumerator simply runs out of links first.
+            // The array and count are separate observations. Concurrent mutation can make the hint
+            // either too small or too large; it is only an initial allocation size for brokers.
             var values = Volatile.Read(ref this.values);
             var countHint = Volatile.Read(ref this.count);
             return (values, countHint);
@@ -150,8 +147,8 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
             {
                 var index = this.freeIndex.Dequeue();
                 value.Index = index;
-                this.values[index] = value;
-                this.count++;
+                Volatile.Write(ref this.values[index], value);
+                Volatile.Write(ref this.count, this.count + 1);
                 return index;
             }
             else
@@ -167,7 +164,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
                 var index = this.freeIndex.Dequeue();
                 value.Index = index;
                 newValues[index] = value;
-                this.count++;
+                Volatile.Write(ref this.count, this.count + 1);
                 Volatile.Write(ref this.values, newValues);
                 return index;
             }
@@ -182,10 +179,10 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
                 return;
             }
 
-            v = default(Link);
+            Volatile.Write(ref v, null);
             this.freeIndex.Enqueue(index);
-            value.Index = -1;
-            this.count--;
+            Volatile.Write(ref value.Index, -1);
+            Volatile.Write(ref this.count, this.count - 1);
         }
 
         /// <summary>
@@ -318,14 +315,19 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
     /// <returns>A link to the opened channel, or null if the channel is full.</returns>
     internal Link? OpenInternal(TService instance, bool weakReference)
     {// using (this.LockObject.EnterScope()) is required
+        ArgumentNullException.ThrowIfNull(instance);
         if (this.list.Count >= this.MaxLinks)
-        {// Invalid link
-            return default; // new(this);
+        {
+            this.RemoveDeadLinks();
+            if (this.list.Count >= this.MaxLinks)
+            {// Invalid link
+                return default; // new(this);
+            }
         }
 
         var link = new Link(this, instance, weakReference);
         this.list.Add(link);
-        if (this.trimCount++ >= TrimThreshold)
+        if (++this.trimCount >= TrimThreshold)
         {
             this.trimCount = 0;
             this.TrimInternal();
@@ -335,17 +337,17 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
     }
 
     /// <summary>
-    /// Gets the number of links in the channel.
+    /// Gets the current number of registered links, including weak links not yet cleaned up.
     /// </summary>
     public int Count => this.list.Count;
 
     /// <summary>
     /// Gets the internal link array together with a hint of the number of links it holds.<br/>
     /// Intended for the generated broker code: the array is shared, must be treated as read-only,
-    /// and contains null entries for the unused slots. CountHint never under-reports the number of
-    /// links held by the returned array, but links may be added or removed concurrently.
+    /// and contains null entries for unused slots. CountHint is an allocation hint, not a snapshot
+    /// or an iteration limit. Links may be added or removed concurrently.
     /// </summary>
-    /// <returns>The link array, and the number of links it holds.</returns>
+    /// <returns>The shared link array and an approximate link count.</returns>
     [EditorBrowsable(EditorBrowsableState.Never)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public (Link?[] Links, int CountHint) UnsafeGetLinks() => this.list.GetValuesAndCountHint();
@@ -374,21 +376,24 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
 
     private void TrimInternal()
     {// using (this.LockObject.EnterScope()) is required
-        if (this.checkReferenceCount++ >= WeakReferenceCheckThreshold)
+        if (++this.checkReferenceCount >= WeakReferenceCheckThreshold)
         {
             this.checkReferenceCount = 0;
 
-            var array = this.list.GetValues();
-            for (var i = 0; i < array.Length; i++)
-            {
-                if (array[i] is { } link
-                    && !link.TryGetInstance(out _))
-                {
-                    this.list.Remove(link);
-                }
-            }
+            this.RemoveDeadLinks();
         }
 
         this.list.TryTrim();
+    }
+
+    private void RemoveDeadLinks()
+    {
+        foreach (var link in this.list.GetValues())
+        {
+            if (link is not null && !link.TryGetInstance(out _))
+            {
+                this.list.Remove(link);
+            }
+        }
     }
 }

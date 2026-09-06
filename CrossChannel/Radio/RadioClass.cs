@@ -1,4 +1,4 @@
-﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
+// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 #pragma warning disable SA1210 // Using directives should be ordered alphabetically by namespace
 
@@ -51,7 +51,6 @@ public class RadioClass
     /// <param name="key">The key.</param>
     /// <param name="channel">When this method returns, contains the channel associated with the specified service type and key, if the key is found; otherwise, the default value.</param>
     /// <returns><c>true</c> if the channel for the specified service type and key is found; otherwise, <c>false</c>.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public bool TryGetChannelWithKey<TService, TKey>(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
         where TService : class, IRadioService
         where TKey : notnull
@@ -65,7 +64,6 @@ public class RadioClass
     /// <param name="key">The key.</param>
     /// <param name="channel">When this method returns, contains the channel associated with the specified service type and key, if the key is found; otherwise, the default value.</param>
     /// <returns><c>true</c> if the channel for the specified service type and key is found; otherwise, <c>false</c>.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public bool TryGetChannelWithKey<TKey>(Type serviceType, TKey key, [MaybeNullWhen(false)] out Channel channel)
         where TKey : notnull
         => RadioHelper.TryGetChannelWithKey(this.twoTypeToMap, serviceType, key, out channel);
@@ -77,7 +75,7 @@ public class RadioClass
     /// <param name="instance">The instance to register.</param>
     /// <param name="weakReference">
     /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
-    /// automatically once the instance is garbage collected.
+    /// during sending or subscription cleanup after the instance is collected.
     /// </param>
     /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full (see <see cref="RadioServiceAttribute.MaxLinks"/>).</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
@@ -97,7 +95,7 @@ public class RadioClass
     /// <param name="key">The key.</param>
     /// <param name="weakReference">
     /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
-    /// automatically once the instance is garbage collected.
+    /// during sending or subscription cleanup after the instance is collected.
     /// </param>
     /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full (see <see cref="RadioServiceAttribute.MaxLinks"/>).</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>

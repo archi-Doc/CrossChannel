@@ -1,4 +1,4 @@
-﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
+// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 #pragma warning disable SA1214 // Readonly fields should appear before non-readonly fields
 #pragma warning disable SA1401 // Fields should be private
@@ -43,12 +43,6 @@ internal sealed class ThreadsafeTwoTypeKeyHashtable<TValue>
         this.buckets = new Entry[tableSize];
     }
 
-    public bool TryAdd(Type key, Type key2, TValue value)
-        => this.TryAdd(key, key2, (_, _) => value);
-
-    public bool TryAdd(Type key, Type key2, Func<Type, Type, TValue> valueFactory)
-        => this.TryAddInternal(key, key2, valueFactory, out TValue _);
-
     public TValue GetOrAdd(Type key, Type key2, Func<Type, Type, TValue> valueFactory)
     {
         if (this.TryGetValue(key, key2, out var v))
@@ -63,8 +57,8 @@ internal sealed class ThreadsafeTwoTypeKeyHashtable<TValue>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetValue(Type key, Type key2, [MaybeNullWhen(false)] out TValue value)
     {
-        var table = this.buckets;
-        var entry = table[CombineHash(key, key2) & (table.Length - 1)];
+        var table = Volatile.Read(ref this.buckets);
+        var entry = Volatile.Read(ref table[CombineHash(key, key2) & (table.Length - 1)]);
 
         while (entry is not null)
         {
@@ -74,7 +68,7 @@ internal sealed class ThreadsafeTwoTypeKeyHashtable<TValue>
                 return true;
             }
 
-            entry = entry.Next;
+            entry = Volatile.Read(ref entry.Next);
         }
 
         value = default;
