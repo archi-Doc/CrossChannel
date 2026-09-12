@@ -15,7 +15,7 @@ public class GeneratorTests
     private static readonly MetadataReference[] References = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
         .Split(System.IO.Path.PathSeparator)
         .Append(typeof(Radio).Assembly.Location)
-        .Where(x => !string.Equals(x, typeof(CrossChannelGeneratorV2).Assembly.Location, StringComparison.OrdinalIgnoreCase))
+        .Where(x => !string.Equals(x, typeof(CrossChannelGenerator).Assembly.Location, StringComparison.OrdinalIgnoreCase))
         .Distinct()
         .Select(x => MetadataReference.CreateFromFile(x))
         .ToArray();
@@ -116,7 +116,7 @@ public class GeneratorTests
         var compilation = CSharpCompilation.Create("GeneratorInput",
             new[] { CSharpSyntaxTree.ParseText(source) }, References,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CrossChannelGeneratorV2().AsSourceGenerator());
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(new CrossChannelGenerator().AsSourceGenerator());
         driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var output, out var diagnostics);
         return (output, diagnostics.ToArray(), driver.GetRunResult().GeneratedTrees.ToArray());
     }

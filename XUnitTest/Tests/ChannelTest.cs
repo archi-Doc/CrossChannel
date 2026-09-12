@@ -12,27 +12,27 @@ public class ChannelTest
     [Fact]
     public void GetChannelReturnsTheSameInstance()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         var channel = radio.GetChannel<ITestService>();
         ReferenceEquals(channel, radio.GetChannel<ITestService>()).IsTrue();
         ReferenceEquals(channel, radio.GetChannel(typeof(ITestService))).IsTrue();
 
-        // Each RadioClass instance owns its own channel.
-        ReferenceEquals(channel, new RadioClass().GetChannel<ITestService>()).IsFalse();
+        // Each LocalRadio instance owns its own channel.
+        ReferenceEquals(channel, new LocalRadio().GetChannel<ITestService>()).IsFalse();
     }
 
     [Fact]
     public void GetChannelWithUnregisteredType()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         Assert.Throws<InvalidOperationException>(() => radio.GetChannel(typeof(IDisposable)));
     }
 
     [Fact]
     public void BrokerIsStableAndBoundToTheChannel()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var channel = radio.GetChannel<ITestService>();
 
         ReferenceEquals(channel.GetBroker(), radio.Send<ITestService>()).IsTrue();
@@ -42,17 +42,17 @@ public class ChannelTest
     [Fact]
     public void LinkLifetime()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var channel = radio.GetChannel<ITestService>();
         channel.Count.Is(0);
 
         var link = channel.Open(new TestService());
         link.IsNotNull();
-        link!.IsValid.IsTrue();
+        link!.IsOpen.IsTrue();
         channel.Count.Is(1);
 
         link.Dispose();
-        link.IsValid.IsFalse();
+        link.IsOpen.IsFalse();
         channel.Count.Is(0);
 
         // Dispose/Close must be idempotent.
@@ -65,7 +65,7 @@ public class ChannelTest
     [Fact]
     public void CloseAndReopen()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var channel = radio.GetChannel<ITestService>();
 
         for (var i = 0; i < 5; i++)
@@ -81,7 +81,7 @@ public class ChannelTest
     [Fact]
     public void OpenAndCloseManyTimes()
     {// The internal list is trimmed while links are opened; the count must stay consistent.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var channel = radio.GetChannel<ITestService>();
 
         for (var round = 0; round < 4; round++)
@@ -103,7 +103,7 @@ public class ChannelTest
     [Fact]
     public void MaxLinks()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var channel = radio.GetChannel<ISingleService>();
         channel.MaxLinks.Is(1);
 
@@ -119,20 +119,20 @@ public class ChannelTest
     [Fact]
     public void EmptyChannel()
     {
-        var channel = ChannelRegistry.GetEmptyChannel<ITestService>();
+        var channel = RadioServiceRegistry.GetEmptyChannel<ITestService>();
         channel.MaxLinks.Is(0);
         channel.Open(new TestService()).IsNull();
         channel.Count.Is(0);
         channel.GetBroker().Double(1).IsEmpty.IsTrue();
 
         // The empty channel is cached.
-        ReferenceEquals(channel, ChannelRegistry.GetEmptyChannel<ITestService>()).IsTrue();
+        ReferenceEquals(channel, RadioServiceRegistry.GetEmptyChannel<ITestService>()).IsTrue();
     }
 
     [Fact]
     public void WeakReferenceLink()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var channel = radio.GetChannel<ITestService>();
 
         OpenTemporaryInstance(channel);
@@ -160,7 +160,7 @@ public class ChannelTest
     [Fact]
     public void StrongReferenceLinkKeepsTheInstanceAlive()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var channel = radio.GetChannel<ITestService>();
 
         void OpenTemporaryInstance() => channel.Open(new TestService());
@@ -174,17 +174,17 @@ public class ChannelTest
     }
 
     [Fact]
-    public void UnsafeGetLinks()
+    public void DangerousGetLinks()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var channel = radio.GetChannel<ITestService>();
 
-        var (array, countHint) = channel.UnsafeGetLinks();
+        var (array, countHint) = channel.DangerousGetLinks();
         countHint.Is(0);
         array.Count(x => x is not null).Is(0);
 
         var links = Enumerable.Range(0, 10).Select(_ => channel.Open(new TestService())!).ToArray();
-        (array, countHint) = channel.UnsafeGetLinks();
+        (array, countHint) = channel.DangerousGetLinks();
         countHint.Is(10);
 
         // CountHint must never exceed the number of links held by the array.
@@ -192,7 +192,7 @@ public class ChannelTest
 
         links[3].Dispose();
         links[7].Dispose();
-        (array, countHint) = channel.UnsafeGetLinks();
+        (array, countHint) = channel.DangerousGetLinks();
         countHint.Is(8);
         array.Count(x => x is not null).Is(countHint);
 

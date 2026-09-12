@@ -15,7 +15,7 @@ namespace CrossChannel;
 /// Under Native AOT, where no code can be emitted, an equivalent reflection-based delegate is used instead.
 /// Reference fields remain shared. Fields declared only by a runtime subtype are not copied.
 /// </remarks>
-public static class GhostCopy
+public static class FieldCopier
 {
     /// <summary>
     /// The members of the copied type which must survive trimming.
@@ -28,22 +28,22 @@ public static class GhostCopy
     /// Delegate for copying fields from one instance to another.
     /// </summary>
     /// <typeparam name="T">The class type to copy.</typeparam>
-    /// <param name="from">The source instance.</param>
-    /// <param name="to">The destination instance.</param>
-    public delegate void CopyDelegate<T>(ref T from, ref T to)
+    /// <param name="source">The source instance.</param>
+    /// <param name="destination">The destination instance.</param>
+    public delegate void CopyDelegate<T>(ref T source, ref T destination)
         where T : class;
 
     /// <summary>
     /// Copies all fields from one instance to another, including private/readonly/backing fields.
     /// </summary>
     /// <typeparam name="T">The class type to copy.</typeparam>
-    /// <param name="from">The source instance.</param>
-    /// <param name="to">The destination instance.</param>
+    /// <param name="source">The source instance.</param>
+    /// <param name="destination">The destination instance.</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void Copy<[DynamicallyAccessedMembers(CopiedMembers)] T>(ref T from, ref T to)
+    public static void Copy<[DynamicallyAccessedMembers(CopiedMembers)] T>(ref T source, ref T destination)
         where T : class
     {
-        CopyDelegateCache<T>.CopyDelegate(ref from, ref to);
+        CopyDelegateCache<T>.CopyDelegate(ref source, ref destination);
     }
 
     /// <summary>
@@ -52,7 +52,7 @@ public static class GhostCopy
     /// <remarks>The delegate is cached per type and shared with <see cref="Copy{T}(ref T, ref T)"/>.</remarks>
     /// <typeparam name="T">The class type to copy.</typeparam>
     /// <returns>A delegate that copies fields from one instance to another.</returns>
-    public static CopyDelegate<T> CreateDelegate<[DynamicallyAccessedMembers(CopiedMembers)] T>()
+    public static CopyDelegate<T> GetDelegate<[DynamicallyAccessedMembers(CopiedMembers)] T>()
         where T : class
         => CopyDelegateCache<T>.CopyDelegate;
 
@@ -63,7 +63,7 @@ public static class GhostCopy
         var fields = GetFields(typeof(T));
         if (fields.Length == 0)
         {
-            return static (ref T from, ref T to) => { };
+            return static (ref T source, ref T destination) => { };
         }
 
         return RuntimeFeature.IsDynamicCodeSupported ?
@@ -96,8 +96,8 @@ public static class GhostCopy
         where T : class
     {
         var byref = typeof(T).MakeByRefType();
-        var source = Expression.Parameter(byref, "from");
-        var destination = Expression.Parameter(byref, "to");
+        var source = Expression.Parameter(byref, "source");
+        var destination = Expression.Parameter(byref, "destination");
         var expressionList = new List<Expression>(fields.Length);
 
         foreach (var field in fields)
@@ -124,11 +124,11 @@ public static class GhostCopy
         where T : class
     {
         // FieldInfo.SetValue writes init-only instance fields as well, so no special case is needed here.
-        return (ref T from, ref T to) =>
+        return (ref T source, ref T destination) =>
         {
             foreach (var field in fields)
             {
-                field.SetValue(to, field.GetValue(from));
+                field.SetValue(destination, field.GetValue(source));
             }
         };
     }
@@ -147,7 +147,7 @@ public static class GhostCopy
     private static class CompiledDelegateCache
     {
         // This cache is only referenced by the dynamic-code path and is removed by Native AOT.
-        public static readonly MethodInfo SetReadonlyMethod = typeof(GhostCopy).GetMethod(nameof(SetReadonlyField), BindingFlags.Static | BindingFlags.NonPublic)!;
+        public static readonly MethodInfo SetReadonlyMethod = typeof(FieldCopier).GetMethod(nameof(SetReadonlyField), BindingFlags.Static | BindingFlags.NonPublic)!;
         public static readonly ConcurrentDictionary<Type, MethodInfo> SetReadonlyMethods = new();
     }
 }

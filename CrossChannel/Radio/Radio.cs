@@ -19,7 +19,7 @@ namespace CrossChannel;
 /// <summary>
 /// The process-wide radio: instances subscribe to a service interface with <see cref="Open{TService}(TService, bool)"/>
 /// and messages are sent through <see cref="Send{TService}"/>.<br/>
-/// Use <see cref="RadioClass"/> when several independent radios are needed.
+/// Use <see cref="LocalRadio"/> when several independent radios are needed.
 /// </summary>
 public static class Radio
 {// CrossChannel by Romeo
@@ -38,7 +38,7 @@ public static class Radio
 
         private static Channel<TService> Initialize()
         {
-            var value = (Channel<TService>)typeToChannel.GetOrAdd(typeof(TService), static _ => ChannelRegistry.GetRegistration<TService>().CreateChannel());
+            var value = (Channel<TService>)typeToChannel.GetOrAdd(typeof(TService), static _ => RadioServiceRegistry.GetRegistration<TService>().ChannelFactory());
             Volatile.Write(ref channel, value);
             return value;
         }
@@ -67,7 +67,7 @@ public static class Radio
     /// <returns>The channel for the specified service type.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public static Channel GetChannel(Type serviceType)
-        => typeToChannel.GetOrAdd(serviceType, static a => ChannelRegistry.GetRegistration(a).CreateChannel());
+        => typeToChannel.GetOrAdd(serviceType, static a => RadioServiceRegistry.GetRegistration(a).ChannelFactory());
 
     /// <summary>
     /// Tries to get the channel for the specified service type and key.
@@ -99,17 +99,17 @@ public static class Radio
     /// </summary>
     /// <typeparam name="TService">The type of the service.</typeparam>
     /// <param name="instance">The instance to register.</param>
-    /// <param name="weakReference">
+    /// <param name="useWeakReference">
     /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
     /// during sending or subscription cleanup after the instance is collected.
     /// </param>
     /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full (see <see cref="RadioServiceAttribute.MaxLinks"/>).</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
-    public static Channel<TService>.Link? Open<TService>(TService instance, bool weakReference = false)
+    public static Channel<TService>.Link? Open<TService>(TService instance, bool useWeakReference = false)
         where TService : class, IRadioService
     {
         var channel = ChannelCache<TService>.Channel;
-        return channel.Open(instance, weakReference);
+        return channel.Open(instance, useWeakReference);
     }
 
     /// <summary>
@@ -119,17 +119,17 @@ public static class Radio
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <param name="instance">The instance to register.</param>
     /// <param name="key">The key.</param>
-    /// <param name="weakReference">
+    /// <param name="useWeakReference">
     /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
     /// during sending or subscription cleanup after the instance is collected.
     /// </param>
     /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full (see <see cref="RadioServiceAttribute.MaxLinks"/>).</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
-    public static Channel<TService>.Link? OpenWithKey<TService, TKey>(TService instance, TKey key, bool weakReference = false)
+    public static Channel<TService>.Link? OpenWithKey<TService, TKey>(TService instance, TKey key, bool useWeakReference = false)
         where TService : class, IRadioService
         where TKey : notnull
     {
-        return RadioHelper.OpenWithKey<TService, TKey>(twoTypeToMap, key, instance, weakReference);
+        return RadioHelper.OpenWithKey<TService, TKey>(twoTypeToMap, key, instance, useWeakReference);
     }
 
     /// <summary>
@@ -165,7 +165,7 @@ public static class Radio
         }
         else
         {
-            return ChannelRegistry.GetEmptyChannel<TService>().Broker;
+            return RadioServiceRegistry.GetEmptyChannel<TService>().Broker;
         }
     }
 }

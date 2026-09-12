@@ -57,14 +57,14 @@ public class H2HBenchmark
     private ISimpleService simpleService7 = new SimpleService();
     private ISimpleService simpleService8 = new SimpleService();
 
-    private readonly RadioClass radio;
+    private readonly LocalRadio radio;
 
     public H2HBenchmark()
     {
         var sc = new ServiceCollection();
         sc.AddMessagePipe();
         this.Provider = sc.BuildServiceProvider();
-        this.radio = new RadioClass();
+        this.radio = new LocalRadio();
     }
 
     [GlobalSetup]

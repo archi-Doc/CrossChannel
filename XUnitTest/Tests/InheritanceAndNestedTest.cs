@@ -81,7 +81,7 @@ public class InheritanceAndNestedTest
     [Fact]
     public async Task InheritedMethodsAreBrokered()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service = new DerivedRadioService();
 
         using (radio.Open<IDerivedRadioService>(service))
@@ -107,7 +107,7 @@ public class InheritanceAndNestedTest
     [Fact]
     public void TheBaseServiceHasItsOwnChannel()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var derived = new DerivedRadioService();
         var @base = new DerivedRadioService();
 
@@ -127,7 +127,7 @@ public class InheritanceAndNestedTest
     [Fact]
     public async Task NestedService()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         radio.Send<NestedHost.Inner.INestedService>().Triple(1).IsEmpty.IsTrue();
 
@@ -142,7 +142,7 @@ public class InheritanceAndNestedTest
     [Fact]
     public void GlobalNamespaceService()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service = new ConductorPresentationService();
 
         using (radio.Open<IConductorPresentationService>(service))
@@ -155,13 +155,13 @@ public class InheritanceAndNestedTest
     [Fact]
     public async Task ResultOfAnArbitraryType()
     {// RadioResult<Task<int>>: T is not restricted.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<ITestInterface>(new TestInterface()))
         {
             var result = radio.Send<ITestInterface>().Triple(3);
             result.Count.Is(1);
-            result.TryGetSingleResult(out var task).IsTrue();
+            result.TryGetFirst(out var task).IsTrue();
             (await task!).Is(9);
         }
     }
@@ -169,7 +169,7 @@ public class InheritanceAndNestedTest
     [Fact]
     public async Task UnsignedResult()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<ITestInterface>(new TestInterface()))
         {

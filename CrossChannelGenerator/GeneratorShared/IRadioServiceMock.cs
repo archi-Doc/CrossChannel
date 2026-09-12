@@ -2,7 +2,7 @@
 
 namespace CrossChannel;
 
-public sealed class IRadioService
+public sealed class IRadioServiceMock
 {
     public static readonly string StandardName = "IRadioService";
     public static readonly string FullName = "CrossChannel." + StandardName;

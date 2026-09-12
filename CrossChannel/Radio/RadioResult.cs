@@ -77,7 +77,7 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     /// </summary>
     /// <param name="value">The single result.</param>
     /// <returns>A <see cref="RadioResult{T}"/> with a single result.</returns>
-    public static RadioResult<T> Single(T value)
+    public static RadioResult<T> FromValue(T value)
         => new RadioResult<T>(value);
 
     /// <summary>
@@ -91,13 +91,13 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
         => new RadioResult<T>(results);
 
     /// <summary>
-    /// Tries to get the result. This is the usual way to read the response of a single receiver.<br/>
-    /// When several receivers responded, the first result is returned; enumerate the
+    /// Tries to get the first result. This is the usual way to read the response of a single receiver.<br/>
+    /// When several receivers responded, only the first result is returned; enumerate the
     /// <see cref="RadioResult{T}"/> to read all of them.
     /// </summary>
-    /// <param name="result">When this method returns, contains the result, if there is at least one.</param>
+    /// <param name="result">When this method returns, contains the first result, if there is at least one.</param>
     /// <returns><see langword="true"/> if a result was retrieved; <see langword="false"/> if the <see cref="RadioResult{T}"/> is empty.</returns>
-    public bool TryGetSingleResult([MaybeNullWhen(false)] out T result)
+    public bool TryGetFirst([MaybeNullWhen(false)] out T result)
     {
         if (this.resultArray is null)
         {

@@ -28,7 +28,7 @@ public static class RadioTask
     /// <typeparam name="T">The type of the result.</typeparam>
     /// <returns>A completed task holding an empty <see cref="RadioResult{T}"/>.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Task<RadioResult<T>> EmptyResult<T>()
+    public static Task<RadioResult<T>> GetEmptyResultTask<T>()
         => EmptyCache<T>.Task;
 
     /// <summary>
@@ -38,7 +38,7 @@ public static class RadioTask
     /// <typeparam name="T">The type of the result.</typeparam>
     /// <param name="resultsTask">A task holding the result of every receiver.</param>
     /// <returns>The aggregated <see cref="RadioResult{T}"/>.</returns>
-    public static async Task<RadioResult<T>> Aggregate<T>(Task<RadioResult<T>[]> resultsTask)
+    public static async Task<RadioResult<T>> AggregateAsync<T>(Task<RadioResult<T>[]> resultsTask)
     {
         var radioResults = await resultsTask.ConfigureAwait(false);
 
@@ -61,7 +61,7 @@ public static class RadioTask
         var index = 0;
         foreach (var x in radioResults)
         {
-            if (x.TryGetSingleResult(out var result))
+            if (x.TryGetFirst(out var result))
             {
                 if (results is null)
                 {

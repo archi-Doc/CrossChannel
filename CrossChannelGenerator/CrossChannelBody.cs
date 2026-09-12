@@ -23,7 +23,7 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         id: "CCG001", title: "Partial class/struct", messageFormat: "Parent type '{0}' is not a partial class/struct",
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
-    public static readonly DiagnosticDescriptor Error_IRadioService = new DiagnosticDescriptor(
+    public static readonly DiagnosticDescriptor Error_NotRadioService = new DiagnosticDescriptor(
         id: "CCG002", title: "IRadioService", messageFormat: "Types with the RadioService attribute must derive from IRadioService",
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
 

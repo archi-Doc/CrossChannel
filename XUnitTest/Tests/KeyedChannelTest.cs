@@ -12,7 +12,7 @@ public class KeyedChannelTest
     [Fact]
     public void TryGetChannelWithKey()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         radio.TryGetChannelWithKey<ITestService, int>(1, out _).IsFalse();
         radio.TryGetChannelWithKey(typeof(ITestService), 1, out _).IsFalse();
 
@@ -36,7 +36,7 @@ public class KeyedChannelTest
     [Fact]
     public void ReuseKeyedChannelInstance()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var link = radio.OpenWithKey((ITestService)new TestService(), 1);
         link.IsNotNull();
 
@@ -53,7 +53,7 @@ public class KeyedChannelTest
     [Fact]
     public void SendWithKey()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         radio.SendWithKey<ITestService, int>(1).Double(1).IsEmpty.IsTrue(); // Empty channel.
 
         using (radio.OpenWithKey((ITestService)new TestService(), 1))

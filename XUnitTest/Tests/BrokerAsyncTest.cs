@@ -120,7 +120,7 @@ public class AsyncService : IAsyncService
             return default;
         }
 
-        return RadioResult<string?>.Single(this.value == -1 ? null : this.value.ToString());
+        return RadioResult<string?>.FromValue(this.value == -1 ? null : this.value.ToString());
     }
 }
 
@@ -129,7 +129,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task NoReceiver()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         var task = radio.Send<IAsyncService>().Increment(1);
         task.IsCompletedSuccessfully.IsTrue(); // The fast path must not create a pending task.
@@ -143,7 +143,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task SingleReceiver()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service = new AsyncService(3);
 
         using (radio.Open<IAsyncService>(service))
@@ -159,7 +159,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task SingleReceiverIsNotAwaitedByTheBroker()
     {// With a single receiver the task is passed through, so it must stay pending until the receiver completes.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service = new AsyncService(8, AsyncService.Behavior.Gate);
 
         using (radio.Open<IAsyncService>(service))
@@ -178,7 +178,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task MultipleReceivers()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var services = Enumerable.Range(1, 5).Select(x => new AsyncService(x)).ToArray();
         var links = services.Select(x => radio.Open<IAsyncService>(x)!).ToArray();
 
@@ -200,7 +200,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task AllReceiversRunConcurrently()
     {// Every receiver must be invoked before the aggregated task is awaited.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var services = Enumerable.Range(1, 4).Select(x => new AsyncService(x, AsyncService.Behavior.Gate)).ToArray();
         var links = services.Select(x => radio.Open<IAsyncService>(x)!).ToArray();
 
@@ -223,7 +223,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task EmptyResultsAreSkipped()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IAsyncService>(new AsyncService(0)))
         using (radio.Open<IAsyncService>(new AsyncService(1)))
@@ -239,7 +239,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task AllResultsAreEmpty()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IAsyncService>(new AsyncService(0)))
         using (radio.Open<IAsyncService>(new AsyncService(0)))
@@ -251,7 +251,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task SingleValidResultAmongMany()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IAsyncService>(new AsyncService(0)))
         using (radio.Open<IAsyncService>(new AsyncService(0)))
@@ -266,7 +266,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task NullableResult()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IAsyncService>(new AsyncService(-1))) // Returns a single null.
         using (radio.Open<IAsyncService>(new AsyncService(0))) // Returns an empty result.
@@ -281,7 +281,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task SynchronousExceptionIsCapturedInTheTask()
     {// The broker methods are not 'async', so a synchronous exception must not escape before the task is awaited.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IAsyncService>(new AsyncService(1, AsyncService.Behavior.ThrowSynchronously)))
         {
@@ -298,7 +298,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task AsynchronousExceptionIsPropagated()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IAsyncService>(new AsyncService(1, AsyncService.Behavior.ThrowAsynchronously)))
         {
@@ -310,7 +310,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task ExceptionAmongMultipleReceivers()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service1 = new AsyncService(1);
         var service2 = new AsyncService(2, AsyncService.Behavior.ThrowAsynchronously);
         var service3 = new AsyncService(3);
@@ -332,7 +332,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task SynchronousExceptionAmongMultipleReceivers()
     {// The tasks already started are abandoned, but the exception must be observed via the returned task.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IAsyncService>(new AsyncService(1)))
         using (radio.Open<IAsyncService>(new AsyncService(2, AsyncService.Behavior.ThrowSynchronously)))
@@ -345,7 +345,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task ManyReceivers()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var links = Enumerable.Range(1, 50).Select(x => radio.Open<IAsyncService>(new AsyncService(x))!).ToArray();
 
         (await radio.Send<IAsyncService>().Value()).SequenceEqual(Enumerable.Range(1, 50)).IsTrue();
@@ -366,7 +366,7 @@ public class BrokerAsyncTest
     [Fact]
     public async Task DeadWeakReferencesAreSkipped()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service = new AsyncService(4);
 
         void OpenTemporaryInstances()

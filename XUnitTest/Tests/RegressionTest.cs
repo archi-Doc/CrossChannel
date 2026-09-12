@@ -48,7 +48,7 @@ public class RegressionService : IRegressionService
         return new(2);
     }
 
-    public RadioResult<int[]> Arrays() => RadioResult<int[]>.Single([3, 4]);
+    public RadioResult<int[]> Arrays() => RadioResult<int[]>.FromValue([3, 4]);
 
     public Task<RadioResult<int[]>> ArraysAsync() => Task.FromResult(this.Arrays());
 
@@ -82,11 +82,11 @@ public class RegressionTest
     [Fact]
     public void MissingRegistrationCanRecover()
     {
-        Assert.Throws<InvalidOperationException>(() => ChannelRegistry.GetRegistration<ILateService>());
+        Assert.Throws<InvalidOperationException>(() => RadioServiceRegistry.GetRegistration<ILateService>());
         Assert.Throws<InvalidOperationException>(() => Radio.GetChannel<ILateService>());
         Assert.Throws<InvalidOperationException>(() => Radio.Send<ILateService>());
-        Assert.True(ChannelRegistry.Register(new(typeof(ILateService), _ => new LateService(), () => new Channel<ILateService>(), 1, false)));
-        Assert.Same(ChannelRegistry.GetRegistration(typeof(ILateService)), ChannelRegistry.GetRegistration<ILateService>());
+        Assert.True(RadioServiceRegistry.Register(new(typeof(ILateService), _ => new LateService(), () => new Channel<ILateService>(), 1, false)));
+        Assert.Same(RadioServiceRegistry.GetRegistration(typeof(ILateService)), RadioServiceRegistry.GetRegistration<ILateService>());
         Assert.Same(Radio.GetChannel(typeof(ILateService)), Radio.GetChannel<ILateService>());
     }
 
@@ -95,7 +95,7 @@ public class RegressionTest
     [InlineData(true)]
     public void FullChannelReclaimsDeadWeakLink(bool keyed)
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         using var dead = OpenTemporary(radio, keyed);
         GC.Collect();
         GC.WaitForPendingFinalizers();
@@ -105,7 +105,7 @@ public class RegressionTest
         var receiver = new SingleLinkCounterService();
         using var link = keyed ? radio.OpenWithKey<ISingleLinkCounterService, int>(receiver, 7) : radio.Open<ISingleLinkCounterService>(receiver);
         Assert.NotNull(link);
-        Assert.False(dead.IsValid);
+        Assert.False(dead.IsOpen);
         var broker = keyed ? radio.SendWithKey<ISingleLinkCounterService, int>(7) : radio.Send<ISingleLinkCounterService>();
         broker.Increment();
         Assert.Equal(1, receiver.Count);
@@ -114,7 +114,7 @@ public class RegressionTest
     [Fact]
     public void NullSubscriptionDoesNotCreateKeyedChannel()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         Assert.Throws<ArgumentNullException>(() => radio.Open<IRegressionService>(null!));
         Assert.Equal(0, radio.GetChannel<IRegressionService>().Count);
         Assert.Throws<ArgumentNullException>(() => radio.OpenWithKey<IRegressionService, int>(null!, 3));
@@ -251,8 +251,8 @@ public class RegressionTest
     [Fact]
     public async Task TypeCachesSurviveConcurrentGrowth()
     {
-        var radio = new RadioClass();
-        var registrations = ChannelRegistry.Registrations.ToArray();
+        var radio = new LocalRadio();
+        var registrations = RadioServiceRegistry.Registrations.ToArray();
         await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => Task.Run(
             () =>
             {
@@ -271,7 +271,7 @@ public class RegressionTest
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
-        var task = RadioTask.Aggregate(Task.FromCanceled<RadioResult<int>[]>(cts.Token));
+        var task = RadioTask.AggregateAsync(Task.FromCanceled<RadioResult<int>[]>(cts.Token));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
         Assert.True(task.IsCanceled);
     }
@@ -281,7 +281,7 @@ public class RegressionTest
     {
         var channel = new Channel<IRegressionService>();
         var links = Enumerable.Range(0, 64).Select(_ => channel.Open(new RegressionService())!).ToArray();
-        var oldLength = channel.UnsafeGetLinks().Links.Length;
+        var oldLength = channel.DangerousGetLinks().Links.Length;
         foreach (var link in links.Take(62))
         {
             link.Dispose();
@@ -292,7 +292,7 @@ public class RegressionTest
             using var temporary = channel.Open(new RegressionService());
         }
 
-        Assert.True(channel.UnsafeGetLinks().Links.Length < oldLength);
+        Assert.True(channel.DangerousGetLinks().Links.Length < oldLength);
         Assert.Equal(2, channel.GetBroker().Value().Count);
         links[62].Dispose();
         links[63].Dispose();
@@ -316,7 +316,7 @@ public class RegressionTest
             using var temporary = channel.Open(receiver);
         }
 
-        Assert.False(dead.IsValid);
+        Assert.False(dead.IsOpen);
         Assert.Equal(0, channel.Count);
     }
 
@@ -325,7 +325,7 @@ public class RegressionTest
         => channel.Open(new RegressionService(), true)!;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static Channel<ISingleLinkCounterService>.Link OpenTemporary(RadioClass radio, bool keyed)
+    private static Channel<ISingleLinkCounterService>.Link OpenTemporary(LocalRadio radio, bool keyed)
         => (keyed ? radio.OpenWithKey<ISingleLinkCounterService, int>(new SingleLinkCounterService(), 7, true) : radio.Open<ISingleLinkCounterService>(new SingleLinkCounterService(), true))!;
 }
 

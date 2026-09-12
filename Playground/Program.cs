@@ -100,7 +100,7 @@ class Program
         var tc = new CopyTestClass();
         tc.Prepare();
 
-        var copyDelegate = GhostCopy.CreateDelegate<CopyTestClass>();
+        var copyDelegate = FieldCopier.GetDelegate<CopyTestClass>();
         var tc2 = new CopyTestClass();
         copyDelegate(ref tc, ref tc2);
 
@@ -119,8 +119,8 @@ class Program
         var sender = provider.GetRequiredService<ISender<ITestService>>();
         sender.Send().Test1("Broker");
 
-        var radio = provider.GetRequiredService<RadioClass>();
-        radio.Send<ITestService>().Test1("RadioClass");
+        var radio = provider.GetRequiredService<LocalRadio>();
+        radio.Send<ITestService>().Test1("LocalRadio");
 
         link?.Close();
         testService.Test1("Closed");// No service

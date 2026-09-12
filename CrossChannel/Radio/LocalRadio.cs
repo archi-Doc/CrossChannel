@@ -12,15 +12,15 @@ namespace CrossChannel;
 /// A radio with its own set of channels, so that several independent radios can coexist in one process.<br/>
 /// Use the static <see cref="Radio"/> instead when a single, process-wide radio is enough (it is slightly faster).
 /// </summary>
-public class RadioClass
+public class LocalRadio
 {
     private readonly ThreadsafeTypeKeyHashtable<Channel> typeToChannel = new();
     private readonly ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap = new(); // UnorderedMapWithLock<TKey, object> // object is Channel<TService>
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RadioClass"/> class.
+    /// Initializes a new instance of the <see cref="LocalRadio"/> class.
     /// </summary>
-    public RadioClass()
+    public LocalRadio()
     {
     }
 
@@ -32,7 +32,7 @@ public class RadioClass
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public Channel<TService> GetChannel<TService>()
         where TService : class, IRadioService
-        => (Channel<TService>)this.typeToChannel.GetOrAdd(typeof(TService), static _ => ChannelRegistry.GetRegistration<TService>().CreateChannel());
+        => (Channel<TService>)this.typeToChannel.GetOrAdd(typeof(TService), static _ => RadioServiceRegistry.GetRegistration<TService>().ChannelFactory());
 
     /// <summary>
     /// Gets the channel for the specified service type.
@@ -41,7 +41,7 @@ public class RadioClass
     /// <returns>The channel for the specified service type.</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public Channel GetChannel(Type serviceType)
-        => this.typeToChannel.GetOrAdd(serviceType, static a => ChannelRegistry.GetRegistration(a).CreateChannel());
+        => this.typeToChannel.GetOrAdd(serviceType, static a => RadioServiceRegistry.GetRegistration(a).ChannelFactory());
 
     /// <summary>
     /// Tries to get the channel for the specified service type and key.
@@ -73,17 +73,17 @@ public class RadioClass
     /// </summary>
     /// <typeparam name="TService">The type of the service.</typeparam>
     /// <param name="instance">The instance to register.</param>
-    /// <param name="weakReference">
+    /// <param name="useWeakReference">
     /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
     /// during sending or subscription cleanup after the instance is collected.
     /// </param>
     /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full (see <see cref="RadioServiceAttribute.MaxLinks"/>).</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
-    public Channel<TService>.Link? Open<TService>(TService instance, bool weakReference = false)
+    public Channel<TService>.Link? Open<TService>(TService instance, bool useWeakReference = false)
         where TService : class, IRadioService
     {
         var channel = this.GetChannel<TService>();
-        return channel.Open(instance, weakReference);
+        return channel.Open(instance, useWeakReference);
     }
 
     /// <summary>
@@ -93,17 +93,17 @@ public class RadioClass
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <param name="instance">The instance to register.</param>
     /// <param name="key">The key.</param>
-    /// <param name="weakReference">
+    /// <param name="useWeakReference">
     /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
     /// during sending or subscription cleanup after the instance is collected.
     /// </param>
     /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full (see <see cref="RadioServiceAttribute.MaxLinks"/>).</returns>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
-    public Channel<TService>.Link? OpenWithKey<TService, TKey>(TService instance, TKey key, bool weakReference = false)
+    public Channel<TService>.Link? OpenWithKey<TService, TKey>(TService instance, TKey key, bool useWeakReference = false)
         where TService : class, IRadioService
         where TKey : notnull
     {
-        return RadioHelper.OpenWithKey<TService, TKey>(this.twoTypeToMap, key, instance, weakReference);
+        return RadioHelper.OpenWithKey<TService, TKey>(this.twoTypeToMap, key, instance, useWeakReference);
     }
 
     /// <summary>
@@ -138,7 +138,7 @@ public class RadioClass
         }
         else
         {
-            return ChannelRegistry.GetEmptyChannel<TService>().Broker;
+            return RadioServiceRegistry.GetEmptyChannel<TService>().Broker;
         }
     }
 }

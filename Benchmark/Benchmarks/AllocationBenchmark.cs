@@ -61,7 +61,7 @@ public class AllocationBenchmark
     public RadioResult<int> Result() => this.broker.Value();
 
     [Benchmark]
-    public Task<RadioResult<int>> SparseAggregate() => RadioTask.Aggregate(this.sparseResults);
+    public Task<RadioResult<int>> SparseAggregate() => RadioTask.AggregateAsync(this.sparseResults);
 
     public static void CheckAllocations()
     {

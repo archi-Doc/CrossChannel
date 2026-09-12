@@ -6,19 +6,19 @@ using System.Threading;
 namespace CrossChannel;
 
 /// <summary>
-/// Holds the <see cref="ChannelRegistration"/> of every radio service in the process.<br/>
+/// Holds the <see cref="RadioServiceRegistration"/> of every radio service in the process.<br/>
 /// Generated module initializers add services as their modules initialize.
 /// </summary>
-public static class ChannelRegistry
+public static class RadioServiceRegistry
 {
-    private static readonly ConcurrentDictionary<Type, ChannelRegistration> TypeToRegistration = new();
+    private static readonly ConcurrentDictionary<Type, RadioServiceRegistration> TypeToRegistration = new();
 
     private static class RegistrationCache<TService>
         where TService : class, IRadioService
     {
-        private static ChannelRegistration? registration;
+        private static RadioServiceRegistration? registration;
 
-        public static ChannelRegistration Registration
+        public static RadioServiceRegistration Registration
         {
             get
             {
@@ -37,14 +37,14 @@ public static class ChannelRegistry
     /// <summary>
     /// Gets a snapshot of the registrations currently in the process.
     /// </summary>
-    public static ICollection<ChannelRegistration> Registrations => TypeToRegistration.Values;
+    public static ICollection<RadioServiceRegistration> Registrations => TypeToRegistration.Values;
 
     /// <summary>
     /// Registers a radio service. Called by the generated module initializer.
     /// </summary>
     /// <param name="registration">The registration to add.</param>
     /// <returns><see langword="true"/> if it was added; <see langword="false"/> if the service type is already registered.</returns>
-    public static bool Register(ChannelRegistration registration)
+    public static bool Register(RadioServiceRegistration registration)
     {
         return TypeToRegistration.TryAdd(registration.ServiceType, registration);
     }
@@ -56,7 +56,7 @@ public static class ChannelRegistry
     /// <returns>The registration.</returns>
     /// <exception cref="InvalidOperationException">The service type is not registered.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ChannelRegistration GetRegistration<TService>()
+    public static RadioServiceRegistration GetRegistration<TService>()
         where TService : class, IRadioService
     {
         return RegistrationCache<TService>.Registration;
@@ -68,7 +68,7 @@ public static class ChannelRegistry
     /// <param name="serviceType">The type of the service.</param>
     /// <returns>The registration.</returns>
     /// <exception cref="InvalidOperationException">The service type is not registered.</exception>
-    public static ChannelRegistration GetRegistration(Type serviceType)
+    public static RadioServiceRegistration GetRegistration(Type serviceType)
     {
         if (TypeToRegistration.TryGetValue(serviceType, out var registration))
         {

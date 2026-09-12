@@ -40,7 +40,7 @@ public class AggregateTest
     [Fact]
     public void Sync()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         radio.Send<IAggregateService>().Get().IsEmpty.IsTrue();
 
         using (radio.Open<IAggregateService>(new AggregateService(1)))
@@ -55,7 +55,7 @@ public class AggregateTest
     [Fact]
     public async Task Async()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         (await radio.Send<IAggregateService>().GetAsync()).IsEmpty.IsTrue();
 
         using (radio.Open<IAggregateService>(new AggregateService(1)))

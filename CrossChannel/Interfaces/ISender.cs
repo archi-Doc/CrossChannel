@@ -4,8 +4,8 @@ namespace CrossChannel;
 
 /// <summary>
 /// Provides the sending (publishing) side of a radio service, so that a class can send messages
-/// without depending on <see cref="Radio"/> or <see cref="RadioClass"/> directly.<br/>
-/// Registered in dependency injection by <see cref="ServiceCollectionExtensions.AddCrossChannel"/>.
+/// without depending on <see cref="Radio"/> or <see cref="LocalRadio"/> directly.<br/>
+/// Registered in dependency injection by <see cref="CrossChannelServiceCollectionExtensions.AddCrossChannel"/>.
 /// </summary>
 /// <typeparam name="TService">The type of the service.</typeparam>
 public interface ISender<TService>
@@ -49,15 +49,15 @@ internal sealed class StaticRadioSender<TService> : ISender<TService>
 }
 
 /// <summary>
-/// An <see cref="ISender{TService}"/> which sends through a <see cref="RadioClass"/> instance.
+/// An <see cref="ISender{TService}"/> which sends through a <see cref="LocalRadio"/> instance.
 /// </summary>
 /// <typeparam name="TService">The type of the service.</typeparam>
-internal sealed class RadioClassSender<TService> : ISender<TService>
+internal sealed class LocalRadioSender<TService> : ISender<TService>
     where TService : class, IRadioService
 {
-    private readonly RadioClass radio;
+    private readonly LocalRadio radio;
 
-    public RadioClassSender(RadioClass radio)
+    public LocalRadioSender(LocalRadio radio)
     {
         this.radio = radio;
     }

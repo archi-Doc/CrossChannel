@@ -4,8 +4,8 @@ namespace CrossChannel;
 
 /// <summary>
 /// Provides the subscribing side of a radio service, so that a class can subscribe without
-/// depending on <see cref="Radio"/> or <see cref="RadioClass"/> directly.<br/>
-/// Registered in dependency injection by <see cref="ServiceCollectionExtensions.AddCrossChannel"/>.
+/// depending on <see cref="Radio"/> or <see cref="LocalRadio"/> directly.<br/>
+/// Registered in dependency injection by <see cref="CrossChannelServiceCollectionExtensions.AddCrossChannel"/>.
 /// </summary>
 /// <typeparam name="TService">The type of the service.</typeparam>
 public interface IChannel<TService>
@@ -15,11 +15,11 @@ public interface IChannel<TService>
     /// Subscribes the specified instance to the channel.
     /// </summary>
     /// <param name="instance">The instance which receives the messages.</param>
-    /// <param name="weakReference">
+    /// <param name="useWeakReference">
     /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
     /// during sending or subscription cleanup after the instance is collected.
     /// </param>
     /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="instance"/> is null.</exception>
-    Channel<TService>.Link? Open(TService instance, bool weakReference = false);
+    Channel<TService>.Link? Open(TService instance, bool useWeakReference = false);
 }

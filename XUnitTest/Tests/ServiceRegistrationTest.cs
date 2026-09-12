@@ -16,7 +16,7 @@ public class ServiceRegistrationTest
         var services = new ServiceCollection();
         services.AddCrossChannel();
 
-        foreach (var x in ChannelRegistry.Registrations)
+        foreach (var x in RadioServiceRegistry.Registrations)
         {
             var channelType = typeof(IChannel<>).MakeGenericType(x.ServiceType);
             services.Count(y => y.ServiceType == channelType).Is(1);
@@ -53,7 +53,7 @@ public class ServiceRegistrationTest
         services.AddCrossChannel();
         var provider = services.BuildServiceProvider();
 
-        var radio = provider.GetRequiredService<RadioClass>();
+        var radio = provider.GetRequiredService<LocalRadio>();
         var channel = provider.GetRequiredService<IChannel<IVoidService>>();
         var sender = provider.GetRequiredService<ISender<IVoidService>>();
 
@@ -76,7 +76,7 @@ public class ServiceRegistrationTest
         services.AddCrossChannel();
         var provider = services.BuildServiceProvider();
 
-        var radio = provider.GetRequiredService<RadioClass>();
+        var radio = provider.GetRequiredService<LocalRadio>();
         var sender = provider.GetRequiredService<ISender<ITestService>>();
 
         // An unknown key must return the broker of the empty channel.
@@ -100,7 +100,7 @@ public class ServiceRegistrationTest
         services.AddCrossChannel();
         var provider = services.BuildServiceProvider();
 
-        ReferenceEquals(provider.GetRequiredService<RadioClass>(), provider.GetRequiredService<RadioClass>()).IsTrue();
+        ReferenceEquals(provider.GetRequiredService<LocalRadio>(), provider.GetRequiredService<LocalRadio>()).IsTrue();
         ReferenceEquals(provider.GetRequiredService<ISender<ITestService>>(), provider.GetRequiredService<ISender<ITestService>>()).IsTrue();
         ReferenceEquals(provider.GetRequiredService<IChannel<ITestService>>(), provider.GetRequiredService<IChannel<ITestService>>()).IsTrue();
     }
@@ -112,8 +112,8 @@ public class ServiceRegistrationTest
         services.AddCrossChannel(false);
         var provider = services.BuildServiceProvider();
 
-        // RadioClass is not registered when the static Radio is used.
-        provider.GetService<RadioClass>().IsNull();
+        // LocalRadio is not registered when the static Radio is used.
+        provider.GetService<LocalRadio>().IsNull();
 
         var channel = provider.GetRequiredService<IChannel<ITestService>>();
         ReferenceEquals(channel, Radio.GetChannel<ITestService>()).IsTrue();
