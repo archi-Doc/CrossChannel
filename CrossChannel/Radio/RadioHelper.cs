@@ -54,7 +54,7 @@ internal static class RadioHelper
         }
     }
 
-    public static Channel<TService>.Link? OpenWithKey<TService, TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, TKey key, TService instance, bool weakReference)
+    public static Channel<TService>.Link? OpenWithKey<TService, TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, TKey key, TService instance, bool useWeakReference)
         where TService : class, IRadioService
         where TKey : notnull
     {
@@ -76,7 +76,7 @@ internal static class RadioHelper
                 (channel.NodeIndex, _) = map.Add(key, channel);
             }
 
-            var link = channel.OpenInternal(instance, weakReference);
+            var link = channel.OpenInternal(instance, useWeakReference);
             if (link is null &&
                 channel.NodeIndex != -1 &&
                 channel.Count == 0)

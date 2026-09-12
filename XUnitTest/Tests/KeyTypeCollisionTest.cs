@@ -48,7 +48,7 @@ public class KeyTypeCollisionTest
     [Fact]
     public void ManyKeyTypesOnOneService()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         // Every key type gets its own map, even when several of them share a bucket.
         Open<K01>(radio, 1);
@@ -72,7 +72,7 @@ public class KeyTypeCollisionTest
     [Fact]
     public void SameServiceDifferentKeyTypes()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using var intLink = radio.OpenWithKey((ITestService)new TestService(), 1);
         using var stringLink = radio.OpenWithKey((ITestService)new TestService(), "1");
@@ -88,7 +88,7 @@ public class KeyTypeCollisionTest
         ReferenceEquals(a, b).IsFalse();
     }
 
-    private static void Open<TKey>(RadioClass radio, int value)
+    private static void Open<TKey>(LocalRadio radio, int value)
         where TKey : notnull, new()
     {
         var key = new TKey();

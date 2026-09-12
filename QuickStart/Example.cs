@@ -97,7 +97,7 @@ internal static class Example
         Radio.Send<IMessageService>().Message("message");
 
         // Test 4: You can create a local radio class.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         using (radio.Open<IMessageService>(new MessageService("Local: ")))
         {
             // Send a message. The result is "Local: message"

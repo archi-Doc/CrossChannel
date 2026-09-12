@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace CrossChannel.Generator;
 
 [Generator]
-public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformation
+public class CrossChannelGenerator : IIncrementalGenerator, IGeneratorInformation
 {
     public bool AttachDebugger { get; private set; }
 
@@ -45,12 +45,12 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                             foreach (var attribute in attributeList.Attributes)
                             {
                                 var name = context.SemanticModel.GetSymbolInfo(attribute).Symbol?.ContainingType.ToDisplayString();
-                                if (name == CrossChannelGeneratorOptionAttributeMock.FullName)
-                                {// [CrossChannelGeneratorOptionAttribute]
+                                if (name == CrossChannelGeneratorOptionsAttributeMock.FullName)
+                                {// [CrossChannelGeneratorOptionsAttribute]
                                     return syntax;
                                 }
                                 else if (name == RadioServiceAttributeMock.FullName)
-                                {// [RadioServiceInterfaceAttribute]
+                                {// [RadioServiceAttribute]
                                     return syntax;
                                 }
                             }
@@ -61,7 +61,7 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                             foreach (var baseType in syntax.BaseList.Types)
                             {
                                 var name = baseType.ToString();
-                                if (name.EndsWith(IRadioService.StandardName))
+                                if (name.EndsWith(IRadioServiceMock.StandardName))
                                 {
                                     return syntax;
                                 }
@@ -80,13 +80,13 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
     {
         var compilation = source.Compilation;
 
-        var generatorOptionAttributeSymbol = compilation.GetTypeByMetadataName(CrossChannelGeneratorOptionAttributeMock.FullName);
+        var generatorOptionAttributeSymbol = compilation.GetTypeByMetadataName(CrossChannelGeneratorOptionsAttributeMock.FullName);
         if (generatorOptionAttributeSymbol == null)
         {
             return;
         }
 
-        var iRadioService = compilation.GetTypeByMetadataName(IRadioService.FullName);
+        var iRadioService = compilation.GetTypeByMetadataName(IRadioServiceMock.FullName);
         if (iRadioService == null)
         {
             return;
@@ -127,10 +127,10 @@ public class CrossChannelGeneratorV2 : IIncrementalGenerator, IGeneratorInformat
                 {
                     if (!generatorOptionIsSet &&
                         SymbolEqualityComparer.Default.Equals(y.AttributeClass, generatorOptionAttributeSymbol))
-                    {// [CrossChannelGeneratorOption]
+                    {// [CrossChannelGeneratorOptions]
                         generatorOptionIsSet = true;
-                        var attribute = new VisceralAttribute(CrossChannelGeneratorOptionAttributeMock.FullName, y);
-                        var generatorOption = CrossChannelGeneratorOptionAttributeMock.FromArray(attribute.ConstructorArguments, attribute.NamedArguments);
+                        var attribute = new VisceralAttribute(CrossChannelGeneratorOptionsAttributeMock.FullName, y);
+                        var generatorOption = CrossChannelGeneratorOptionsAttributeMock.FromArray(attribute.ConstructorArguments, attribute.NamedArguments);
 
                         this.AttachDebugger = generatorOption.AttachDebugger;
                         this.GenerateToFile = generatorOption.GenerateToFile;

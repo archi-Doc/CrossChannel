@@ -16,7 +16,7 @@ public class RadioResultTest
         var empty = default(RadioResult<int>);
         empty.IsEmpty.IsTrue();
         empty.Count.Is(0);
-        empty.TryGetSingleResult(out _).IsFalse();
+        empty.TryGetFirst(out _).IsFalse();
         empty.ToArray().Length.Is(0);
         empty.ToString().Is("[]");
         (empty == RadioResult<int>.Empty).IsTrue();
@@ -28,7 +28,7 @@ public class RadioResultTest
         var single = new RadioResult<int>(5);
         single.IsEmpty.IsFalse();
         single.Count.Is(1);
-        single.TryGetSingleResult(out var r).IsTrue();
+        single.TryGetFirst(out var r).IsTrue();
         r.Is(5);
         single.SequenceEqual([5,]).IsTrue();
         single.ToString().Is("[5]");
@@ -74,11 +74,11 @@ public class RadioResultTest
     [Fact]
     public void NullResult()
     {
-        var result = RadioResult<string?>.Single(null);
+        var result = RadioResult<string?>.FromValue(null);
         result.Count.Is(1);
         result.GetHashCode().Is(0);
         result.ToString().Is("[]");
-        result.TryGetSingleResult(out var r).IsTrue();
+        result.TryGetFirst(out var r).IsTrue();
         r.IsNull();
 
         var array = RadioResult<string?>.FromArray([null, "a",]);

@@ -11,7 +11,7 @@ namespace XUnitTest;
 public class DependencyInjectionTest
 {
     [Fact]
-    public void RadioClass()
+    public void LocalRadio()
     {
         var services = new ServiceCollection();
         services.AddCrossChannel();

@@ -40,28 +40,28 @@ public class CopyTestClass
 }
 
 [Config(typeof(BenchmarkConfig))]
-public class GhostCopyBenchmark
+public class FieldCopierBenchmark
 {
     private CopyTestClass tc = new();
     private CopyTestClass tc2 = new();
 
-    public GhostCopyBenchmark()
+    public FieldCopierBenchmark()
     {
         this.tc.Prepare();
         var t = new CopyTestClass();
-        GhostCopy.Copy(ref this.tc, ref t);
+        FieldCopier.Copy(ref this.tc, ref t);
     }
 
     [Benchmark]
-    public GhostCopy.CopyDelegate<CopyTestClass> CreateDelegate()
+    public FieldCopier.CopyDelegate<CopyTestClass> GetDelegate()
     {
-        return GhostCopy.CreateDelegate<CopyTestClass>();
+        return FieldCopier.GetDelegate<CopyTestClass>();
     }
 
     [Benchmark]
     public CopyTestClass Copy()
     {
-        GhostCopy.Copy<CopyTestClass>(ref this.tc, ref this.tc2);
+        FieldCopier.Copy<CopyTestClass>(ref this.tc, ref this.tc2);
         return this.tc2;
     }
 }

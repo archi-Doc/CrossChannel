@@ -12,7 +12,7 @@ public class TrimTest
     [Fact]
     public void WeakReference()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         void CreateChannel()
         {

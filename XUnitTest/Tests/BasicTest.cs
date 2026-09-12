@@ -12,7 +12,7 @@ public class BasicTest
     [Fact]
     public void TestClass()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         using (radio.Open((ITestService)new TestService()))
         {
             radio.Send<ITestService>().Double(1).SequenceEqual([2, ]).IsTrue();

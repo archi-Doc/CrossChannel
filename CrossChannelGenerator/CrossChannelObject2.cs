@@ -14,10 +14,10 @@ public partial class CrossChannelObject
 
     internal void GenerateBrokerClass(ScopingStringBuilder ssb)
     {
-        using (ssb.ScopeBrace($"private sealed class {this.ClassName} : {this.LocalName}"))
+        using (ssb.ScopeBrace($"private sealed class {this.BrokerClassName} : {this.LocalName}"))
         {
             ssb.AppendLine($"private readonly Channel<{this.LocalName}> channel;");
-            using (ssb.ScopeBrace($"public {this.ClassName}(object channel)"))
+            using (ssb.ScopeBrace($"public {this.BrokerClassName}(object channel)"))
             {
                 ssb.AppendLine($"this.channel = (Channel<{this.LocalName}>)channel;");
             }
@@ -26,28 +26,28 @@ public partial class CrossChannelObject
             {
                 foreach (var x in this.Methods)
                 {
-                    if (x.ReturnType == ServiceMethod.Type.Other)
+                    if (x.ReturnKind == ServiceMethod.MethodReturnKind.Other)
                     {
                         continue;
                     }
 
                     // The broker methods are deliberately not 'async': the common cases (no receiver,
                     // a single receiver) complete without allocating an async state machine.
-                    using (ssb.ScopeBrace($"{x.ReturnName} {x.DeclaringName}.@{x.SimpleName}({x.GetParameters()})"))
+                    using (ssb.ScopeBrace($"{x.ReturnName} {x.DeclaringName}.@{x.SimpleName}({x.GetParameterDeclarations()})"))
                     {
-                        if (x.ReturnType == ServiceMethod.Type.Void)
+                        if (x.ReturnKind == ServiceMethod.MethodReturnKind.Void)
                         {
                             this.GenerateBrokerMethod_Void(ssb, x);
                         }
-                        else if (x.ReturnType == ServiceMethod.Type.RadioResult)
+                        else if (x.ReturnKind == ServiceMethod.MethodReturnKind.RadioResult)
                         {
                             this.GenerateBrokerMethod_RadioResult(ssb, x);
                         }
-                        else if (x.ReturnType == ServiceMethod.Type.Task)
+                        else if (x.ReturnKind == ServiceMethod.MethodReturnKind.Task)
                         {
                             this.GenerateBrokerMethod_Task(ssb, x);
                         }
-                        else if (x.ReturnType == ServiceMethod.Type.TaskRadioResult)
+                        else if (x.ReturnKind == ServiceMethod.MethodReturnKind.TaskRadioResult)
                         {
                             this.GenerateBrokerMethod_TaskRadioResult(ssb, x);
                         }
@@ -78,7 +78,7 @@ public partial class CrossChannelObject
 
         using (this.Generate_ForEach(ssb))
         {
-            ssb.AppendLine($"if (!(({method.DeclaringName})instance).@{method.SimpleName}({method.GetParameterNames()}).TryGetSingleResult(out var r)) continue;");
+            ssb.AppendLine($"if (!(({method.DeclaringName})instance).@{method.SimpleName}({method.GetParameterNames()}).TryGetFirst(out var r)) continue;");
             this.Generate_AddValue(ssb, method.ResultName, "results", "firstResult", "r");
         }
 
@@ -125,7 +125,7 @@ public partial class CrossChannelObject
     private void GenerateBrokerMethod_TaskRadioResult(ScopingStringBuilder ssb, ServiceMethod method)
     {// Task<RadioResult<T>>
         var taskName = method.ReturnName; // System.Threading.Tasks.Task<CrossChannel.RadioResult<T>>
-        var emptyTask = $"CrossChannel.RadioTask.EmptyResult<{method.ResultName}>()";
+        var emptyTask = $"CrossChannel.RadioTask.GetEmptyResultTask<{method.ResultName}>()";
 
         this.Generate_GetList(ssb);
         ssb.AppendLine($"if (countHint == 0) return {emptyTask};");
@@ -150,11 +150,11 @@ public partial class CrossChannelObject
         // 0 receivers: a cached completed task, 1 receiver: the task is passed through as-is.
         ssb.AppendLine($"if (count == 0) return {emptyTask};");
         ssb.AppendLine("else if (count == 1) return firstTask!;");
-        ssb.AppendLine($"return CrossChannel.RadioTask.Aggregate<{method.ResultName}>({TaskName}.WhenAll(tasks!.AsSpan(0, count)));");
+        ssb.AppendLine($"return CrossChannel.RadioTask.AggregateAsync<{method.ResultName}>({TaskName}.WhenAll(tasks!.AsSpan(0, count)));");
     }
 
     private void Generate_GetList(ScopingStringBuilder ssb)
-        => ssb.AppendLine("var (array, countHint) = this.channel.UnsafeGetLinks();");
+        => ssb.AppendLine("var (array, countHint) = this.channel.DangerousGetLinks();");
 
     /// <summary>
     /// Enumerates the captured array without treating the concurrent count hint as a limit.
@@ -163,7 +163,7 @@ public partial class CrossChannelObject
     {
         var scope = ssb.ScopeBrace("for (var linkIndex = 0; linkIndex < array.Length; linkIndex++)");
         ssb.AppendLine("var x = System.Threading.Volatile.Read(ref array[linkIndex]);");
-        ssb.AppendLine("if (x is null || !x.IsValid) continue;");
+        ssb.AppendLine("if (x is null || !x.IsOpen) continue;");
         ssb.AppendLine("if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }");
 
         return scope;

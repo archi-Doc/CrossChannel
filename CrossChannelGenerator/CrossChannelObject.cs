@@ -17,7 +17,7 @@ public enum DeclarationCondition
 }
 
 [Flags]
-public enum CrossChannelObjectFlag
+public enum CrossChannelObjectFlags
 {
     Configured = 1 << 0,
     RelationConfigured = 1 << 1,
@@ -35,9 +35,9 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
     public new CrossChannelBody Body => (CrossChannelBody)((VisceralObjectBase<CrossChannelObject>)this).Body;
 
-    public CrossChannelObjectFlag ObjectFlag { get; private set; }
+    public CrossChannelObjectFlags ObjectFlags { get; private set; }
 
-    public RadioServiceAttributeMock? RadioServiceInterfaceAttribute { get; private set; }
+    public RadioServiceAttributeMock? RadioServiceAttribute { get; private set; }
 
     public List<CrossChannelObject>? Children { get; private set; } // The opposite of ContainingObject
 
@@ -45,7 +45,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
     // public VisceralIdentifier Identifier { get; private set; } = VisceralIdentifier.Default;
 
-    public string ClassName { get; set; } = string.Empty;
+    public string BrokerClassName { get; set; } = string.Empty;
 
     public List<ServiceMethod>? Methods { get; private set; }
 
@@ -86,19 +86,19 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
     public void Configure()
     {
-        if (this.ObjectFlag.HasFlag(CrossChannelObjectFlag.Configured))
+        if (this.ObjectFlags.HasFlag(CrossChannelObjectFlags.Configured))
         {
             return;
         }
 
-        this.ObjectFlag |= CrossChannelObjectFlag.Configured;
+        this.ObjectFlags |= CrossChannelObjectFlags.Configured;
 
         foreach (var x in this.AllAttributes)
         {
             if (x.FullName == RadioServiceAttributeMock.FullName)
             {// [RadioService]
-                this.RadioServiceInterfaceAttribute = RadioServiceAttributeMock.FromArray(x.Location, x.ConstructorArguments, x.NamedArguments);
-                this.ObjectFlag |= CrossChannelObjectFlag.RadioService;
+                this.RadioServiceAttribute = RadioServiceAttributeMock.FromArray(x.Location, x.ConstructorArguments, x.NamedArguments);
+                this.ObjectFlags |= CrossChannelObjectFlags.RadioService;
             }
         }
 
@@ -117,12 +117,12 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
     public void ConfigureRelation()
     {// Create an object tree.
-        if (this.ObjectFlag.HasFlag(CrossChannelObjectFlag.RelationConfigured))
+        if (this.ObjectFlags.HasFlag(CrossChannelObjectFlags.RelationConfigured))
         {
             return;
         }
 
-        this.ObjectFlag |= CrossChannelObjectFlag.RelationConfigured;
+        this.ObjectFlags |= CrossChannelObjectFlags.RelationConfigured;
 
         if (!this.Kind.IsType())
         {// Not type
@@ -181,14 +181,14 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
     public void Check()
     {
-        if (this.ObjectFlag.HasFlag(CrossChannelObjectFlag.Checked))
+        if (this.ObjectFlags.HasFlag(CrossChannelObjectFlags.Checked))
         {
             return;
         }
 
-        this.ObjectFlag |= CrossChannelObjectFlag.Checked;
+        this.ObjectFlags |= CrossChannelObjectFlags.Checked;
 
-        if (this.ObjectFlag.HasFlag(CrossChannelObjectFlag.RadioService))
+        if (this.ObjectFlags.HasFlag(CrossChannelObjectFlags.RadioService))
         {// [RadioService]
             this.GetRawInformation(out var rawSymbol, out _, out _);
             if (rawSymbol is INamedTypeSymbol serviceSymbol)
@@ -215,9 +215,9 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
             }
 
             // Must be derived from IRadioService
-            if (!this.AllInterfaces.Any(x => x == IRadioService.FullName))
+            if (!this.AllInterfaces.Any(x => x == IRadioServiceMock.FullName))
             {
-                this.Body.AddDiagnostic(CrossChannelBody.Error_IRadioService, this.Location);
+                this.Body.AddDiagnostic(CrossChannelBody.Error_NotRadioService, this.Location);
                 return;
             }
 
@@ -233,7 +233,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
                 parent = parent.ContainingObject;
             }
 
-            this.ClassName = $"__{this.SimpleName}_Broker_{(uint)FarmHash.Hash64(this.FullName):x8}__";
+            this.BrokerClassName = $"__{this.SimpleName}_Broker_{(uint)FarmHash.Hash64(this.FullName):x8}__";
 
             foreach (var x in this.GetMembers(VisceralTarget.Method))
             {
@@ -269,18 +269,18 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
             return;
         }
 
-        var list2 = list.SelectMany(x => x.ConstructedObjects).Where(x => x.RadioServiceInterfaceAttribute != null).ToArray();
+        var list2 = list.SelectMany(x => x.ConstructedObjects).Where(x => x.RadioServiceAttribute != null).ToArray();
 
         if (parent != null)
         {
-            parent.ObjectFlag |= CrossChannelObjectFlag.InitializerGenerated;
+            parent.ObjectFlags |= CrossChannelObjectFlags.InitializerGenerated;
         }
 
         using (var m = ssb.ScopeBrace($"internal static void {CrossChannelBody.InitializerName}()"))
         {
             foreach (var x in list2)
             {
-                if (x.RadioServiceInterfaceAttribute == null)
+                if (x.RadioServiceAttribute == null)
                 {
                     continue;
                 }
@@ -291,7 +291,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
                 }
             }
 
-            foreach (var x in list.Where(a => a.ObjectFlag.HasFlag(CrossChannelObjectFlag.InitializerGenerated)))
+            foreach (var x in list.Where(a => a.ObjectFlags.HasFlag(CrossChannelObjectFlags.InitializerGenerated)))
             {// Children
                 ssb.AppendLine($"{x.FullName}.{CrossChannelBody.InitializerName}();");
             }
@@ -321,7 +321,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
         using (var cls = ssb.ScopeBrace($"{this.AccessibilityName} partial {this.KindName} {this.LocalName}"))
         {
-            if (this.RadioServiceInterfaceAttribute is not null)
+            if (this.RadioServiceAttribute is not null)
             {
                 this.GenerateInObject(ssb);
             }
@@ -353,7 +353,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
     /// </summary>
     internal void GenerateOutObject(ScopingStringBuilder ssb)
     {
-        if (this.RadioServiceInterfaceAttribute is not null)
+        if (this.RadioServiceAttribute is not null)
         {
             this.GenerateBrokerClass(ssb);
         }
@@ -376,12 +376,12 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
     internal void GenerateRegister(ScopingStringBuilder ssb)
     {
         if (this.Generics_Kind == VisceralGenericsKind.OpenGeneric ||
-            this.RadioServiceInterfaceAttribute is null)
+            this.RadioServiceAttribute is null)
         {
             return;
         }
 
-        var autoRegisterServiceAndSender = this.RadioServiceInterfaceAttribute.AutoRegisterServiceAndSender ? "true" : "false";
-        ssb.AppendLine($"ChannelRegistry.Register(new(typeof({this.FullName}), static x => new {this.ClassName}(x), static () => new Channel<{this.FullName}>(), {this.RadioServiceInterfaceAttribute.MaxLinks.ToString()}, {autoRegisterServiceAndSender}));");
+        var autoRegisterServiceAndSender = this.RadioServiceAttribute.AutoRegisterServiceAndSender ? "true" : "false";
+        ssb.AppendLine($"RadioServiceRegistry.Register(new(typeof({this.FullName}), static x => new {this.BrokerClassName}(x), static () => new Channel<{this.FullName}>(), {this.RadioServiceAttribute.MaxLinks.ToString()}, {autoRegisterServiceAndSender}));");
     }
 }

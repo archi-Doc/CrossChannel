@@ -26,7 +26,7 @@ public class SingleTest
     [Fact]
     public void Test1()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         radio.Send<ISingleService>().Double(1).SequenceEqual([]).IsTrue();
 

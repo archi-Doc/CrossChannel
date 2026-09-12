@@ -61,10 +61,10 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         private readonly WeakReference<TService>? weakReference;
         private readonly TService? strongReference;
 
-        internal Link(Channel<TService> channel, TService instance, bool weakReference)
+        internal Link(Channel<TService> channel, TService instance, bool useWeakReference)
         {// Valid link
             this.channel = channel;
-            if (weakReference)
+            if (useWeakReference)
             {
                 this.weakReference = new(instance);
             }
@@ -75,9 +75,9 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         }
 
         /// <summary>
-        /// Gets a value indicating whether the link is still registered in the channel.
+        /// Gets a value indicating whether the link is open (still registered in the channel).
         /// </summary>
-        public bool IsValid => Volatile.Read(ref this.Index) != -1;
+        public bool IsOpen => Volatile.Read(ref this.Index) != -1;
 
         /// <summary>
         /// Tries to get the linked instance. Fails when the instance was held by a weak reference and has been collected.
@@ -281,9 +281,9 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         this.LockObject = new Lock();
         this.NodeIndex = -1;
 
-        var registration = ChannelRegistry.GetRegistration<TService>();
+        var registration = RadioServiceRegistry.GetRegistration<TService>();
         this.MaxLinks = registration.MaxLinks;
-        this.Broker = (TService)registration.CreateBroker(this);
+        this.Broker = (TService)registration.BrokerFactory(this);
     }
 
     internal Channel(IUnorderedMapWithLock map)
@@ -292,17 +292,17 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         this.LockObject = map.LockObject; // Shared with the map (the node is added/removed while holding this lock).
         this.NodeIndex = -1;
 
-        var registration = ChannelRegistry.GetRegistration<TService>();
+        var registration = RadioServiceRegistry.GetRegistration<TService>();
         this.MaxLinks = registration.MaxLinks;
-        this.Broker = (TService)registration.CreateBroker(this);
+        this.Broker = (TService)registration.BrokerFactory(this);
     }
 
     /// <inheritdoc/>
-    public Link? Open(TService instance, bool weakReference = false)
+    public Link? Open(TService instance, bool useWeakReference = false)
     {
         using (this.LockObject.EnterScope())
         {
-            return this.OpenInternal(instance, weakReference);
+            return this.OpenInternal(instance, useWeakReference);
         }
     }
 
@@ -311,9 +311,9 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
     /// A keyed channel shares the lock with its map, so the caller can add the node and the link atomically.
     /// </summary>
     /// <param name="instance">The instance to register.</param>
-    /// <param name="weakReference">Indicates whether to use a weak reference for the instance.</param>
+    /// <param name="useWeakReference">Indicates whether to use a weak reference for the instance.</param>
     /// <returns>A link to the opened channel, or null if the channel is full.</returns>
-    internal Link? OpenInternal(TService instance, bool weakReference)
+    internal Link? OpenInternal(TService instance, bool useWeakReference)
     {// using (this.LockObject.EnterScope()) is required
         ArgumentNullException.ThrowIfNull(instance);
         if (this.list.Count >= this.MaxLinks)
@@ -325,7 +325,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
             }
         }
 
-        var link = new Link(this, instance, weakReference);
+        var link = new Link(this, instance, useWeakReference);
         this.list.Add(link);
         if (++this.trimCount >= TrimThreshold)
         {
@@ -350,7 +350,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
     /// <returns>The shared link array and an approximate link count.</returns>
     [EditorBrowsable(EditorBrowsableState.Never)]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public (Link?[] Links, int CountHint) UnsafeGetLinks() => this.list.GetValuesAndCountHint();
+    public (Link?[] Links, int CountHint) DangerousGetLinks() => this.list.GetValuesAndCountHint();
 
     /// <inheritdoc/>
     public override TService GetBroker() => this.Broker;

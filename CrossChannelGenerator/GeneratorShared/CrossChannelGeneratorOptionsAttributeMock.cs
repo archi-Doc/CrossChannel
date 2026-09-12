@@ -5,9 +5,9 @@ using Arc.Visceral;
 namespace CrossChannel.Generator;
 
 [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false, Inherited = true)]
-public sealed class CrossChannelGeneratorOptionAttributeMock : Attribute
+public sealed class CrossChannelGeneratorOptionsAttributeMock : Attribute
 {
-    public static readonly string SimpleName = "CrossChannelGeneratorOption";
+    public static readonly string SimpleName = "CrossChannelGeneratorOptions";
     public static readonly string StandardName = SimpleName + "Attribute";
     public static readonly string FullName = "CrossChannel." + StandardName;
 
@@ -15,13 +15,13 @@ public sealed class CrossChannelGeneratorOptionAttributeMock : Attribute
 
     public bool GenerateToFile { get; set; } = false;
 
-    public CrossChannelGeneratorOptionAttributeMock()
+    public CrossChannelGeneratorOptionsAttributeMock()
     {
     }
 
-    public static CrossChannelGeneratorOptionAttributeMock FromArray(object?[] constructorArguments, KeyValuePair<string, object?>[] namedArguments)
+    public static CrossChannelGeneratorOptionsAttributeMock FromArray(object?[] constructorArguments, KeyValuePair<string, object?>[] namedArguments)
     {
-        var attribute = new CrossChannelGeneratorOptionAttributeMock();
+        var attribute = new CrossChannelGeneratorOptionsAttributeMock();
         object? val;
 
         val = VisceralHelper.GetValue(-1, nameof(AttachDebugger), constructorArguments, namedArguments);

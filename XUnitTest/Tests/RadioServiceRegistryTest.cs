@@ -20,53 +20,53 @@ public class ManualRegistrationService : IManualRegistrationService
     void IManualRegistrationService.Test(int x) => this.Sum += x;
 }
 
-public class ChannelRegistryTest
+public class RadioServiceRegistryTest
 {
     [Fact]
     public void GetInformation()
     {
-        var registration = ChannelRegistry.GetRegistration<ITestService>();
+        var registration = RadioServiceRegistry.GetRegistration<ITestService>();
         registration.ServiceType.Is(typeof(ITestService));
         registration.MaxLinks.Is(int.MaxValue);
         registration.AutoRegisterServiceAndSender.IsTrue();
 
         // The generic and the Type-based overloads must return the same instance.
-        ReferenceEquals(registration, ChannelRegistry.GetRegistration(typeof(ITestService))).IsTrue();
-        ReferenceEquals(registration, ChannelRegistry.GetRegistration<ITestService>()).IsTrue();
+        ReferenceEquals(registration, RadioServiceRegistry.GetRegistration(typeof(ITestService))).IsTrue();
+        ReferenceEquals(registration, RadioServiceRegistry.GetRegistration<ITestService>()).IsTrue();
     }
 
     [Fact]
     public void AttributeArguments()
     {
-        ChannelRegistry.GetRegistration<ISingleService>().MaxLinks.Is(1);
-        ChannelRegistry.GetRegistration<IConductorPresentationService>().MaxLinks.Is(1);
-        ChannelRegistry.GetRegistration<IManualRegistrationService>().AutoRegisterServiceAndSender.IsFalse();
-        ChannelRegistry.GetRegistration<IVoidService>().AutoRegisterServiceAndSender.IsTrue();
+        RadioServiceRegistry.GetRegistration<ISingleService>().MaxLinks.Is(1);
+        RadioServiceRegistry.GetRegistration<IConductorPresentationService>().MaxLinks.Is(1);
+        RadioServiceRegistry.GetRegistration<IManualRegistrationService>().AutoRegisterServiceAndSender.IsFalse();
+        RadioServiceRegistry.GetRegistration<IVoidService>().AutoRegisterServiceAndSender.IsTrue();
     }
 
     [Fact]
     public void GetUnregisteredType()
     {
-        Assert.Throws<InvalidOperationException>(() => ChannelRegistry.GetRegistration(typeof(IDisposable)));
+        Assert.Throws<InvalidOperationException>(() => RadioServiceRegistry.GetRegistration(typeof(IDisposable)));
     }
 
     [Fact]
     public void RegisterDuplicate()
     {
-        var registration = ChannelRegistry.GetRegistration<ITestService>();
+        var registration = RadioServiceRegistry.GetRegistration<ITestService>();
 
         // A service type which is already registered must not be replaced.
-        var result = ChannelRegistry.Register(new(typeof(ITestService), static x => throw new NotSupportedException(), static () => throw new NotSupportedException(), 12, false));
+        var result = RadioServiceRegistry.Register(new(typeof(ITestService), static x => throw new NotSupportedException(), static () => throw new NotSupportedException(), 12, false));
         result.IsFalse();
 
-        ReferenceEquals(registration, ChannelRegistry.GetRegistration<ITestService>()).IsTrue();
-        ChannelRegistry.GetRegistration<ITestService>().MaxLinks.Is(int.MaxValue);
+        ReferenceEquals(registration, RadioServiceRegistry.GetRegistration<ITestService>()).IsTrue();
+        RadioServiceRegistry.GetRegistration<ITestService>().MaxLinks.Is(int.MaxValue);
     }
 
     [Fact]
     public void Channels()
     {
-        var channels = ChannelRegistry.Registrations;
+        var channels = RadioServiceRegistry.Registrations;
 
         // Every service declared in this assembly must be registered by the module initializer.
         channels.Any(x => x.ServiceType == typeof(ITestService)).IsTrue();
@@ -82,15 +82,15 @@ public class ChannelRegistryTest
     }
 
     [Fact]
-    public void CreateChannelAndCreateBroker()
+    public void ChannelFactoryAndBrokerFactory()
     {
-        var registration = ChannelRegistry.GetRegistration<ITestService>();
+        var registration = RadioServiceRegistry.GetRegistration<ITestService>();
 
-        var channel = registration.CreateChannel();
+        var channel = registration.ChannelFactory();
         channel.IsInstanceOf<Channel<ITestService>>();
-        ReferenceEquals(channel, registration.CreateChannel()).IsFalse();
+        ReferenceEquals(channel, registration.ChannelFactory()).IsFalse();
 
-        var broker = registration.CreateBroker(channel);
+        var broker = registration.BrokerFactory(channel);
         (broker is ITestService).IsTrue();
         ReferenceEquals(broker, channel.GetBroker()).IsFalse(); // A brand new broker instance.
     }
@@ -98,7 +98,7 @@ public class ChannelRegistryTest
     [Fact]
     public void ServiceWithoutAutoRegistration()
     {// The generated broker must work even when the service is not registered in DI.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service = new ManualRegistrationService();
 
         using (radio.Open<IManualRegistrationService>(service))

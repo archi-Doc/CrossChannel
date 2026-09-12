@@ -67,7 +67,7 @@ public class BrokerVoidTest
     [Fact]
     public void NoReceiver()
     {// Must not throw and must do nothing.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         radio.Send<IVoidService>().NoParameter();
         radio.Send<IVoidService>().Add(1);
         radio.GetChannel<IVoidService>().Count.Is(0);
@@ -76,7 +76,7 @@ public class BrokerVoidTest
     [Fact]
     public void SingleReceiver()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service = new VoidService();
 
         using (radio.Open<IVoidService>(service))
@@ -97,7 +97,7 @@ public class BrokerVoidTest
     [Fact]
     public void MultipleReceivers()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var services = Enumerable.Range(0, 10).Select(_ => new VoidService()).ToArray();
         var links = services.Select(x => radio.Open<IVoidService>(x)).ToArray();
 
@@ -119,7 +119,7 @@ public class BrokerVoidTest
     [Fact]
     public void Parameters()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service = new VoidService();
 
         using (radio.Open<IVoidService>(service))
@@ -142,7 +142,7 @@ public class BrokerVoidTest
     [Fact]
     public void DefaultParameterInGlobalNamespace()
     {// A service declared in the global namespace, with a default parameter value.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service = new ConductorPresentationService();
 
         using (radio.Open<IConductorPresentationService>(service))
@@ -159,7 +159,7 @@ public class BrokerVoidTest
     [Fact]
     public void ExceptionIsPropagated()
     {// A void broker method is synchronous, so the exception must escape as-is.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IVoidService>(new VoidService()))
         {
@@ -172,7 +172,7 @@ public class BrokerVoidTest
     {// The enumeration must reach every live link, whatever its position in the internal array.
         for (var pattern = 0; pattern < 3; pattern++)
         {
-            var radio = new RadioClass();
+            var radio = new LocalRadio();
             var services = Enumerable.Range(0, 64).Select(_ => new VoidService()).ToArray();
             var links = services.Select(x => radio.Open<IVoidService>(x)!).ToArray();
 
@@ -214,7 +214,7 @@ public class BrokerVoidTest
     [Fact]
     public void DeadWeakReferencesAreSkipped()
     {// A dead weak reference must not stop the enumeration of the remaining links.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service = new VoidService();
 
         void OpenTemporaryInstances()
@@ -249,7 +249,7 @@ public class BrokerVoidTest
     [Fact]
     public void MaxLinks()
     {// IConductorPresentationService is declared with MaxLinks = 1.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service1 = new ConductorPresentationService();
         var service2 = new ConductorPresentationService();
 

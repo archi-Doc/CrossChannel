@@ -8,7 +8,7 @@ namespace Benchmark;
 [Config(typeof(BenchmarkConfig))]
 public class CrossChannelBenchmark
 {
-    public RadioClass TestRadio { get; } = new();
+    public LocalRadio TestRadio { get; } = new();
 
     private ISimpleService simpleService1 = new SimpleService();
     private ISimpleService simpleService2 = new SimpleService();

@@ -125,7 +125,7 @@ _ = Radio.Open<IMessageService>(new MessageService("Leak: "));
 Radio.Send<IMessageService>().Message("message");
 
 // Test 4: You can create a local radio class.
-var radio = new RadioClass();
+var radio = new LocalRadio();
 using (radio.Open<IMessageService>(new MessageService("Local: ")))
 {
     // Send a message. The result is "Local: message"
@@ -214,7 +214,7 @@ public class TestService : ITestService
 
 
 ```csharp
-var radio = new RadioClass(); // Or use the static Radio.
+var radio = new LocalRadio(); // Or use the static Radio.
 
 var link = radio.Open<ITestService>(new TestService()); // Subscribe. Returns null if the channel is full.
 radio.Open<ITestService>(new TestService(), true); // Subscribe with a weak reference.
@@ -250,7 +250,7 @@ using (radio.Open<ICalcService>(new CalcService()))
 
     var count = result.Count; // 2
     var isEmpty = result.IsEmpty; // false
-    var retrieved = result.TryGetSingleResult(out var value); // true, and value is the first result.
+    var retrieved = result.TryGetFirst(out var value); // true, and value is the first result.
     foreach (var x in result) { } // Enumerate every result.
     var text = result.ToString(); // "[4, 4]"
 }
@@ -259,7 +259,7 @@ using (radio.Open<ICalcService>(new CalcService()))
 var empty = radio.Send<ICalcService>().Double(2).IsEmpty; // true
 ```
 
-On the receiving side, return `default` to contribute nothing, or use `RadioResult<T>.Single(value)` when the constructor overload would be ambiguous (a `null` reference, or an array type).
+On the receiving side, return `default` to contribute nothing, or use `RadioResult<T>.FromValue(value)` when the constructor overload would be ambiguous (a `null` reference, or an array type).
 
 `FromArray` and the array constructor retain arrays with two or more elements without copying. Treat those arrays as immutable, especially when using a result as a dictionary key. Equality compares the ordered values. Direct `foreach` uses a struct enumerator; enumeration through `IEnumerable<T>` boxes it.
 
@@ -350,10 +350,10 @@ var link2 = radio.Open<ISingleService>(new SingleService()); // null: the channe
 
 ### Local radio
 
-The static `Radio` is the fastest, but its channels are shared by the whole process. Create a `RadioClass` when independent sets of channels are needed (per window, per test, per tenant).
+The static `Radio` is the fastest, but its channels are shared by the whole process. Create a `LocalRadio` when independent sets of channels are needed (per window, per test, per tenant).
 
 ```csharp
-var radio = new RadioClass();
+var radio = new LocalRadio();
 using (radio.Open<IMessageService>(new MessageService("Local: ")))
 {
     radio.Send<IMessageService>().Message("message"); // Only the subscribers of this radio receive it.
@@ -364,11 +364,11 @@ using (radio.Open<IMessageService>(new MessageService("Local: ")))
 
 ### Dependency injection
 
-Add `CrossChannel` to the `ServiceCollection`. Services present in `ChannelRegistry` at that time are registered; load assemblies containing additional service interfaces before calling `AddCrossChannel`.
+Add `CrossChannel` to the `ServiceCollection`. Services present in `RadioServiceRegistry` at that time are registered; load assemblies containing additional service interfaces before calling `AddCrossChannel`.
 
 ```csharp
 var collection = new ServiceCollection();
-collection.AddCrossChannel(); // Pass false to use the static Radio instead of a RadioClass singleton.
+collection.AddCrossChannel(); // Pass false to use the static Radio instead of a LocalRadio singleton.
 var provider = collection.BuildServiceProvider();
 
 // IChannel<TService>: the subscribing side.
@@ -399,15 +399,15 @@ public interface IManualService : IRadioService
 
 ### Direct channels
 
-Use `new Channel<TService>()` for a standalone channel independent of `Radio` and `RadioClass`. Subscribe with `Open` and send through `GetBroker()`. `Count` reports registered links; `MaxLinks` comes from the service attribute. Dispose each returned link to unsubscribe; `Close` is equivalent and both are idempotent.
+Use `new Channel<TService>()` for a standalone channel independent of `Radio` and `LocalRadio`. Subscribe with `Open` and send through `GetBroker()`. `Count` reports registered links; `MaxLinks` comes from the service attribute. Dispose each returned link to unsubscribe; `Close` is equivalent and both are idempotent.
 
-`ChannelRegistry.GetRegistration<TService>()` exposes generated factories and options. `GetEmptyChannel<TService>()` returns the shared channel that accepts no subscriptions. `UnsafeGetLinks()` is for generated code: its shared array is read-only to callers and its count is only an allocation hint.
+`RadioServiceRegistry.GetRegistration<TService>()` exposes generated factories and options. `GetEmptyChannel<TService>()` returns the shared channel that accepts no subscriptions. `DangerousGetLinks()` is for generated code: its shared array is read-only to callers and its count is only an allocation hint.
 
 ### Field copying
 
-`GhostCopy.Copy<T>(ref source, ref destination)` shallow-copies instance fields declared by `T` and its base types, including private, readonly, and auto-property backing fields. Reference fields keep referring to the same objects; properties are not invoked and fields declared only by a runtime subtype are not copied. Pass existing non-null instances.
+`FieldCopier.Copy<T>(ref source, ref destination)` shallow-copies instance fields declared by `T` and its base types, including private, readonly, and auto-property backing fields. Reference fields keep referring to the same objects; properties are not invoked and fields declared only by a runtime subtype are not copied. Pass existing non-null instances.
 
-`GhostCopy.CreateDelegate<T>()` returns the same cached delegate used by `Copy<T>`. The JIT path allocates no objects per warmed copy; the Native AOT reflection fallback may box value-type fields.
+`FieldCopier.GetDelegate<T>()` returns the same cached delegate used by `Copy<T>`. The JIT path allocates no objects per warmed copy; the Native AOT reflection fallback may box value-type fields.
 
 ### Native AOT
 
@@ -419,7 +419,7 @@ dotnet publish -c Release -r linux-x64 -p:PublishAot=true
 
 Everything works unchanged, including keyed channels, `ISender<TService>`, and the `AddCrossChannel` dependency injection registrations. `AotTest` in this repository is a smoke test which exercises all of them from a Native AOT binary.
 
-`GhostCopy` uses a delegate compiled once per type when dynamic code is available. Under Native AOT, a reflection-based delegate is used instead, and the expression-tree path and its helper cache are trimmed away. Both paths copy instance fields across the inheritance hierarchy, including private, readonly, and backing fields. `Copy<T>` and `CreateDelegate<T>` share the same cached delegate. The `AllFields` trimming annotation preserves inherited private fields as well; generic wrappers around these APIs must propagate that annotation to their type parameter.
+`FieldCopier` uses a delegate compiled once per type when dynamic code is available. Under Native AOT, a reflection-based delegate is used instead, and the expression-tree path and its helper cache are trimmed away. Both paths copy instance fields across the inheritance hierarchy, including private, readonly, and backing fields. `Copy<T>` and `GetDelegate<T>` share the same cached delegate. The `AllFields` trimming annotation preserves inherited private fields as well; generic wrappers around these APIs must propagate that annotation to their type parameter.
 
 To run this repository's smoke test on Windows (with the [Native AOT prerequisites](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/#prerequisites) installed):
 
@@ -455,7 +455,7 @@ This fallback check still runs on CoreCLR; it does not replace publishing and ex
 
 ## Generator options
 
-Place `[CrossChannelGeneratorOption]` on an interface to configure the project. At most one options attribute takes effect. `GenerateToFile = true` writes source files to an existing `Generated` directory beside the annotated file; otherwise code is added to the compilation in memory. Files written to disk must be included in compilation to use their brokers. Prefer the standard compiler option `EmitCompilerGeneratedFiles` when inspecting output without changing compilation behavior.
+Place `[CrossChannelGeneratorOptions]` on an interface to configure the project. At most one options attribute takes effect. `GenerateToFile = true` writes source files to an existing `Generated` directory beside the annotated file; otherwise code is added to the compilation in memory. Files written to disk must be included in compilation to use their brokers. Prefer the standard compiler option `EmitCompilerGeneratedFiles` when inspecting output without changing compilation behavior.
 
 `AttachDebugger` is reserved by the current generator and has no effect.
 
@@ -503,7 +503,7 @@ dotnet run -c Release -- --filter '*AllocationBenchmark*'
 The following table is historical and is retained for reference. Re-run benchmarks on the target runtime and hardware before comparing performance.
 
 - `Radio` is the fastest since it uses static type caching.
-- `RadioClass` uses `ThreadsafeTypeKeyHashtable` which is a bit slower than static type caching, but still fast enough.
+- `LocalRadio` uses `ThreadsafeTypeKeyHashtable` which is a bit slower than static type caching, but still fast enough.
 - `Key` features cause slight performance degradation.
 - Weak subscriptions allocate a weak-reference object in addition to their link.
 
@@ -533,6 +533,6 @@ ulong hkr = 3055952910;
 while (true)
 {
     var r = CrossChannel.Radio.Send<ITaichi>().Message(hkr++, "生きている人、いますか？");
-    if (r.TryGetSingleResult(out _)) break;
+    if (r.TryGetFirst(out _)) break;
 }
 ```

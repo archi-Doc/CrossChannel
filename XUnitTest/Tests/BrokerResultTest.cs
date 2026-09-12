@@ -32,7 +32,7 @@ public class ResultService : IResultService
         => this.value == 0 ? default : new(this.value);
 
     RadioResult<string?> IResultService.Text()
-        => this.value == 0 ? default : RadioResult<string?>.Single(this.value == -1 ? null : this.value.ToString());
+        => this.value == 0 ? default : RadioResult<string?>.FromValue(this.value == -1 ? null : this.value.ToString());
 
     RadioResult<int> IResultService.Multiple()
         => new([this.value, this.value * 10, this.value * 100,]);
@@ -46,7 +46,7 @@ public class BrokerResultTest
     [Fact]
     public void NoReceiver()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var result = radio.Send<IResultService>().Value();
         result.IsEmpty.IsTrue();
         result.Count.Is(0);
@@ -56,13 +56,13 @@ public class BrokerResultTest
     [Fact]
     public void SingleReceiver()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IResultService>(new ResultService(3)))
         {
             var result = radio.Send<IResultService>().Value();
             result.Count.Is(1);
-            result.TryGetSingleResult(out var r).IsTrue();
+            result.TryGetFirst(out var r).IsTrue();
             r.Is(3);
             result.SequenceEqual([3,]).IsTrue();
         }
@@ -71,7 +71,7 @@ public class BrokerResultTest
     [Fact]
     public void SingleReceiverWithEmptyResult()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IResultService>(new ResultService(0)))
         {
@@ -82,7 +82,7 @@ public class BrokerResultTest
     [Fact]
     public void MultipleReceivers()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IResultService>(new ResultService(1)))
         using (radio.Open<IResultService>(new ResultService(2)))
@@ -96,7 +96,7 @@ public class BrokerResultTest
     [Fact]
     public void EmptyResultsAreSkipped()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IResultService>(new ResultService(0)))
         using (radio.Open<IResultService>(new ResultService(1)))
@@ -114,7 +114,7 @@ public class BrokerResultTest
     [Fact]
     public void AllResultsAreEmpty()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IResultService>(new ResultService(0)))
         using (radio.Open<IResultService>(new ResultService(0)))
@@ -126,7 +126,7 @@ public class BrokerResultTest
     [Fact]
     public void SingleValidResultAmongMany()
     {// The aggregation must collapse into a single result (no array).
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IResultService>(new ResultService(0)))
         using (radio.Open<IResultService>(new ResultService(0)))
@@ -142,7 +142,7 @@ public class BrokerResultTest
     [Fact]
     public void ManyReceivers()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var links = Enumerable.Range(1, 100).Select(x => radio.Open<IResultService>(new ResultService(x))!).ToArray();
 
         radio.GetChannel<IResultService>().Count.Is(100);
@@ -165,7 +165,7 @@ public class BrokerResultTest
     [Fact]
     public void ReferenceTypeAndNull()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IResultService>(new ResultService(-1))) // Returns a single null.
         using (radio.Open<IResultService>(new ResultService(0))) // Returns an empty result.
@@ -182,7 +182,7 @@ public class BrokerResultTest
     [Fact]
     public void OnlyTheFirstResultOfEachReceiverIsAggregated()
     {// The receiver-side result is expected to be singular.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IResultService>(new ResultService(1)))
         using (radio.Open<IResultService>(new ResultService(2)))
@@ -194,7 +194,7 @@ public class BrokerResultTest
     [Fact]
     public void ExceptionIsPropagated()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         using (radio.Open<IResultService>(new ResultService(1)))
         {
@@ -205,7 +205,7 @@ public class BrokerResultTest
     [Fact]
     public void DeadWeakReferencesAreSkipped()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var service = new ResultService(4);
 
         void OpenTemporaryInstances()

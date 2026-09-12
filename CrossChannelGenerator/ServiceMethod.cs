@@ -13,10 +13,10 @@ public class ServiceMethod
     public const string VoidName = "void";
     public const string RadioResultName = "CrossChannel.RadioResult<T>";
     public const string TaskName = "System.Threading.Tasks.Task";
-    public const string TaskRadioResultName = "System.Threading.Tasks.Task<TResult>";
+    public const string GenericTaskName = "System.Threading.Tasks.Task<TResult>";
     public const string CancellationTokenName = "System.Threading.CancellationToken";
 
-    public enum Type
+    public enum MethodReturnKind
     {
         Other,
         Void,
@@ -25,7 +25,7 @@ public class ServiceMethod
         TaskRadioResult,
     }
 
-    public static ServiceMethod? Create(CrossChannelObject obj, CrossChannelObject method)
+    public static ServiceMethod? Create(CrossChannelObject serviceObject, CrossChannelObject method)
     {
         method.GetRawInformation(out var rawSymbol, out _, out _);
         if (rawSymbol is IMethodSymbol symbol)
@@ -49,36 +49,36 @@ public class ServiceMethod
             return null;
         }
 
-        var returnType = Type.Other;
+        var returnKind = MethodReturnKind.Other;
         CrossChannelObject? resultObject = null;
         if (returnObject.FullName == VoidName)
         {
-            returnType = Type.Void;
+            returnKind = MethodReturnKind.Void;
         }
         else
         {
             var originalName = returnObject.OriginalDefinition?.FullName ?? string.Empty;
             if (originalName == RadioResultName)
             {
-                returnType = Type.RadioResult;
+                returnKind = MethodReturnKind.RadioResult;
                 resultObject = returnObject.Generics_Arguments[0];
             }
             else if (originalName == TaskName)
             {
-                returnType = Type.Task;
+                returnKind = MethodReturnKind.Task;
             }
-            else if (originalName == TaskRadioResultName)
+            else if (originalName == GenericTaskName)
             {
                 resultObject = returnObject.Generics_Arguments[0];
                 if (resultObject.OriginalDefinition?.FullName == RadioResultName)
                 {
-                    returnType = Type.TaskRadioResult;
+                    returnKind = MethodReturnKind.TaskRadioResult;
                     resultObject = resultObject.Generics_Arguments[0];
                 }
             }
         }
 
-        if (returnType == Type.Other)
+        if (returnKind == MethodReturnKind.Other)
         {
             method.Body.ReportDiagnostic(CrossChannelBody.Error_MethodReturnType, method.Location);
             return null;
@@ -89,21 +89,21 @@ public class ServiceMethod
             return null;
         }
 
-        var serviceMethod = new ServiceMethod(obj, method, returnObject, returnType, resultObject);
+        var serviceMethod = new ServiceMethod(serviceObject, method, returnObject, returnKind, resultObject);
         return serviceMethod;
     }
 
-    public ServiceMethod(CrossChannelObject obj, CrossChannelObject method, CrossChannelObject returnObject, Type returnType, CrossChannelObject? resultObject)
+    public ServiceMethod(CrossChannelObject serviceObject, CrossChannelObject method, CrossChannelObject returnObject, MethodReturnKind returnKind, CrossChannelObject? resultObject)
     {
         this.method = method;
 
         // An explicit interface implementation has to be qualified with the interface which declares the method,
         // which is not necessarily the service interface itself (the method may be inherited from a base interface).
         var declaringObject = method.ContainingObject;
-        this.DeclaringName = declaringObject is null || declaringObject == obj ? obj.LocalName : declaringObject.FullName;
+        this.DeclaringName = declaringObject is null || declaringObject == serviceObject ? serviceObject.LocalName : declaringObject.FullName;
 
         this.ReturnObject = returnObject;
-        this.ReturnType = returnType;
+        this.ReturnKind = returnKind;
         this.ResultObject = resultObject;
 
         // CrossChannelObject.FullName drops the nullable annotations, but the generated broker
@@ -112,7 +112,7 @@ public class ServiceMethod
         if (symbol is IMethodSymbol ms)
         {
             this.ReturnName = this.method.Body.SymbolToFullName(ms.ReturnType, true);
-            if (GetResultSymbol(ms.ReturnType, returnType) is { } resultSymbol)
+            if (GetResultSymbol(ms.ReturnType, returnKind) is { } resultSymbol)
             {
                 this.ResultName = this.method.Body.SymbolToFullName(resultSymbol, true);
             }
@@ -125,7 +125,7 @@ public class ServiceMethod
 
         // this.CancellationTokenIndex = this.method.Method_Parameters.IndexOf(CancellationTokenName);
 
-        static ITypeSymbol? GetResultSymbol(ITypeSymbol returnSymbol, Type returnType)
+        static ITypeSymbol? GetResultSymbol(ITypeSymbol returnSymbol, MethodReturnKind returnKind)
         {// RadioResult<T> -> T, Task<RadioResult<T>> -> T
             if (returnSymbol is not INamedTypeSymbol nts ||
                 nts.TypeArguments.Length != 1)
@@ -133,11 +133,11 @@ public class ServiceMethod
                 return null;
             }
 
-            if (returnType == Type.RadioResult)
+            if (returnKind == MethodReturnKind.RadioResult)
             {
                 return nts.TypeArguments[0];
             }
-            else if (returnType == Type.TaskRadioResult)
+            else if (returnKind == MethodReturnKind.TaskRadioResult)
             {
                 return nts.TypeArguments[0] is INamedTypeSymbol inner && inner.TypeArguments.Length == 1 ?
                     inner.TypeArguments[0] : null;
@@ -169,7 +169,7 @@ public class ServiceMethod
     /// </summary>
     public string ReturnName { get; private set; }
 
-    public Type ReturnType { get; private set; }
+    public MethodReturnKind ReturnKind { get; private set; }
 
     public CrossChannelObject? ResultObject { get; private set; }
 
@@ -182,7 +182,7 @@ public class ServiceMethod
 
     private CrossChannelObject method;
 
-    public string GetParameters()
+    public string GetParameterDeclarations()
     {// int a1, string a2
         var sb = new StringBuilder();
         for (var i = 0; i < this.method.Method_Parameters.Length; i++)

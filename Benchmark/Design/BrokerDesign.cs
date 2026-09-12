@@ -36,7 +36,7 @@ namespace Playground;
             if (x is null) continue;
             if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }
 
-            if (instance.Test2(a0).TryGetSingleResult(out var r))
+            if (instance.Test2(a0).TryGetFirst(out var r))
             {
                 if (count == 0)
                 {
@@ -98,6 +98,6 @@ namespace Playground;
         if (countHint != count) Array.Resize(ref tasks, count);
         if (count == 0) return default;
         else if (count == 1) return await tasks[0].ConfigureAwait(false);
-        else return new((await Task.WhenAll(tasks).ConfigureAwait(false)).Select(x => x.TryGetSingleResult(out var r) ? r : default).ToArray());
+        else return new((await Task.WhenAll(tasks).ConfigureAwait(false)).Select(x => x.TryGetFirst(out var r) ? r : default).ToArray());
     }
 }*/

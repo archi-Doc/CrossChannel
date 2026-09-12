@@ -70,7 +70,7 @@ public class CopyTestClass
     }
 }
 
-public class GhostCopyTest
+public class FieldCopierTest
 {
     [Fact]
     public void Test1()
@@ -79,7 +79,7 @@ public class GhostCopyTest
         tc.Prepare();
 
         var tc2 = new CopyTestClass();
-        GhostCopy.Copy(ref tc, ref tc2);
+        FieldCopier.Copy(ref tc, ref tc2);
         tc.Compare(tc2).IsTrue();
     }
 
@@ -94,11 +94,11 @@ public class GhostCopyTest
 
         if (createDelegate)
         {
-            GhostCopy.CreateDelegate<DerivedCopyTarget>()(ref from, ref to);
+            FieldCopier.GetDelegate<DerivedCopyTarget>()(ref from, ref to);
         }
         else
         {
-            GhostCopy.Copy(ref from, ref to);
+            FieldCopier.Copy(ref from, ref to);
         }
 
         Assert.Same(original, to);

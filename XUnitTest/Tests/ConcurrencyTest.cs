@@ -60,7 +60,7 @@ public class ConcurrencyTest
     [Fact]
     public void ConcurrentSendWithStableReceivers()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var services = Enumerable.Range(0, 4).Select(_ => new CounterService()).ToArray();
         var links = services.Select(x => radio.Open<ICounterService>(x)!).ToArray();
 
@@ -86,7 +86,7 @@ public class ConcurrencyTest
     [Fact]
     public void ConcurrentResultSend()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var links = Enumerable.Range(0, 4).Select(_ => radio.Open<ICounterService>(new CounterService())!).ToArray();
 
         Parallel.For(0, Threads, _ =>
@@ -106,7 +106,7 @@ public class ConcurrencyTest
     [Fact]
     public async Task ConcurrentAsyncSend()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var services = Enumerable.Range(0, 4).Select(_ => new CounterService()).ToArray();
         var links = services.Select(x => radio.Open<ICounterService>(x)!).ToArray();
 
@@ -134,7 +134,7 @@ public class ConcurrencyTest
     [Fact]
     public async Task SendWhileOpeningAndClosing()
     {// Opening and closing links while sending must neither throw nor drop a message for the stable receiver.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var stable = new CounterService();
         using var stableLink = radio.Open<ICounterService>(stable); // The first link of the channel.
 
@@ -178,14 +178,14 @@ public class ConcurrencyTest
     [Fact]
     public void ConcurrentDisposeOfTheSameLink()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var channel = radio.GetChannel<ICounterService>();
 
         for (var round = 0; round < 200; round++)
         {
             var link = channel.Open(new CounterService())!;
             Parallel.For(0, Threads, _ => link.Dispose());
-            link.IsValid.IsFalse();
+            link.IsOpen.IsFalse();
             channel.Count.Is(0);
         }
     }
@@ -193,7 +193,7 @@ public class ConcurrencyTest
     [Fact]
     public void ConcurrentKeyedChannels()
     {// Each thread uses its own key, so the delivery is deterministic.
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
 
         Parallel.For(0, Threads, t =>
         {
@@ -221,7 +221,7 @@ public class ConcurrencyTest
     public async Task ConcurrentKeyedChannelsWithASharedKey()
     {// OpenWithKey must be atomic: a link must never be attached to a channel which was just detached from the map.
         const int key = 1;
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var threadCount = Math.Max(8, Environment.ProcessorCount);
 
         void OpenAndClose()
@@ -258,7 +258,7 @@ public class ConcurrencyTest
     [Fact]
     public void ConcurrentGetChannel()
     {
-        var radio = new RadioClass();
+        var radio = new LocalRadio();
         var channels = new Channel<ICounterService>[Threads];
 
         Parallel.For(0, Threads, t => channels[t] = radio.GetChannel<ICounterService>());

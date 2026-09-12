@@ -25,7 +25,7 @@ public sealed class RadioServiceAttribute : Attribute
     public int MaxLinks { get; set; } = int.MaxValue;
 
     /// <summary>
-    /// Gets or sets a value indicating whether <see cref="ServiceCollectionExtensions.AddCrossChannel"/>
+    /// Gets or sets a value indicating whether <see cref="CrossChannelServiceCollectionExtensions.AddCrossChannel"/>
     /// registers the service interface and <see cref="ISender{TService}"/> in dependency injection (default is <see langword="true"/>).<br/>
     /// <see cref="IChannel{TService}"/> is registered regardless of this value.
     /// </summary>

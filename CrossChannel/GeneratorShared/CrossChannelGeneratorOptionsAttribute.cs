@@ -7,12 +7,12 @@ namespace CrossChannel;
 /// Place it on any interface of the project; at most one per project takes effect.
 /// </summary>
 [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false, Inherited = true)]
-public sealed class CrossChannelGeneratorOptionAttribute : Attribute
+public sealed class CrossChannelGeneratorOptionsAttribute : Attribute
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="CrossChannelGeneratorOptionAttribute"/> class.
+    /// Initializes a new instance of the <see cref="CrossChannelGeneratorOptionsAttribute"/> class.
     /// </summary>
-    public CrossChannelGeneratorOptionAttribute()
+    public CrossChannelGeneratorOptionsAttribute()
     {
     }
 
