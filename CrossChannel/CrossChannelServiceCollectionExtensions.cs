@@ -21,8 +21,10 @@ public static class CrossChannelServiceCollectionExtensions
     /// <see langword="false"/> to route them through the static <see cref="Radio"/>.
     /// </param>
     /// <returns>The service collection, so that calls can be chained.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="services"/> is null.</exception>
     public static IServiceCollection AddCrossChannel(this IServiceCollection services, bool useLocalRadio = true)
     {
+        ArgumentNullException.ThrowIfNull(services);
         if (useLocalRadio)
         {// Use a LocalRadio instance.
             services.AddSingleton<LocalRadio>();

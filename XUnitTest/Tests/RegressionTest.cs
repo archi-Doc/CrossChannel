@@ -320,6 +320,71 @@ public class RegressionTest
         Assert.Equal(0, channel.Count);
     }
 
+    [Fact]
+    public void ClosingLinksCompactsASparseChannel()
+    {// Sending scans the whole link array, so closing links alone must shrink it (not only opening new ones).
+        var channel = new Channel<IRegressionService>();
+        var survivor = new RegressionService();
+        using var survivorLink = channel.Open(survivor);
+        var links = Enumerable.Range(1, (Channel.TrimThreshold * Channel.TrimThreshold) - 1).Select(_ => channel.Open(new RegressionService())!).ToArray();
+        Assert.True(channel.DangerousGetLinks().Links.Length > links.Length);
+        foreach (var link in links)
+        {
+            link.Dispose();
+        }
+
+        // The last trim is sized for at most (count + 2 * TrimThreshold) links, not for the peak.
+        Assert.Equal(1, channel.Count);
+        Assert.True(channel.DangerousGetLinks().Links.Length <= 4 * Channel.TrimThreshold);
+        channel.GetBroker().@event();
+        Assert.Equal(1, survivor.Calls);
+    }
+
+    [Fact]
+    public void RepeatedOpenAndCloseKeepsTheLinkArray()
+    {// Trimming at the low point of an open/close cycle must not shrink an array which is needed again right away.
+        var channel = new Channel<IRegressionService>();
+        using var stable = channel.Open(new RegressionService());
+        var service = new RegressionService();
+        var links = new Channel<IRegressionService>.Link[8];
+        Channel<IRegressionService>.Link?[]? array = null;
+        for (var round = 0; round < Channel.TrimThreshold * 4; round++)
+        {
+            for (var i = 0; i < links.Length; i++)
+            {
+                links[i] = channel.Open(service)!;
+            }
+
+            foreach (var link in links)
+            {
+                link.Dispose();
+            }
+
+            if (round == Channel.TrimThreshold)
+            {// Warmed up.
+                array = channel.DangerousGetLinks().Links;
+            }
+        }
+
+        Assert.Same(array, channel.DangerousGetLinks().Links);
+    }
+
+    [Fact]
+    public void NullArgumentsAreRejected()
+    {
+        var radio = new LocalRadio();
+        Assert.Throws<ArgumentNullException>("serviceType", () => Radio.GetChannel(null!));
+        Assert.Throws<ArgumentNullException>("serviceType", () => radio.GetChannel(null!));
+        Assert.Throws<ArgumentNullException>("serviceType", () => Radio.TryGetChannelWithKey(null!, 1, out _));
+        Assert.Throws<ArgumentNullException>("serviceType", () => radio.TryGetChannelWithKey(null!, 1, out _));
+        Assert.Throws<ArgumentNullException>("serviceType", () => RadioServiceRegistry.GetRegistration(null!));
+        Assert.Throws<ArgumentNullException>("registration", () => RadioServiceRegistry.Register(null!));
+        Assert.Throws<ArgumentNullException>("serviceType", () => new RadioServiceRegistration(null!, _ => new RegressionService(), () => new Channel<IRegressionService>(), 1, false));
+        Assert.Throws<ArgumentNullException>("brokerFactory", () => new RadioServiceRegistration(typeof(IRegressionService), null!, () => new Channel<IRegressionService>(), 1, false));
+        Assert.Throws<ArgumentNullException>("channelFactory", () => new RadioServiceRegistration(typeof(IRegressionService), _ => new RegressionService(), null!, 1, false));
+        Assert.Throws<ArgumentNullException>("services", () => CrossChannelServiceCollectionExtensions.AddCrossChannel(null!));
+    }
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static Channel<IRegressionService>.Link OpenTemporaryRegression(Channel<IRegressionService> channel)
         => channel.Open(new RegressionService(), true)!;

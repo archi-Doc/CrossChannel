@@ -111,6 +111,25 @@ public class GeneratorTests
         Assert.Empty(result.Diagnostics);
     }
 
+    [Fact]
+    public void GeneratorOptionsInATreeWithoutAFilePathStillGenerate()
+    {// An in-memory syntax tree has no folder, so the output falls back to the compilation.
+        var result = Run("""
+            using CrossChannel;
+            [CrossChannelGeneratorOptions(GenerateToFile = true)] public interface IOptions { }
+            [RadioService] public interface IService : IRadioService { void M(); }
+            """);
+        Assert.DoesNotContain(result.Diagnostics, x => x.Id == "CS8785");
+        Assert.Single(result.GeneratedTrees);
+        Assert.DoesNotContain(result.Output.GetDiagnostics(TestContext.Current.CancellationToken), x => x.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact]
+    public void GeneratorHasNoInstanceState()
+    {// The host may share one generator instance between compilations running concurrently.
+        Assert.Empty(typeof(CrossChannelGenerator).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic));
+    }
+
     private static (Compilation Output, Diagnostic[] Diagnostics, SyntaxTree[] GeneratedTrees) Run(string source)
     {
         var compilation = CSharpCompilation.Create("GeneratorInput",

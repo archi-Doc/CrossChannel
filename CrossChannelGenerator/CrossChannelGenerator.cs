@@ -11,22 +11,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace CrossChannel.Generator;
 
 [Generator]
-public class CrossChannelGenerator : IIncrementalGenerator, IGeneratorInformation
+public class CrossChannelGenerator : IIncrementalGenerator
 {
-    public bool AttachDebugger { get; private set; }
-
-    public bool GenerateToFile { get; private set; }
-
-    public string? CustomNamespace { get; private set; }
-
-    public string? AssemblyName { get; private set; }
-
-    public int AssemblyId { get; private set; }
-
-    public OutputKind OutputKind { get; private set; }
-
-    public string? TargetFolder { get; private set; }
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var provider = context.CompilationProvider.Combine(
@@ -73,10 +59,10 @@ public class CrossChannelGenerator : IIncrementalGenerator, IGeneratorInformatio
                 })
             .Collect());
 
-        context.RegisterImplementationSourceOutput(provider, this.Emit);
+        context.RegisterImplementationSourceOutput(provider, Emit);
     }
 
-    private void Emit(SourceProductionContext context, (Compilation Compilation, ImmutableArray<InterfaceDeclarationSyntax?> Types) source)
+    private static void Emit(SourceProductionContext context, (Compilation Compilation, ImmutableArray<InterfaceDeclarationSyntax?> Types) source)
     {
         var compilation = source.Compilation;
 
@@ -98,13 +84,8 @@ public class CrossChannelGenerator : IIncrementalGenerator, IGeneratorInformatio
             return;
         }
 
-        this.AssemblyName = compilation.AssemblyName ?? string.Empty;
-        this.AssemblyId = this.AssemblyName.GetHashCode();
-        this.OutputKind = compilation.Options.OutputKind;
-        this.AttachDebugger = false;
-        this.GenerateToFile = false;
-        this.TargetFolder = null;
-
+        // The host may share a generator instance between compilations, so the options of this run are kept locally.
+        var information = new GeneratorInformation(compilation.AssemblyName ?? string.Empty, compilation.Options.OutputKind);
         var body = new CrossChannelBody(context);
         var processed = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
 
@@ -132,9 +113,13 @@ public class CrossChannelGenerator : IIncrementalGenerator, IGeneratorInformatio
                         var attribute = new VisceralAttribute(CrossChannelGeneratorOptionsAttributeMock.FullName, y);
                         var generatorOption = CrossChannelGeneratorOptionsAttributeMock.FromArray(attribute.ConstructorArguments, attribute.NamedArguments);
 
-                        this.AttachDebugger = generatorOption.AttachDebugger;
-                        this.GenerateToFile = generatorOption.GenerateToFile;
-                        this.TargetFolder = Path.Combine(Path.GetDirectoryName(x.SyntaxTree.FilePath), "Generated");
+                        information.AttachDebugger = generatorOption.AttachDebugger;
+                        information.GenerateToFile = generatorOption.GenerateToFile;
+
+                        // A syntax tree which is not backed by a file (e.g. an in-memory compilation) has no folder to write to.
+                        var filePath = x.SyntaxTree.FilePath;
+                        var directory = string.IsNullOrEmpty(filePath) ? null : Path.GetDirectoryName(filePath);
+                        information.TargetFolder = string.IsNullOrEmpty(directory) ? null : Path.Combine(directory, "Generated");
                     }
                     else if (SymbolEqualityComparer.Default.Equals(y.AttributeClass, radioServiceInterface))
                     {// [RadioService]
@@ -153,6 +138,30 @@ public class CrossChannelGenerator : IIncrementalGenerator, IGeneratorInformatio
         }
 
         context.CancellationToken.ThrowIfCancellationRequested();
-        body.Generate(this, context.CancellationToken);
+        body.Generate(information, context.CancellationToken);
+    }
+
+    private sealed class GeneratorInformation : IGeneratorInformation
+    {
+        public GeneratorInformation(string assemblyName, OutputKind outputKind)
+        {
+            this.AssemblyName = assemblyName;
+            this.AssemblyId = assemblyName.GetHashCode();
+            this.OutputKind = outputKind;
+        }
+
+        public bool AttachDebugger { get; set; }
+
+        public bool GenerateToFile { get; set; }
+
+        public string? CustomNamespace => null;
+
+        public string? AssemblyName { get; }
+
+        public int AssemblyId { get; }
+
+        public OutputKind OutputKind { get; }
+
+        public string? TargetFolder { get; set; }
     }
 }
