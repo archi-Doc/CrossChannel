@@ -34,6 +34,7 @@ internal static class RadioHelper
     public static bool TryGetChannelWithKey<TKey>(ThreadsafeTwoTypeKeyHashtable<object> twoTypeToMap, Type serviceType, TKey key, [MaybeNullWhen(false)] out Channel channel)
         where TKey : notnull
     {
+        ArgumentNullException.ThrowIfNull(serviceType);
         if (!twoTypeToMap.TryGetValue(serviceType, typeof(TKey), out var obj) ||
             obj is not UnorderedMapWithLock<TKey, object> map)
         {

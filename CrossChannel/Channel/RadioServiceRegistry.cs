@@ -44,8 +44,10 @@ public static class RadioServiceRegistry
     /// </summary>
     /// <param name="registration">The registration to add.</param>
     /// <returns><see langword="true"/> if it was added; <see langword="false"/> if the service type is already registered.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="registration"/> is null.</exception>
     public static bool Register(RadioServiceRegistration registration)
     {
+        ArgumentNullException.ThrowIfNull(registration);
         return TypeToRegistration.TryAdd(registration.ServiceType, registration);
     }
 
@@ -67,9 +69,11 @@ public static class RadioServiceRegistry
     /// </summary>
     /// <param name="serviceType">The type of the service.</param>
     /// <returns>The registration.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="serviceType"/> is null.</exception>
     /// <exception cref="InvalidOperationException">The service type is not registered.</exception>
     public static RadioServiceRegistration GetRegistration(Type serviceType)
     {
+        ArgumentNullException.ThrowIfNull(serviceType);
         if (TypeToRegistration.TryGetValue(serviceType, out var registration))
         {
             return registration;

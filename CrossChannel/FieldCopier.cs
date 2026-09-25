@@ -14,6 +14,7 @@ namespace CrossChannel;
 /// When the runtime supports dynamic code (JIT), the copy is performed by a delegate compiled once per type.<br/>
 /// Under Native AOT, where no code can be emitted, an equivalent reflection-based delegate is used instead.
 /// Reference fields remain shared. Fields declared only by a runtime subtype are not copied.
+/// <see cref="string"/> is not supported, since its length is part of its layout.
 /// </remarks>
 public static class FieldCopier
 {
@@ -39,6 +40,7 @@ public static class FieldCopier
     /// <typeparam name="T">The class type to copy.</typeparam>
     /// <param name="source">The source instance.</param>
     /// <param name="destination">The destination instance.</param>
+    /// <exception cref="NotSupportedException"><typeparamref name="T"/> is <see cref="string"/>.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void Copy<[DynamicallyAccessedMembers(CopiedMembers)] T>(ref T source, ref T destination)
         where T : class
@@ -59,6 +61,11 @@ public static class FieldCopier
     private static CopyDelegate<T> CreateDelegateCore<[DynamicallyAccessedMembers(CopiedMembers)] T>()
         where T : class
     {
+        if (typeof(T) == typeof(string))
+        {// The length field of a string determines its size, so copying it would corrupt the destination (and the heap).
+            return static (ref T source, ref T destination) => throw new NotSupportedException("FieldCopier does not support System.String.");
+        }
+
         // Do not copy properties, since the backing fields are copied directly.
         var fields = GetFields(typeof(T));
         if (fields.Length == 0)

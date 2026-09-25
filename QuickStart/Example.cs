@@ -35,7 +35,7 @@ public interface ITestService : IRadioService // The target interface must deriv
 
     Task Test3(); // Asynchronous function without a return value.
 
-    Task<RadioResult<int>> Test4(); // Asynchronous function without a return value.
+    Task<RadioResult<int>> Test4(); // Asynchronous function with a return value.
 }
 
 public class TestService : ITestService

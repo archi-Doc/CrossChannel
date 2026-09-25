@@ -55,8 +55,12 @@ public class RadioServiceRegistration
     /// <param name="channelFactory">The factory which creates a new channel.</param>
     /// <param name="maxLinks">The maximum number of links a channel can hold.</param>
     /// <param name="autoRegisterServiceAndSender">Whether to register the service interface and the sender in dependency injection.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="serviceType"/>, <paramref name="brokerFactory"/>, or <paramref name="channelFactory"/> is null.</exception>
     public RadioServiceRegistration(Type serviceType, Func<Channel, object> brokerFactory, Func<Channel> channelFactory, int maxLinks, bool autoRegisterServiceAndSender)
     {
+        ArgumentNullException.ThrowIfNull(serviceType);
+        ArgumentNullException.ThrowIfNull(brokerFactory);
+        ArgumentNullException.ThrowIfNull(channelFactory);
         this.ServiceType = serviceType;
         this.BrokerFactory = brokerFactory;
         this.ChannelFactory = channelFactory;

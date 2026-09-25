@@ -405,7 +405,7 @@ Use `new Channel<TService>()` for a standalone channel independent of `Radio` an
 
 ### Field copying
 
-`FieldCopier.Copy<T>(ref source, ref destination)` shallow-copies instance fields declared by `T` and its base types, including private, readonly, and auto-property backing fields. Reference fields keep referring to the same objects; properties are not invoked and fields declared only by a runtime subtype are not copied. Pass existing non-null instances.
+`FieldCopier.Copy<T>(ref source, ref destination)` shallow-copies instance fields declared by `T` and its base types, including private, readonly, and auto-property backing fields. Reference fields keep referring to the same objects; properties are not invoked and fields declared only by a runtime subtype are not copied. Pass existing non-null instances. `string` is not supported (its length is part of its layout) and throws `NotSupportedException`.
 
 `FieldCopier.GetDelegate<T>()` returns the same cached delegate used by `Copy<T>`. The JIT path allocates no objects per warmed copy; the Native AOT reflection fallback may box value-type fields.
 

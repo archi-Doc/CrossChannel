@@ -107,6 +107,16 @@ public class FieldCopierTest
         Assert.Equal("derived", to.Text);
     }
 
+    [Fact]
+    public void StringIsRejected()
+    {// Copying the length field of a string would make the destination read past its own memory.
+        var source = new string('a', 3);
+        var destination = new string('b', 2);
+        Assert.Throws<NotSupportedException>(() => FieldCopier.Copy(ref source, ref destination));
+        Assert.Throws<NotSupportedException>(() => FieldCopier.GetDelegate<string>()(ref source, ref destination));
+        Assert.Equal("bb", destination);
+    }
+
     private class BaseCopyTarget
     {
         private readonly int id;

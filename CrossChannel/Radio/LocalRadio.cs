@@ -39,9 +39,13 @@ public class LocalRadio
     /// </summary>
     /// <param name="serviceType">The type of the service.</param>
     /// <returns>The channel for the specified service type.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="serviceType"/> is null.</exception>
     /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
     public Channel GetChannel(Type serviceType)
-        => this.typeToChannel.GetOrAdd(serviceType, static a => RadioServiceRegistry.GetRegistration(a).ChannelFactory());
+    {
+        ArgumentNullException.ThrowIfNull(serviceType);
+        return this.typeToChannel.GetOrAdd(serviceType, static a => RadioServiceRegistry.GetRegistration(a).ChannelFactory());
+    }
 
     /// <summary>
     /// Tries to get the channel for the specified service type and key.
@@ -64,6 +68,7 @@ public class LocalRadio
     /// <param name="key">The key.</param>
     /// <param name="channel">When this method returns, contains the channel associated with the specified service type and key, if the key is found; otherwise, the default value.</param>
     /// <returns><c>true</c> if the channel for the specified service type and key is found; otherwise, <c>false</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="serviceType"/> is null.</exception>
     public bool TryGetChannelWithKey<TKey>(Type serviceType, TKey key, [MaybeNullWhen(false)] out Channel channel)
         where TKey : notnull
         => RadioHelper.TryGetChannelWithKey(this.twoTypeToMap, serviceType, key, out channel);

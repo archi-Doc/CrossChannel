@@ -11,7 +11,7 @@ namespace CrossChannel;
 public abstract class Channel
 {
     /// <summary>
-    /// The number of open operations between two trim operations.
+    /// The number of link changes (opens and closes) between two trim operations.
     /// </summary>
     public const int TrimThreshold = 32;
 
@@ -120,6 +120,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
 
         private Link?[] values = default!;
         private int count;
+        private int peakCount; // The largest count since the last trim (>= count).
         private FastIntQueue freeIndex = default!;
 
         public FastList()
@@ -143,6 +144,11 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
 
         public int Add(Link value)
         {
+            if (this.count >= this.peakCount)
+            {
+                this.peakCount = this.count + 1;
+            }
+
             if (this.freeIndex.Count != 0)
             {
                 var index = this.freeIndex.Dequeue();
@@ -186,32 +192,35 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         }
 
         /// <summary>
-        /// Shrink the list when there are too many unused objects.
+        /// Shrink the list when there are too many unused objects.<br/>
+        /// The list is sized for the largest count since the previous trim, not just the current count,
+        /// so that a list whose links are repeatedly opened and closed does not shrink only to grow again.
         /// </summary>
-        /// <returns>true if the list is empty.</returns>
-        public bool TryTrim()
+        public void TryTrim()
         {
-            if (this.count == 0)
+            var size = this.peakCount;
+            this.peakCount = this.count;
+            if (size == 0)
             {// Empty
                 if (this.values.Length > MinShrinkStart)
                 {
                     this.Initialize();
                 }
 
-                return true;
+                return;
             }
 
             if (this.values.Length <= MinShrinkStart)
             {
-                return false;
+                return;
             }
-            else if (this.count * 2 >= this.values.Length)
+            else if (size * 2 >= this.values.Length)
             {
-                return false;
+                return;
             }
 
             var newLength = this.values.Length >> 1;
-            while (this.count < newLength)
+            while (size < newLength)
             {
                 newLength >>= 1;
             }
@@ -243,8 +252,6 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
             }
 
             Volatile.Write(ref this.values, newValues);
-
-            return false;
         }
 
         private void Initialize()
@@ -327,11 +334,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
 
         var link = new Link(this, instance, useWeakReference);
         this.list.Add(link);
-        if (++this.trimCount >= TrimThreshold)
-        {
-            this.trimCount = 0;
-            this.TrimInternal();
-        }
+        this.TrimPeriodically();
 
         return link;
     }
@@ -362,6 +365,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
             if (link.Index != -1)
             {
                 this.list.Remove(link); // this.Index is set to -1
+                this.TrimPeriodically();
             }
 
             if (this.map is not null &&
@@ -374,8 +378,19 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         }
     }
 
-    private void TrimInternal()
+    /// <summary>
+    /// Trims the list once every <see cref="Channel.TrimThreshold"/> link changes.<br/>
+    /// Closing counts as well as opening: sending scans the whole array, so a channel whose links were
+    /// mostly closed must not keep its peak capacity until enough new links are opened.
+    /// </summary>
+    private void TrimPeriodically()
     {// using (this.LockObject.EnterScope()) is required
+        if (++this.trimCount < TrimThreshold)
+        {
+            return;
+        }
+
+        this.trimCount = 0;
         if (++this.checkReferenceCount >= WeakReferenceCheckThreshold)
         {
             this.checkReferenceCount = 0;
