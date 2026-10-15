@@ -1,5 +1,6 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
+using System.Globalization;
 using Arc.Visceral;
 using Microsoft.CodeAnalysis;
 
@@ -9,20 +10,12 @@ using Microsoft.CodeAnalysis;
 
 namespace CrossChannel.Generator;
 
-public enum DeclarationCondition
-{
-    NotDeclared, // Not declared
-    ImplicitlyDeclared, // declared (implicitly)
-    ExplicitlyDeclared, // declared (explicitly interface)
-}
-
 [Flags]
 public enum CrossChannelObjectFlags
 {
     Configured = 1 << 0,
     RelationConfigured = 1 << 1,
     Checked = 1 << 2,
-    InitializerGenerated = 1 << 3,
 
     RadioService = 1 << 10, // RadioService
 }
@@ -41,48 +34,24 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
     public List<CrossChannelObject>? Children { get; private set; } // The opposite of ContainingObject
 
-    public List<CrossChannelObject>? ConstructedObjects { get; private set; } // The opposite of ConstructedFrom
-
     // public VisceralIdentifier Identifier { get; private set; } = VisceralIdentifier.Default;
 
     public string BrokerClassName { get; set; } = string.Empty;
 
     public List<ServiceMethod>? Methods { get; private set; }
 
-    public Arc.Visceral.NullableAnnotation NullableAnnotationIfReferenceType
-    {
-        get
-        {
-            if (this.TypeObject?.Kind.IsReferenceType() == true)
-            {
-                if (this.symbol is IFieldSymbol fs)
-                {
-                    return (Arc.Visceral.NullableAnnotation)fs.NullableAnnotation;
-                }
-                else if (this.symbol is IPropertySymbol ps)
-                {
-                    return (Arc.Visceral.NullableAnnotation)ps.NullableAnnotation;
-                }
-            }
+    /// <summary>
+    /// Gets the global:: qualified name of the type, as referenced by the generated code.
+    /// </summary>
+    public string QualifiedName => this.qualifiedName ??= this.symbol!.ToDisplayString(ServiceMethod.QualifiedFormat);
 
-            return Arc.Visceral.NullableAnnotation.None;
-        }
-    }
+    /// <summary>
+    /// Gets a value indicating whether the type hosts nested services, so that its partial declaration and initializer are generated.<br/>
+    /// Every type which hosts a service is partial (CCG001 aborts the generation otherwise).
+    /// </summary>
+    public bool IsContainer => this.Children is { Count: > 0 };
 
-    public string QuestionMarkIfReferenceType
-    {
-        get
-        {
-            if (this.Kind.IsReferenceType())
-            {
-                return "?";
-            }
-            else
-            {
-                return string.Empty;
-            }
-        }
-    }
+    private string? qualifiedName;
 
     public void Configure()
     {
@@ -97,7 +66,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
         {
             if (x.FullName == RadioServiceAttributeMock.FullName)
             {// [RadioService]
-                this.RadioServiceAttribute = RadioServiceAttributeMock.FromArray(x.Location, x.ConstructorArguments, x.NamedArguments);
+                this.RadioServiceAttribute = RadioServiceAttributeMock.FromArray(x.ConstructorArguments, x.NamedArguments);
                 this.ObjectFlags |= CrossChannelObjectFlags.RadioService;
             }
         }
@@ -167,16 +136,6 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
                 parent.Children.Add(originalDefinition);
             }
         }
-
-        if (originalDefinition.ConstructedObjects == null)
-        {
-            originalDefinition.ConstructedObjects = new();
-        }
-
-        if (!originalDefinition.ConstructedObjects.Contains(this))
-        {
-            originalDefinition.ConstructedObjects.Add(this);
-        }
     }
 
     public void Check()
@@ -188,29 +147,20 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
         this.ObjectFlags |= CrossChannelObjectFlags.Checked;
 
-        if (this.ObjectFlags.HasFlag(CrossChannelObjectFlags.RadioService))
+        if (this.ObjectFlags.HasFlag(CrossChannelObjectFlags.RadioService) &&
+            this.symbol is INamedTypeSymbol serviceSymbol)
         {// [RadioService]
-            this.GetRawInformation(out var rawSymbol, out _, out _);
-            if (rawSymbol is INamedTypeSymbol serviceSymbol)
+            for (var type = serviceSymbol; type is not null; type = type.ContainingType)
             {
-                for (var type = serviceSymbol; type is not null; type = type.ContainingType)
+                if (type.IsGenericType)
                 {
-                    if (type.IsGenericType)
-                    {
-                        this.Body.ReportDiagnostic(CrossChannelBody.Error_UnsupportedMember, this.Location);
-                        return;
-                    }
+                    this.Body.ReportDiagnostic(CrossChannelBody.Error_UnsupportedMember, this.Location);
+                    return;
                 }
-
-                foreach (var type in serviceSymbol.AllInterfaces.Prepend(serviceSymbol))
-                {
-                    foreach (var member in type.GetMembers())
-                    {
-                        if (member is IPropertySymbol or IEventSymbol)
-                        {
-                            this.Body.ReportDiagnostic(CrossChannelBody.Error_UnsupportedMember, member.Locations.FirstOrDefault() ?? this.Location);
-                        }
-                    }
+                else if (type.IsFileLocal)
+                {// The generated code lives in another file, so it cannot reference a file-local type.
+                    this.Body.ReportDiagnostic(CrossChannelBody.Error_FileLocal, this.Location, type.Name);
+                    return;
                 }
             }
 
@@ -235,75 +185,62 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
 
             this.BrokerClassName = $"__{this.SimpleName}_Broker_{(uint)FarmHash.Hash64(this.FullName):x8}__";
 
-            foreach (var x in this.GetMembers(VisceralTarget.Method))
+            // The members are read from the symbols: Arc.Visceral skips the methods of any namespace named System (e.g. IDisposable).
+            foreach (var type in serviceSymbol.AllInterfaces.Prepend(serviceSymbol))
             {
-                AddMethod(this, x);
-            }
-
-            foreach (var @interface in this.AllInterfaceObjects)
-            {
-                foreach (var x in @interface.GetMembers(VisceralTarget.Method).Where(y => y.ContainingObject == @interface))
+                foreach (var member in type.GetMembers())
                 {
-                    AddMethod(this, x);
+                    if (member is IMethodSymbol method)
+                    {
+                        if (ServiceMethod.Create(this, method) is { } serviceMethod)
+                        {
+                            this.Methods ??= new();
+                            this.Methods.Add(serviceMethod);
+                        }
+                    }
+                    else if (member is IPropertySymbol or IEventSymbol)
+                    {
+                        this.Body.ReportDiagnostic(CrossChannelBody.Error_UnsupportedMember, this.GetLocation(member));
+                    }
                 }
             }
-        }
-
-        static void AddMethod(CrossChannelObject obj, CrossChannelObject method)
-        {
-            var serviceMethod = ServiceMethod.Create(obj, method);
-            if (serviceMethod == null)
-            {
-                return;
-            }
-
-            obj.Methods ??= new();
-            obj.Methods.Add(serviceMethod);
         }
     }
 
-    public static void GenerateInitializer(ScopingStringBuilder ssb, CrossChannelObject? parent, List<CrossChannelObject> list)
+    public static void GenerateInitializer(ScopingStringBuilder ssb, List<CrossChannelObject> list)
     {
-        if (parent?.Generics_Kind == VisceralGenericsKind.OpenGeneric)
-        {
-            return;
-        }
-
-        var list2 = list.SelectMany(x => x.ConstructedObjects).Where(x => x.RadioServiceAttribute != null).ToArray();
-
-        if (parent != null)
-        {
-            parent.ObjectFlags |= CrossChannelObjectFlags.InitializerGenerated;
-        }
-
+        ssb.AppendLine(CrossChannelBody.ObsoleteContext);
         using (var m = ssb.ScopeBrace($"internal static void {CrossChannelBody.InitializerName}()"))
         {
-            foreach (var x in list2)
-            {
-                if (x.RadioServiceAttribute == null)
-                {
-                    continue;
-                }
-
-                if (x.Generics_Kind != VisceralGenericsKind.OpenGeneric)
-                {// Register fixed types.
-                    x.GenerateRegister(ssb);
-                }
+            foreach (var x in list)
+            {// Register services.
+                x.GenerateRegister(ssb);
             }
 
-            foreach (var x in list.Where(a => a.ObjectFlags.HasFlag(CrossChannelObjectFlags.InitializerGenerated)))
+            foreach (var x in list)
             {// Children
-                ssb.AppendLine($"{x.FullName}.{CrossChannelBody.InitializerName}();");
+                if (x.IsContainer)
+                {
+                    ssb.AppendLine($"{x.QualifiedName}.{CrossChannelBody.InitializerName}();");
+                }
             }
         }
     }
 
     /// <summary>
-    /// Generates the broker, nested declarations, and registration initializer.
+    /// Gets the source location of a member, or the location of this type if the member is declared in metadata.
+    /// </summary>
+    /// <param name="member">The member of this type.</param>
+    /// <returns>The location to report a diagnostic at.</returns>
+    internal Location GetLocation(ISymbol member)
+        => member.Locations.FirstOrDefault(x => x.IsInSource) ?? this.Location;
+
+    /// <summary>
+    /// Generates the broker and, for a type which hosts nested services, its partial declaration.
     /// </summary>
     internal void GenerateObject(ScopingStringBuilder ssb)
     {
-        if (this.ConstructedObjects == null)
+        if (this.RadioServiceAttribute is null && !this.IsContainer)
         {
             return;
         }
@@ -314,38 +251,7 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
         }*/
 
         this.GenerateOutObject(ssb);
-        if (!this.IsPartial)
-        {
-            return;
-        }
-
-        using (var cls = ssb.ScopeBrace($"{this.AccessibilityName} partial {this.KindName} {this.LocalName}"))
-        {
-            if (this.RadioServiceAttribute is not null)
-            {
-                this.GenerateInObject(ssb);
-            }
-
-            if (this.Children?.Count > 0)
-            {// Generate children and loader.
-                var isFirst = true;
-                foreach (var x in this.Children)
-                {
-                    if (isFirst)
-                    {
-                        isFirst = false;
-                    }
-                    else
-                    {
-                        ssb.AppendLine();
-                    }
-
-                    x.GenerateObject(ssb);
-                }
-
-                GenerateInitializer(ssb, this, this.Children);
-            }
-        }
+        this.GenerateContainer(ssb);
     }
 
     /// <summary>
@@ -360,13 +266,33 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
     }
 
     /// <summary>
-    /// In-object code generation.
+    /// Generates the partial declaration which hosts the brokers of the nested services and their initializer.
     /// </summary>
-    internal void GenerateInObject(ScopingStringBuilder ssb)
+    internal void GenerateContainer(ScopingStringBuilder ssb)
     {
-        if (this.Generics_Kind == VisceralGenericsKind.OpenGeneric)
+        if (this.Children is not { Count: > 0 } children)
         {
-            this.GenerateRegister(ssb);
+            return;
+        }
+
+        using (var cls = ssb.ScopeBrace($"{this.AccessibilityName} partial {this.KindName} {this.symbol!.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)}"))
+        {// Generate children and loader.
+            var isFirst = true;
+            foreach (var x in children)
+            {
+                if (isFirst)
+                {
+                    isFirst = false;
+                }
+                else
+                {
+                    ssb.AppendLine();
+                }
+
+                x.GenerateObject(ssb);
+            }
+
+            GenerateInitializer(ssb, children);
         }
     }
 
@@ -375,13 +301,14 @@ public partial class CrossChannelObject : VisceralObjectBase<CrossChannelObject>
     /// </summary>
     internal void GenerateRegister(ScopingStringBuilder ssb)
     {
-        if (this.Generics_Kind == VisceralGenericsKind.OpenGeneric ||
-            this.RadioServiceAttribute is null)
-        {
+        if (this.RadioServiceAttribute is null)
+        {// Container
             return;
         }
 
+        var serviceName = this.QualifiedName;
+        var maxLinks = this.RadioServiceAttribute.MaxLinks.ToString(CultureInfo.InvariantCulture);
         var autoRegisterServiceAndSender = this.RadioServiceAttribute.AutoRegisterServiceAndSender ? "true" : "false";
-        ssb.AppendLine($"RadioServiceRegistry.Register(new(typeof({this.FullName}), static x => new {this.BrokerClassName}(x), static () => new Channel<{this.FullName}>(), {this.RadioServiceAttribute.MaxLinks.ToString()}, {autoRegisterServiceAndSender}));");
+        ssb.AppendLine($"global::CrossChannel.RadioServiceRegistry.Register(new(typeof({serviceName}), static x => new {this.BrokerClassName}(x), static () => new global::CrossChannel.Channel<{serviceName}>(), {maxLinks}, {autoRegisterServiceAndSender}));");
     }
 }

@@ -11,22 +11,6 @@ public class CrossChannelBenchmark
     public LocalRadio TestRadio { get; } = new();
 
     private ISimpleService simpleService1 = new SimpleService();
-    private ISimpleService simpleService2 = new SimpleService();
-    private ISimpleService simpleService3 = new SimpleService();
-    private ISimpleService simpleService4 = new SimpleService();
-    private ISimpleService simpleService5 = new SimpleService();
-    private ISimpleService simpleService6 = new SimpleService();
-    private ISimpleService simpleService7 = new SimpleService();
-    private ISimpleService simpleService8 = new SimpleService();
-
-    public CrossChannelBenchmark()
-    {
-    }
-
-    [GlobalSetup]
-    public void Setup()
-    {
-    }
 
     [Benchmark]
     public void Send()

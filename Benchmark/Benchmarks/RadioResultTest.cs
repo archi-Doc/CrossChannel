@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using BenchmarkDotNet.Attributes;
+using CrossChannel;
 
 namespace Benchmark;
 
@@ -111,8 +112,8 @@ public readonly struct HybridResult<T> : IEnumerable, IEnumerable<T>, IEquatable
             return other.HasSingleResult && EqualityComparer<T>.Default.Equals(this.result, other.result);
         }
         else
-        {// >1: Array
-            return other.resultArray != null && this.resultArray!.SequenceEqual(other.resultArray!);
+        {// >1: Array (check HasSingleResult so that the single result marker is never dereferenced)
+            return other.resultArray is not null && !other.HasSingleResult && this.resultArray!.SequenceEqual(other.resultArray);
         }
     }
 
@@ -234,41 +235,16 @@ public readonly struct HybridResult<T> : IEnumerable, IEnumerable<T>, IEquatable
     #endregion
 }
 
-public record class MessageResult(string Message);
-
+/// <summary>
+/// Compares result holders: plain structs, the <see cref="HybridResult{T}"/> prototype and the shipped <see cref="RadioResult{T}"/>.
+/// </summary>
 [Config(typeof(BenchmarkConfig))]
 public class RadioResultTest
 {
     private HybridResult<int> hybridResult1 = new([1234,]);
-    private HybridResult<int> hybridResult1b = new([1234,]);
     private HybridResult<int> hybridResult8 = new([1234, 45, 67, 1, 456787, 12, -333, 33,]);
-    private HybridResult<int> hybridResult8b = new([1234, 45, 67, 1, 456787, 12, -333, 33,]);
-
-    public RadioResultTest()
-    {
-        var result = default(HybridResult<int>);
-        var array = result.ToArray();
-        result = new HybridResult<int>(22);
-        array = result.ToArray();
-
-        var result2 = new HybridResult<int>([11,]);
-        var eq = result.Equals(result2);
-        result2 = new HybridResult<int>([22,]);
-        eq = result.Equals(result2);
-
-        result = new HybridResult<int>([11, 22,]);
-        array = result.ToArray();
-
-        result2 = new HybridResult<int>([11, 22,]);
-        eq = result.Equals(result2);
-        result2 = new HybridResult<int>([11, 22, 33,]);
-        eq = result.Equals(result2);
-
-        var messageResult = new HybridResult<MessageResult>([new MessageResult("Hello"), new MessageResult("World"),]);
-        var array2 = messageResult.ToArray();
-        var messageResult2 = new HybridResult<MessageResult>([new MessageResult("Hello"), new MessageResult("World"),]);
-        eq = messageResult.Equals(messageResult2);
-    }
+    private RadioResult<int> radioResult1 = new([1234,]);
+    private RadioResult<int> radioResult8 = new([1234, 45, 67, 1, 456787, 12, -333, 33,]);
 
     [Benchmark]
     public int Test_Direct() => this.DirectMethod(1, 2);
@@ -304,6 +280,18 @@ public class RadioResultTest
     private HybridResult<int> HybridMethod(int x, int y) => new(x + y);
 
     [Benchmark]
+    public RadioResult<int> Test_Radio() => this.RadioMethod(1, 2);
+
+    [Benchmark]
+    public int Test_Radio2()
+    {
+        this.RadioMethod(1, 2).TryGetFirst(out var result);
+        return result;
+    }
+
+    private RadioResult<int> RadioMethod(int x, int y) => new(x + y);
+
+    [Benchmark]
     public int Test_GetHashCode1() => this.hybridResult1.GetHashCode();
 
     [Benchmark]
@@ -314,4 +302,10 @@ public class RadioResultTest
 
     [Benchmark]
     public int Test_GetHashCode8B() => this.hybridResult8.GetHashCodeB();
+
+    [Benchmark]
+    public int Test_RadioGetHashCode1() => this.radioResult1.GetHashCode();
+
+    [Benchmark]
+    public int Test_RadioGetHashCode8() => this.radioResult8.GetHashCode();
 }

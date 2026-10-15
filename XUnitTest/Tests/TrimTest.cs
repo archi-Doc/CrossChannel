@@ -49,9 +49,12 @@ public class TrimTest
         GC.Collect();
         radio.Send<ITestService>().Double(1).Count.Is(number);
 
-        radio.Open<ITestService>(new TestService(), true);
+        var service = new TestService();
+        radio.Open<ITestService>(service, true);
         radio.Send<ITestService>().Double(1).Count.Is(number + 1);
 
+        // Other tests may collect concurrently; keep the weakly linked receivers alive until the sends are done.
+        GC.KeepAlive(service);
         GC.KeepAlive(objects);
     }
 }

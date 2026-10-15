@@ -1,7 +1,14 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
+using System.Diagnostics;
+
 namespace CrossChannel;
 
+/// <summary>
+/// A FIFO queue of free slot indices, used by the link list of <see cref="Channel{TService}"/>.<br/>
+/// It never grows on Enqueue; <see cref="Reset"/> sets a new capacity and refills it.
+/// The caller keeps the queue within its capacity (the free and the used slots add up to the capacity).
+/// </summary>
 internal sealed class FastIntQueue
 {
     private int[] array;
@@ -11,15 +18,8 @@ internal sealed class FastIntQueue
 
     public FastIntQueue(int capacity)
     {
-        if (capacity < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(capacity));
-        }
-
+        Debug.Assert(capacity >= 0, "The capacity must not be negative.");
         this.array = new int[capacity];
-        this.head = 0;
-        this.tail = 0;
-        this.size = 0;
     }
 
     public int Count => this.size;
@@ -27,11 +27,7 @@ internal sealed class FastIntQueue
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Enqueue(int item)
     {
-        if (this.size == this.array.Length)
-        {
-            throw new InvalidOperationException("Queue is full.");
-        }
-
+        Debug.Assert(this.size < this.array.Length, "Queue is full.");
         this.array[this.tail] = item;
         this.size++;
         this.tail++;
@@ -44,11 +40,7 @@ internal sealed class FastIntQueue
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Dequeue()
     {
-        if (this.size == 0)
-        {
-            throw new InvalidOperationException("Queue is empty.");
-        }
-
+        Debug.Assert(this.size > 0, "Queue is empty.");
         var removed = this.array[this.head];
         this.size--;
 
@@ -61,24 +53,29 @@ internal sealed class FastIntQueue
         return removed;
     }
 
-    public void EnsureNewCapacity(int capacity)
+    /// <summary>
+    /// Discards all items and fills the queue with the consecutive integers [<paramref name="start"/>, <paramref name="end"/>).<br/>
+    /// The buffer is reallocated only when <paramref name="capacity"/> differs from the current one.
+    /// </summary>
+    /// <param name="capacity">The new capacity.</param>
+    /// <param name="start">The first integer to enqueue.</param>
+    /// <param name="end">The integer after the last one to enqueue.</param>
+    public void Reset(int capacity, int start, int end)
     {
-        var newarray = new int[capacity];
-        if (this.size > 0)
+        Debug.Assert(start >= 0 && start <= end && end - start <= capacity, "The range must fit in the capacity.");
+        if (this.array.Length != capacity)
         {
-            if (this.head < this.tail)
-            {
-                Array.Copy(this.array, this.head, newarray, 0, this.size);
-            }
-            else
-            {
-                Array.Copy(this.array, this.head, newarray, 0, this.array.Length - this.head);
-                Array.Copy(this.array, 0, newarray, this.array.Length - this.head, this.tail);
-            }
+            this.array = new int[capacity];
         }
 
-        this.array = newarray;
+        var n = end - start;
+        for (var i = 0; i < n; i++)
+        {
+            this.array[i] = start + i;
+        }
+
         this.head = 0;
-        this.tail = (this.size == capacity) ? 0 : this.size;
+        this.size = n;
+        this.tail = (n == capacity) ? 0 : n;
     }
 }

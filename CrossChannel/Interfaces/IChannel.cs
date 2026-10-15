@@ -19,7 +19,7 @@ public interface IChannel<TService>
     /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
     /// during sending or subscription cleanup after the instance is collected.
     /// </param>
-    /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full.</returns>
+    /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full (see <see cref="Channel.MaxLinks"/>).</returns>
     /// <exception cref="ArgumentNullException"><paramref name="instance"/> is null.</exception>
     Channel<TService>.Link? Open(TService instance, bool useWeakReference = false);
 }

@@ -29,7 +29,7 @@ public class LocalRadio
     /// </summary>
     /// <typeparam name="TService">The type of the service.</typeparam>
     /// <returns>The channel for the specified service type.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
+    /// <exception cref="InvalidOperationException">The service type is not registered.</exception>
     public Channel<TService> GetChannel<TService>()
         where TService : class, IRadioService
         => (Channel<TService>)this.typeToChannel.GetOrAdd(typeof(TService), static _ => RadioServiceRegistry.GetRegistration<TService>().ChannelFactory());
@@ -40,7 +40,7 @@ public class LocalRadio
     /// <param name="serviceType">The type of the service.</param>
     /// <returns>The channel for the specified service type.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="serviceType"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
+    /// <exception cref="InvalidOperationException">The service type is not registered.</exception>
     public Channel GetChannel(Type serviceType)
     {
         ArgumentNullException.ThrowIfNull(serviceType);
@@ -48,42 +48,47 @@ public class LocalRadio
     }
 
     /// <summary>
-    /// Tries to get the channel for the specified service type and key.
+    /// Tries to get the keyed channel for the specified service type and key. No channel is created.<br/>
+    /// A keyed channel is removed when its last link is closed, and a link opened on a removed channel is never reached by
+    /// <see cref="SendWithKey{TService, TKey}(TKey)"/>; subscribe with <see cref="OpenWithKey{TService, TKey}(TService, TKey, bool)"/> instead.
     /// </summary>
     /// <typeparam name="TService">The type of the service.</typeparam>
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <param name="key">The key.</param>
-    /// <param name="channel">When this method returns, contains the channel associated with the specified service type and key, if the key is found; otherwise, the default value.</param>
-    /// <returns><c>true</c> if the channel for the specified service type and key is found; otherwise, <c>false</c>.</returns>
+    /// <param name="channel">When this method returns, contains the channel, if found; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if the channel exists; otherwise, <see langword="false"/> (including when the service type is not registered).</returns>
     public bool TryGetChannelWithKey<TService, TKey>(TKey key, [MaybeNullWhen(false)] out Channel<TService> channel)
         where TService : class, IRadioService
         where TKey : notnull
-        => RadioHelper.TryGetChannelWithKey(this.twoTypeToMap, key, out channel);
+        => RadioHelper.TryGetChannelWithKey(RadioHelper.TryGetMap<TKey>(this.twoTypeToMap, typeof(TService)), key, out channel);
 
     /// <summary>
-    /// Tries to get the channel for the specified service type and key.
+    /// Tries to get the keyed channel for the specified service type and key. No channel is created.<br/>
+    /// A keyed channel is removed when its last link is closed, and a link opened on a removed channel is never reached by
+    /// <see cref="SendWithKey{TService, TKey}(TKey)"/>; subscribe with <see cref="OpenWithKey{TService, TKey}(TService, TKey, bool)"/> instead.
     /// </summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <param name="serviceType">The type of the service.</param>
     /// <param name="key">The key.</param>
-    /// <param name="channel">When this method returns, contains the channel associated with the specified service type and key, if the key is found; otherwise, the default value.</param>
-    /// <returns><c>true</c> if the channel for the specified service type and key is found; otherwise, <c>false</c>.</returns>
+    /// <param name="channel">When this method returns, contains the channel, if found; otherwise, <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if the channel exists; otherwise, <see langword="false"/> (including when the service type is not registered).</returns>
     /// <exception cref="ArgumentNullException"><paramref name="serviceType"/> is null.</exception>
     public bool TryGetChannelWithKey<TKey>(Type serviceType, TKey key, [MaybeNullWhen(false)] out Channel channel)
         where TKey : notnull
         => RadioHelper.TryGetChannelWithKey(this.twoTypeToMap, serviceType, key, out channel);
 
     /// <summary>
-    /// Opens a channel for the specified service type and registers the instance.
+    /// Subscribes the instance to the channel of the specified service type.
     /// </summary>
     /// <typeparam name="TService">The type of the service.</typeparam>
-    /// <param name="instance">The instance to register.</param>
+    /// <param name="instance">The instance which receives the messages.</param>
     /// <param name="useWeakReference">
     /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
     /// during sending or subscription cleanup after the instance is collected.
     /// </param>
     /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full (see <see cref="RadioServiceAttribute.MaxLinks"/>).</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="instance"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">The service type is not registered.</exception>
     public Channel<TService>.Link? Open<TService>(TService instance, bool useWeakReference = false)
         where TService : class, IRadioService
     {
@@ -92,32 +97,36 @@ public class LocalRadio
     }
 
     /// <summary>
-    /// Opens a channel for the specified service type and key, and registers the instance.
+    /// Subscribes the instance to the keyed channel of the specified service type and key.<br/>
+    /// The keyed channel is created on the first subscription and removed when its last link is closed.
     /// </summary>
     /// <typeparam name="TService">The type of the service.</typeparam>
     /// <typeparam name="TKey">The type of the key.</typeparam>
-    /// <param name="instance">The instance to register.</param>
+    /// <param name="instance">The instance which receives the messages.</param>
     /// <param name="key">The key.</param>
     /// <param name="useWeakReference">
     /// <see langword="true"/> to hold the instance with a weak reference, so that the link is closed
     /// during sending or subscription cleanup after the instance is collected.
     /// </param>
     /// <returns>A link which unsubscribes the instance when disposed, or <see langword="null"/> if the channel is full (see <see cref="RadioServiceAttribute.MaxLinks"/>).</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="instance"/> or <paramref name="key"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">The service type is not registered.</exception>
     public Channel<TService>.Link? OpenWithKey<TService, TKey>(TService instance, TKey key, bool useWeakReference = false)
         where TService : class, IRadioService
         where TKey : notnull
     {
-        return RadioHelper.OpenWithKey<TService, TKey>(this.twoTypeToMap, key, instance, useWeakReference);
+        ArgumentNullException.ThrowIfNull(instance);
+        ArgumentNullException.ThrowIfNull(key);
+        return RadioHelper.OpenWithKey(RadioHelper.GetOrAddMap<TService, TKey>(this.twoTypeToMap), key, instance, useWeakReference);
     }
 
     /// <summary>
-    /// Retrieves an instance of a broker corresponding to a specific service type.<br/>
-    /// When a broker function is called, the methods of the registered instances are invoked.
+    /// Gets the broker of the channel of the specified service type.<br/>
+    /// Calling a method of the broker invokes that method on every subscribed instance.
     /// </summary>
     /// <typeparam name="TService">The type of the service.</typeparam>
-    /// <returns>The broker of the channel for the specified service type.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
+    /// <returns>The broker.</returns>
+    /// <exception cref="InvalidOperationException">The service type is not registered.</exception>
     public TService Send<TService>()
         where TService : class, IRadioService
     {
@@ -125,25 +134,17 @@ public class LocalRadio
     }
 
     /// <summary>
-    /// Retrieves an instance of a broker corresponding to a specific service type.<br/>
-    /// When a broker function is called, the methods of the registered instances are invoked.
+    /// Gets the broker of the keyed channel of the specified service type and key.<br/>
+    /// Calling a method of the broker invokes that method on every instance subscribed with the key.
+    /// The broker is bound to the channel found at call time; call this method again instead of caching the broker.
     /// </summary>
     /// <typeparam name="TService">The type of the service.</typeparam>
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <param name="key">The key.</param>
-    /// <returns>The broker of the channel for the specified service type and key, or the broker of an empty channel if the channel is not found.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the service type is not registered.</exception>
+    /// <returns>The broker, or the broker of the shared empty channel (sending does nothing) if no channel exists for the key.</returns>
+    /// <exception cref="InvalidOperationException">The service type is not registered.</exception>
     public TService SendWithKey<TService, TKey>(TKey key)
         where TService : class, IRadioService
         where TKey : notnull
-    {
-        if (RadioHelper.TryGetChannelWithKey<TService, TKey>(this.twoTypeToMap, key, out var channel))
-        {
-            return channel.Broker;
-        }
-        else
-        {
-            return RadioServiceRegistry.GetEmptyChannel<TService>().Broker;
-        }
-    }
+        => RadioHelper.SendWithKey<TService, TKey>(RadioHelper.TryGetMap<TKey>(this.twoTypeToMap, typeof(TService)), key);
 }

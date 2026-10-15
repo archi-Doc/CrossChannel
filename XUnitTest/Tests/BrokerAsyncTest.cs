@@ -28,11 +28,17 @@ public class AsyncService : IAsyncService
         ThrowSynchronously,
         ThrowAsynchronously,
         Gate, // Completes when the gate is released.
+        Completed, // Returns a task which has already completed.
+        Faulted, // Returns a task which has already faulted.
     }
 
     public int Count { get; private set; }
 
     public int Sum { get; private set; }
+
+    public int IncrementCalls { get; private set; }
+
+    public int ValueCalls { get; private set; }
 
     private readonly int value; // 0: returns an empty result.
     private readonly Behavior behavior;
@@ -53,13 +59,24 @@ public class AsyncService : IAsyncService
 
     Task IAsyncService.Increment(int x)
     {
+        this.IncrementCalls++;
         if (this.behavior == Behavior.ThrowSynchronously)
         {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException(this.value.ToString());
         }
         else if (this.behavior == Behavior.Gate)
         {
             return this.gate.Task;
+        }
+        else if (this.behavior == Behavior.Completed)
+        {
+            this.Count++;
+            this.Sum += x;
+            return Task.CompletedTask;
+        }
+        else if (this.behavior == Behavior.Faulted)
+        {
+            return Task.FromException(new InvalidOperationException(this.value.ToString()));
         }
 
         return this.IncrementAsync(x);
@@ -67,13 +84,22 @@ public class AsyncService : IAsyncService
 
     Task<RadioResult<int>> IAsyncService.Value()
     {
+        this.ValueCalls++;
         if (this.behavior == Behavior.ThrowSynchronously)
         {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException(this.value.ToString());
         }
         else if (this.behavior == Behavior.Gate)
         {
             return this.valueGate.Task;
+        }
+        else if (this.behavior == Behavior.Completed)
+        {
+            return this.value == 0 ? RadioTask.GetEmptyResultTask<int>() : Task.FromResult(new RadioResult<int>(this.value));
+        }
+        else if (this.behavior == Behavior.Faulted)
+        {
+            return Task.FromException<RadioResult<int>>(new InvalidOperationException(this.value.ToString()));
         }
 
         return this.ValueAsync();
@@ -83,7 +109,7 @@ public class AsyncService : IAsyncService
     {
         if (this.behavior == Behavior.ThrowSynchronously)
         {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException(this.value.ToString());
         }
 
         return this.TextAsync();
@@ -94,7 +120,7 @@ public class AsyncService : IAsyncService
         await Task.Yield();
         if (this.behavior == Behavior.ThrowAsynchronously)
         {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException(this.value.ToString());
         }
 
         this.Count++;
@@ -106,7 +132,7 @@ public class AsyncService : IAsyncService
         await Task.Yield();
         if (this.behavior == Behavior.ThrowAsynchronously)
         {
-            throw new InvalidOperationException();
+            throw new InvalidOperationException(this.value.ToString());
         }
 
         return this.value == 0 ? default : new(this.value);
@@ -206,6 +232,7 @@ public class BrokerAsyncTest
 
         var task = radio.Send<IAsyncService>().Value();
         task.IsCompleted.IsFalse();
+        services.All(x => x.ValueCalls == 1).IsTrue(); // Every receiver was invoked before any of them completed.
 
         foreach (var x in services)
         {
@@ -217,6 +244,114 @@ public class BrokerAsyncTest
         foreach (var x in links)
         {
             x.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task CompletedEmptyResultsReturnTheCachedEmptyTask()
+    {// When every receiver has already completed, the results are aggregated synchronously.
+        var radio = new LocalRadio();
+
+        using (radio.Open<IAsyncService>(new AsyncService(0, AsyncService.Behavior.Completed)))
+        using (radio.Open<IAsyncService>(new AsyncService(0, AsyncService.Behavior.Completed)))
+        using (radio.Open<IAsyncService>(new AsyncService(0, AsyncService.Behavior.Completed)))
+        {
+            var task = radio.Send<IAsyncService>().Value();
+            ReferenceEquals(task, RadioTask.GetEmptyResultTask<int>()).IsTrue();
+            (await task).IsEmpty.IsTrue();
+
+            var task2 = radio.Send<IAsyncService>().Increment(1);
+            task2.IsCompletedSuccessfully.IsTrue();
+            await task2;
+        }
+    }
+
+    [Fact]
+    public async Task CompletedSingleResultAmongMany()
+    {
+        var radio = new LocalRadio();
+
+        using (radio.Open<IAsyncService>(new AsyncService(0, AsyncService.Behavior.Completed)))
+        using (radio.Open<IAsyncService>(new AsyncService(5, AsyncService.Behavior.Completed)))
+        using (radio.Open<IAsyncService>(new AsyncService(0, AsyncService.Behavior.Completed)))
+        {
+            var task = radio.Send<IAsyncService>().Value();
+            task.IsCompletedSuccessfully.IsTrue();
+            var result = await task;
+            result.Count.Is(1);
+            result.SequenceEqual([5,]).IsTrue();
+        }
+    }
+
+    [Fact]
+    public async Task CompletedResultsKeepTheReceiverOrder()
+    {
+        var radio = new LocalRadio();
+
+        using (radio.Open<IAsyncService>(new AsyncService(1, AsyncService.Behavior.Completed)))
+        using (radio.Open<IAsyncService>(new AsyncService(0, AsyncService.Behavior.Completed)))
+        using (radio.Open<IAsyncService>(new AsyncService(2, AsyncService.Behavior.Completed)))
+        using (radio.Open<IAsyncService>(new AsyncService(3, AsyncService.Behavior.Completed)))
+        {
+            var task = radio.Send<IAsyncService>().Value();
+            task.IsCompletedSuccessfully.IsTrue();
+            (await task).SequenceEqual([1, 2, 3,]).IsTrue();
+        }
+    }
+
+    [Fact]
+    public async Task CompletedResultsMixedWithAPendingOne()
+    {
+        var radio = new LocalRadio();
+        var gate = new AsyncService(2, AsyncService.Behavior.Gate);
+
+        using (radio.Open<IAsyncService>(new AsyncService(1, AsyncService.Behavior.Completed)))
+        using (radio.Open<IAsyncService>(gate))
+        using (radio.Open<IAsyncService>(new AsyncService(3, AsyncService.Behavior.Completed)))
+        {
+            var task = radio.Send<IAsyncService>().Value();
+            task.IsCompleted.IsFalse(); // Waits for the pending receiver.
+
+            gate.ReleaseGate();
+            (await task).SequenceEqual([1, 2, 3,]).IsTrue();
+        }
+    }
+
+    [Fact]
+    public async Task CompletedResultsMixedWithAFaultedOne()
+    {
+        var radio = new LocalRadio();
+
+        using (radio.Open<IAsyncService>(new AsyncService(1, AsyncService.Behavior.Completed)))
+        using (radio.Open<IAsyncService>(new AsyncService(2, AsyncService.Behavior.Faulted)))
+        using (radio.Open<IAsyncService>(new AsyncService(3, AsyncService.Behavior.Completed)))
+        {
+            var task = radio.Send<IAsyncService>().Value();
+            task.IsFaulted.IsTrue();
+            (await Assert.ThrowsAsync<InvalidOperationException>(async () => await task)).Message.Is("2");
+
+            var task2 = radio.Send<IAsyncService>().Increment(1);
+            task2.IsFaulted.IsTrue();
+            (await Assert.ThrowsAsync<InvalidOperationException>(async () => await task2)).Message.Is("2");
+        }
+    }
+
+    [Fact]
+    public async Task AllAsynchronousFaultsArePreserved()
+    {// Like the Task broker (Task.WhenAll), the Task<RadioResult<T>> broker keeps the exception of every faulted receiver.
+        var radio = new LocalRadio();
+
+        using (radio.Open<IAsyncService>(new AsyncService(1, AsyncService.Behavior.ThrowAsynchronously)))
+        using (radio.Open<IAsyncService>(new AsyncService(2)))
+        using (radio.Open<IAsyncService>(new AsyncService(3, AsyncService.Behavior.ThrowAsynchronously)))
+        {
+            var task = radio.Send<IAsyncService>().Increment(1);
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await task);
+            task.Exception!.InnerExceptions.Select(x => x.Message).Order().SequenceEqual(["1", "3",]).IsTrue(); // Task.WhenAll keeps the completion order.
+
+            var task2 = radio.Send<IAsyncService>().Value();
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await task2);
+            task2.Exception!.InnerExceptions.Select(x => x.Message).SequenceEqual(["1", "3",]).IsTrue(); // In receiver order.
         }
     }
 
@@ -333,12 +468,26 @@ public class BrokerAsyncTest
     public async Task SynchronousExceptionAmongMultipleReceivers()
     {// The tasks already started are abandoned, but the exception must be observed via the returned task.
         var radio = new LocalRadio();
+        var service1 = new AsyncService(1);
+        var service3 = new AsyncService(3);
 
-        using (radio.Open<IAsyncService>(new AsyncService(1)))
+        using (radio.Open<IAsyncService>(service1))
         using (radio.Open<IAsyncService>(new AsyncService(2, AsyncService.Behavior.ThrowSynchronously)))
+        using (radio.Open<IAsyncService>(service3))
         {
             var task = radio.Send<IAsyncService>().Increment(1); // Must not throw here.
+            task.IsFaulted.IsTrue();
             await Assert.ThrowsAsync<InvalidOperationException>(async () => await task);
+
+            var task2 = radio.Send<IAsyncService>().Value(); // Must not throw here, although a task has already been collected.
+            task2.IsFaulted.IsTrue();
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await task2);
+
+            // The exception stops the broker: the receiver after the thrower is not invoked.
+            service1.IncrementCalls.Is(1);
+            service1.ValueCalls.Is(1);
+            service3.IncrementCalls.Is(0);
+            service3.ValueCalls.Is(0);
         }
     }
 

@@ -16,18 +16,18 @@ public class RadioServiceRegistration
     public Type ServiceType { get; }
 
     /// <summary>
-    /// Gets the factory which creates the broker of a channel.<br/>
-    /// The broker forwards each method call to every instance linked to that channel.
+    /// Gets the factory which creates the broker of a channel; the argument must be a <see cref="Channel{TService}"/> of <see cref="ServiceType"/>.<br/>
+    /// The broker forwards each method call to every instance subscribed to that channel.
     /// </summary>
     public Func<Channel, object> BrokerFactory { get; }
 
     /// <summary>
-    /// Gets the factory which creates a new, empty channel.
+    /// Gets the factory which creates a new channel (<see cref="Channel{TService}"/>) of the service.
     /// </summary>
     public Func<Channel> ChannelFactory { get; }
 
     /// <summary>
-    /// Gets the maximum number of links a channel of this service can hold.
+    /// Gets the maximum number of links a channel of this service can hold (<see cref="RadioServiceAttribute.MaxLinks"/>).
     /// </summary>
     public int MaxLinks { get; }
 
@@ -39,8 +39,8 @@ public class RadioServiceRegistration
     public bool AutoRegisterServiceAndSender { get; }
 
     /// <summary>
-    /// Gets the shared channel which accepts no link (<see cref="MaxLinks"/> is 0).<br/>
-    /// Sending to its broker is a no-op, which is used when a keyed channel is not found.
+    /// Gets the shared channel which accepts no link (its <see cref="Channel.MaxLinks"/> is 0).<br/>
+    /// Sending through its broker does nothing; it is used when a keyed channel is not found.
     /// </summary>
     public Channel EmptyChannel
         => Volatile.Read(ref this.emptyChannel) ?? this.PrepareEmptyChannel();

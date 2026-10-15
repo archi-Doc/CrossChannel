@@ -58,6 +58,8 @@ public class H2HBenchmark
     private ISimpleService simpleService8 = new SimpleService();
 
     private readonly LocalRadio radio;
+    private readonly ISubscriber<int> mpSubscriber;
+    private readonly IPublisher<int> mpPublisher;
 
     public H2HBenchmark()
     {
@@ -65,11 +67,10 @@ public class H2HBenchmark
         sc.AddMessagePipe();
         this.Provider = sc.BuildServiceProvider();
         this.radio = new LocalRadio();
-    }
 
-    [GlobalSetup]
-    public void Setup()
-    {
+        // Resolve MessagePipe once (as injected code would), so the MP benchmarks measure only subscribe, publish and dispose.
+        this.mpSubscriber = this.Provider.GetRequiredService<ISubscriber<int>>();
+        this.mpPublisher = this.Provider.GetRequiredService<IPublisher<int>>();
     }
 
     [Benchmark]
@@ -183,8 +184,8 @@ public class H2HBenchmark
     [Benchmark]
     public void MP_OpenSend()
     {
-        var sub = this.Provider.GetService<ISubscriber<int>>()!;
-        var pub = this.Provider.GetService<IPublisher<int>>()!;
+        var sub = this.mpSubscriber;
+        var pub = this.mpPublisher;
         using (var i = sub.Subscribe(x => { }))
         {
             pub.Publish(1);
@@ -196,8 +197,8 @@ public class H2HBenchmark
     [Benchmark]
     public void MP_OpenSend8()
     {
-        var sub = this.Provider.GetService<ISubscriber<int>>()!;
-        var pub = this.Provider.GetService<IPublisher<int>>()!;
+        var sub = this.mpSubscriber;
+        var pub = this.mpPublisher;
         using (var i = sub.Subscribe(x => { }))
         {
             pub.Publish(1);
@@ -216,8 +217,8 @@ public class H2HBenchmark
     [Benchmark]
     public void MP_OpenSend88()
     {
-        var sub = this.Provider.GetService<ISubscriber<int>>()!;
-        var pub = this.Provider.GetService<IPublisher<int>>()!;
+        var sub = this.mpSubscriber;
+        var pub = this.mpPublisher;
         using (sub.Subscribe(x => { }))
         using (sub.Subscribe(x => { }))
         using (sub.Subscribe(x => { }))

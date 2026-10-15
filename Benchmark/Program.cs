@@ -25,6 +25,7 @@ public class Program
         var switcher = new BenchmarkSwitcher(new[]
         {
             typeof(AllocationBenchmark),
+            typeof(AggregateAllocationBenchmark),
             typeof(FieldCopierBenchmark),
             typeof(RadioResultTest),
             typeof(H2HBenchmark),

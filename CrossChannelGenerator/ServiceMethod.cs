@@ -1,7 +1,6 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 using System.Text;
-using Arc.Visceral;
 using Microsoft.CodeAnalysis;
 
 namespace CrossChannel.Generator;
@@ -10,11 +9,15 @@ namespace CrossChannel.Generator;
 
 public class ServiceMethod
 {
-    public const string VoidName = "void";
     public const string RadioResultName = "CrossChannel.RadioResult<T>";
     public const string TaskName = "System.Threading.Tasks.Task";
     public const string GenericTaskName = "System.Threading.Tasks.Task<TResult>";
     public const string CancellationTokenName = "System.Threading.CancellationToken";
+
+    /// <summary>
+    /// The format of the type names emitted in the generated code: global:: qualified, keywords escaped, and nullable annotations kept.
+    /// </summary>
+    public static readonly SymbolDisplayFormat QualifiedFormat = SymbolDisplayFormat.FullyQualifiedFormat.AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
 
     public enum MethodReturnKind
     {
@@ -25,174 +28,132 @@ public class ServiceMethod
         TaskRadioResult,
     }
 
-    public static ServiceMethod? Create(CrossChannelObject serviceObject, CrossChannelObject method)
+    public static ServiceMethod? Create(CrossChannelObject serviceObject, IMethodSymbol symbol)
     {
-        method.GetRawInformation(out var rawSymbol, out _, out _);
-        if (rawSymbol is IMethodSymbol symbol)
+        if (symbol.AssociatedSymbol is not null)
+        {// Property and event accessors (the property or event itself is reported).
+            return null;
+        }
+        else if (symbol.IsStatic)
         {
-            if (symbol.IsStatic && !symbol.IsAbstract)
-            {
-                return null;
-            }
-
-            if (symbol.IsGenericMethod || symbol.IsStatic || symbol.ReturnsByRef || symbol.ReturnsByRefReadonly ||
-                symbol.Parameters.Any(x => x.RefKind != RefKind.None))
-            {
-                method.Body.ReportDiagnostic(CrossChannelBody.Error_UnsupportedMember, method.Location);
+            if (!symbol.IsAbstract)
+            {// Static helpers keep their implementation (static abstract members are reported below).
                 return null;
             }
         }
+        else if (symbol.MethodKind != MethodKind.Ordinary || !(symbol.IsAbstract || symbol.IsVirtual))
+        {// Explicit implementations, reabstractions, and private or sealed methods are not implemented by the broker.
+            return null;
+        }
 
-        var returnObject = method.Method_ReturnObject;
-        if (returnObject == null)
+        // A protected member cannot be called through another instance, so a protected default method keeps its implementation.
+        var isProtected = symbol.DeclaredAccessibility is Accessibility.Protected or Accessibility.ProtectedAndInternal;
+        if (isProtected && !symbol.IsAbstract)
         {
             return null;
         }
 
-        var returnKind = MethodReturnKind.Other;
-        CrossChannelObject? resultObject = null;
-        if (returnObject.FullName == VoidName)
+        var location = serviceObject.GetLocation(symbol);
+        if (symbol.IsStatic || isProtected || symbol.IsGenericMethod || symbol.ReturnsByRef || symbol.ReturnsByRefReadonly ||
+            symbol.Parameters.Any(x => x.RefKind != RefKind.None))
         {
-            returnKind = MethodReturnKind.Void;
-        }
-        else
-        {
-            var originalName = returnObject.OriginalDefinition?.FullName ?? string.Empty;
-            if (originalName == RadioResultName)
-            {
-                returnKind = MethodReturnKind.RadioResult;
-                resultObject = returnObject.Generics_Arguments[0];
-            }
-            else if (originalName == TaskName)
-            {
-                returnKind = MethodReturnKind.Task;
-            }
-            else if (originalName == GenericTaskName)
-            {
-                resultObject = returnObject.Generics_Arguments[0];
-                if (resultObject.OriginalDefinition?.FullName == RadioResultName)
-                {
-                    returnKind = MethodReturnKind.TaskRadioResult;
-                    resultObject = resultObject.Generics_Arguments[0];
-                }
-            }
+            serviceObject.Body.ReportDiagnostic(CrossChannelBody.Error_UnsupportedMember, location);
+            return null;
         }
 
+        // The kind is detected from the symbol, since Arc.Visceral drops type arguments it cannot wrap (delegates, dynamic).
+        var returnKind = GetReturnKind(symbol.ReturnType, out var resultType);
         if (returnKind == MethodReturnKind.Other)
         {
-            method.Body.ReportDiagnostic(CrossChannelBody.Error_MethodReturnType, method.Location);
+            serviceObject.Body.ReportDiagnostic(CrossChannelBody.Error_MethodReturnType, location);
             return null;
         }
 
-        if (method.Body.Abort)
+        if (serviceObject.Body.Abort)
         {
             return null;
         }
 
-        var serviceMethod = new ServiceMethod(serviceObject, method, returnObject, returnKind, resultObject);
-        return serviceMethod;
+        return new ServiceMethod(symbol, returnKind, resultType);
     }
 
-    public ServiceMethod(CrossChannelObject serviceObject, CrossChannelObject method, CrossChannelObject returnObject, MethodReturnKind returnKind, CrossChannelObject? resultObject)
+    public ServiceMethod(IMethodSymbol symbol, MethodReturnKind returnKind, ITypeSymbol? resultType)
     {
-        this.method = method;
+        this.symbol = symbol;
 
         // An explicit interface implementation has to be qualified with the interface which declares the method,
         // which is not necessarily the service interface itself (the method may be inherited from a base interface).
-        var declaringObject = method.ContainingObject;
-        this.DeclaringName = declaringObject is null || declaringObject == serviceObject ? serviceObject.LocalName : declaringObject.FullName;
+        this.DeclaringName = symbol.ContainingType.ToDisplayString(QualifiedFormat);
 
-        this.ReturnObject = returnObject;
         this.ReturnKind = returnKind;
-        this.ResultObject = resultObject;
 
-        // CrossChannelObject.FullName drops the nullable annotations, but the generated broker
-        // implements the interface explicitly, so the annotations have to match exactly.
-        this.method.GetRawInformation(out var symbol, out _, out _);
-        if (symbol is IMethodSymbol ms)
+        // The generated broker implements the interface explicitly, so the nullable annotations have to match exactly.
+        var returnType = symbol.ReturnType;
+        this.ReturnName = returnType.ToDisplayString(QualifiedFormat);
+        this.IsReturnNullable = returnType.NullableAnnotation == NullableAnnotation.Annotated ||
+            symbol.GetReturnTypeAttributes().Any(static x => x.AttributeClass is { Name: "MaybeNullAttribute" } c && c.ContainingNamespace.ToDisplayString() == "System.Diagnostics.CodeAnalysis");
+        this.RequiresUnsafe = symbol.Parameters.Any(static x => IsUnsafeType(x.Type));
+        this.ElementName = this.IsReturnNullable ? returnType.WithNullableAnnotation(NullableAnnotation.NotAnnotated).ToDisplayString(QualifiedFormat) : this.ReturnName;
+        if (resultType is not null)
         {
-            this.ReturnName = this.method.Body.SymbolToFullName(ms.ReturnType, true);
-            if (GetResultSymbol(ms.ReturnType, returnKind) is { } resultSymbol)
-            {
-                this.ResultName = this.method.Body.SymbolToFullName(resultSymbol, true);
-            }
-        }
-        else
-        {
-            this.ReturnName = returnObject.FullName;
-            this.ResultName = resultObject?.FullName ?? string.Empty;
+            this.ResultName = resultType.ToDisplayString(QualifiedFormat);
         }
 
         // this.CancellationTokenIndex = this.method.Method_Parameters.IndexOf(CancellationTokenName);
-
-        static ITypeSymbol? GetResultSymbol(ITypeSymbol returnSymbol, MethodReturnKind returnKind)
-        {// RadioResult<T> -> T, Task<RadioResult<T>> -> T
-            if (returnSymbol is not INamedTypeSymbol nts ||
-                nts.TypeArguments.Length != 1)
-            {
-                return null;
-            }
-
-            if (returnKind == MethodReturnKind.RadioResult)
-            {
-                return nts.TypeArguments[0];
-            }
-            else if (returnKind == MethodReturnKind.TaskRadioResult)
-            {
-                return nts.TypeArguments[0] is INamedTypeSymbol inner && inner.TypeArguments.Length == 1 ?
-                    inner.TypeArguments[0] : null;
-            }
-
-            return null;
-        }
     }
 
-    public Location Location => this.method.Location;
-
-    public string SimpleName => this.method.SimpleName;
-
-    public string LocalName => this.method.LocalName;
+    public string SimpleName => this.symbol.Name;
 
     /// <summary>
     /// Gets the name of the interface which declares the method (used to qualify the explicit interface implementation).
     /// </summary>
-    public string DeclaringName { get; private set; }
+    public string DeclaringName { get; }
 
     // public WithNullable<CrossChannelObject>? ReturnObject { get; internal set; }
 
-    public string ParameterType { get; private set; } = string.Empty;
-
-    public CrossChannelObject ReturnObject { get; private set; }
+    /// <summary>
+    /// Gets the full name of the return type, including the nullable annotations (e.g. global::CrossChannel.RadioResult&lt;string?&gt;).
+    /// </summary>
+    public string ReturnName { get; }
 
     /// <summary>
-    /// Gets the full name of the return type, including the nullable annotations (e.g. CrossChannel.RadioResult&lt;string?&gt;).
+    /// Gets the full name of the return type without the top-level nullable annotation (used for the local task variables).
     /// </summary>
-    public string ReturnName { get; private set; }
+    public string ElementName { get; }
 
-    public MethodReturnKind ReturnKind { get; private set; }
+    /// <summary>
+    /// Gets a value indicating whether the return type is nullable (e.g. Task? or [return: MaybeNull]), so a receiver may return null.
+    /// </summary>
+    public bool IsReturnNullable { get; }
 
-    public CrossChannelObject? ResultObject { get; private set; }
+    /// <summary>
+    /// Gets a value indicating whether a parameter has a pointer or function pointer type, so the broker needs an unsafe context.
+    /// </summary>
+    public bool RequiresUnsafe { get; }
+
+    public MethodReturnKind ReturnKind { get; }
 
     /// <summary>
     /// Gets the full name of the result type T, including the nullable annotations (e.g. string?).
     /// </summary>
-    public string ResultName { get; private set; } = string.Empty;
+    public string ResultName { get; } = string.Empty;
 
     // public int CancellationTokenIndex { get; private set; }
 
-    private CrossChannelObject method;
+    private readonly IMethodSymbol symbol;
 
     public string GetParameterDeclarations()
     {// int a1, string a2
+        var parameters = this.symbol.Parameters;
         var sb = new StringBuilder();
-        for (var i = 0; i < this.method.Method_Parameters.Length; i++)
+        for (var i = 0; i < parameters.Length; i++)
         {
             if (i != 0)
             {
                 sb.Append(", ");
             }
 
-            sb.Append(this.method.Method_Parameters[i]);
+            sb.Append(parameters[i].Type.ToDisplayString(QualifiedFormat));
             sb.Append(" a");
             sb.Append(i + 1);
         }
@@ -202,7 +163,7 @@ public class ServiceMethod
 
     public string GetParameterNames()
     {// a1, a2
-        var parameters = this.method.Method_Parameters;
+        var parameters = this.symbol.Parameters;
         var length = parameters.Length;
         if (length == 0)
         {
@@ -217,10 +178,67 @@ public class ServiceMethod
                 sb.Append(", ");
             }
 
+            var type = parameters[i].Type;
+            if (type.TypeKind == TypeKind.Dynamic)
+            {// A dynamic argument would bind the call at runtime.
+                sb.Append(type.NullableAnnotation == NullableAnnotation.Annotated ? "(object?)" : "(object)");
+            }
+
             sb.Append('a');
             sb.Append(i + 1);
         }
 
         return sb.ToString();
+    }
+
+    private static bool IsUnsafeType(ITypeSymbol type)
+        => type switch
+        {
+            IPointerTypeSymbol or IFunctionPointerTypeSymbol => true,
+            IArrayTypeSymbol array => IsUnsafeType(array.ElementType),
+            _ => false,
+        };
+
+    private static MethodReturnKind GetReturnKind(ITypeSymbol returnType, out ITypeSymbol? resultType)
+    {// void, RadioResult<T>, Task, Task<RadioResult<T>> (T: the result type)
+        resultType = null;
+        if (returnType.SpecialType == SpecialType.System_Void)
+        {
+            return MethodReturnKind.Void;
+        }
+
+        if (returnType is not INamedTypeSymbol namedType)
+        {// dynamic, arrays, pointers
+            return MethodReturnKind.Other;
+        }
+
+        var originalName = namedType.OriginalDefinition.ToDisplayString();
+        if (originalName == RadioResultName)
+        {
+            resultType = namedType.TypeArguments[0];
+        }
+        else if (originalName == TaskName)
+        {
+            return MethodReturnKind.Task;
+        }
+        else if (originalName == GenericTaskName &&
+            namedType.TypeArguments[0] is INamedTypeSymbol resultObject &&
+            resultObject.OriginalDefinition.ToDisplayString() == RadioResultName)
+        {
+            resultType = resultObject.TypeArguments[0];
+        }
+        else
+        {
+            return MethodReturnKind.Other;
+        }
+
+        // dynamic is not supported: 'new(firstResult)' would bind at runtime and treat an array value as multiple results.
+        if (resultType.TypeKind == TypeKind.Dynamic)
+        {
+            resultType = null;
+            return MethodReturnKind.Other;
+        }
+
+        return originalName == RadioResultName ? MethodReturnKind.RadioResult : MethodReturnKind.TaskRadioResult;
     }
 }
