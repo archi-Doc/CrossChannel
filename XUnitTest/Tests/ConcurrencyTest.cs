@@ -256,6 +256,63 @@ public class ConcurrencyTest
     }
 
     [Fact]
+    public async Task KeyedSendWhileOpeningAndClosingTheSameKey()
+    {// The stable link keeps the keyed channel attached, while other links on the same key come and go.
+        const int key = 1;
+        var radio = new LocalRadio();
+        var stable = new CounterService();
+        var stableLink = radio.OpenWithKey<ICounterService, int>(stable, key)!;
+        radio.TryGetChannelWithKey<ICounterService, int>(key, out var channel).IsTrue();
+
+        using var cts = new CancellationTokenSource();
+        var iterations = 0;
+        var churn = Task.Run(OpenAndCloseUntilCancelled, TestContext.Current.CancellationToken);
+
+        void OpenAndCloseUntilCancelled()
+        {
+            var links = new List<Channel<ICounterService>.Link>();
+            while (!cts.IsCancellationRequested)
+            {
+                Interlocked.Increment(ref iterations);
+                for (var i = 0; i < 8; i++)
+                {
+                    if (radio.OpenWithKey<ICounterService, int>(new CounterService(), key) is { } link)
+                    {
+                        links.Add(link);
+                    }
+                }
+
+                foreach (var x in links)
+                {
+                    x.Dispose();
+                }
+
+                links.Clear();
+            }
+        }
+
+        // Make sure that the churn overlaps the sends.
+        SpinWait.SpinUntil(() => Volatile.Read(ref iterations) > 0, TimeSpan.FromSeconds(10)).IsTrue();
+
+        const int count = 20_000;
+        for (var i = 0; i < count; i++)
+        {
+            radio.SendWithKey<ICounterService, int>(key).Increment();
+        }
+
+        await cts.CancelAsync();
+        await churn;
+
+        stable.Count.Is(count);
+        radio.TryGetChannelWithKey<ICounterService, int>(key, out var after).IsTrue();
+        ReferenceEquals(channel, after).IsTrue();
+        after!.Count.Is(1);
+
+        stableLink.Dispose();
+        radio.TryGetChannelWithKey<ICounterService, int>(key, out _).IsFalse();
+    }
+
+    [Fact]
     public void ConcurrentGetChannel()
     {
         var radio = new LocalRadio();

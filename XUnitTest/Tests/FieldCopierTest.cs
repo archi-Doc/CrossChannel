@@ -117,6 +117,152 @@ public class FieldCopierTest
         Assert.Equal("bb", destination);
     }
 
+    [Fact]
+    public void TypeWithoutFieldsIsANoOp()
+    {
+        var source = new NoFieldTarget();
+        var destination = new NoFieldTarget();
+        var original = destination;
+        FieldCopier.Copy(ref source, ref destination);
+        Assert.Same(original, destination);
+        Assert.Same(FieldCopier.GetDelegate<NoFieldTarget>(), FieldCopier.GetDelegate<NoFieldTarget>());
+
+        var sourceObject = new object();
+        var destinationObject = new object();
+        FieldCopier.Copy(ref sourceObject, ref destinationObject);
+        FieldCopier.GetDelegate<object>()(ref sourceObject, ref destinationObject);
+        Assert.NotSame(sourceObject, destinationObject);
+    }
+
+    [Fact]
+    public void CopyThroughABaseTypeIgnoresSubtypeFields()
+    {// The fields are those of T, not of the runtime type of the instances.
+        BaseFieldTarget source = new DerivedFieldTarget { A = 1, B = 2, };
+        BaseFieldTarget destination = new DerivedFieldTarget();
+        FieldCopier.Copy(ref source, ref destination);
+        Assert.Equal(1, destination.A);
+        Assert.Equal(0, ((DerivedFieldTarget)destination).B);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public unsafe void CopiesReadonlyPointerFieldsDeclaredByABaseType(bool createDelegate)
+    {// A pointer type cannot be a generic argument, so readonly pointer fields need their own path in the compiled delegate.
+        var source = new DerivedPointerTarget((byte*)0x1234, &PointerTargetFunction, (byte*)0x5678, 7, "derived");
+        var destination = new DerivedPointerTarget(null, null, null, 0, string.Empty);
+        if (createDelegate)
+        {
+            FieldCopier.GetDelegate<DerivedPointerTarget>()(ref source, ref destination);
+        }
+        else
+        {
+            FieldCopier.Copy(ref source, ref destination);
+        }
+
+        Assert.Equal((nint)0x1234, (nint)destination.Pointer);
+        Assert.Equal((nint)source.Function, (nint)destination.Function);
+        Assert.NotEqual((nint)0, (nint)destination.Function);
+        Assert.Equal((nint)0x5678, (nint)destination.MutablePointer);
+        Assert.Equal(7, destination.Value);
+        Assert.Equal("derived", destination.Text);
+        Assert.Same(FieldCopier.GetDelegate<DerivedPointerTarget>(), FieldCopier.GetDelegate<DerivedPointerTarget>());
+    }
+
+    [Fact]
+    public unsafe void ReflectionDelegateMatchesCompiledDelegate()
+    {// The reflection delegate is used under Native AOT; run it under JIT as well (through private reflection).
+        var getFields = typeof(FieldCopier).GetMethod("GetFields", BindingFlags.Static | BindingFlags.NonPublic, [typeof(Type)]);
+        Assert.True(getFields is not null, "FieldCopier.GetFields(Type) was not found; update this test if it was renamed.");
+        var createReflectionDelegate = typeof(FieldCopier).GetMethod("CreateReflectionDelegate", BindingFlags.Static | BindingFlags.NonPublic);
+        Assert.True(createReflectionDelegate is { IsGenericMethodDefinition: true }, "FieldCopier.CreateReflectionDelegate<T>(FieldInfo[]) was not found; update this test if it was renamed.");
+
+        FieldCopier.CopyDelegate<T> CreateReflectionDelegate<T>()
+            where T : class
+        {
+            var fields = getFields!.Invoke(null, [typeof(T)]);
+            Assert.IsType<FieldInfo[]>(fields);
+            return Assert.IsType<FieldCopier.CopyDelegate<T>>(createReflectionDelegate!.MakeGenericMethod(typeof(T)).Invoke(null, [fields]));
+        }
+
+        var tc = new CopyTestClass();
+        tc.Prepare();
+        var tc2 = new CopyTestClass();
+        CreateReflectionDelegate<CopyTestClass>()(ref tc, ref tc2);
+        tc.Compare(tc2).IsTrue();
+
+        var from = new DerivedCopyTarget(42, "base", "derived");
+        var to = new DerivedCopyTarget(0, string.Empty, string.Empty);
+        CreateReflectionDelegate<DerivedCopyTarget>()(ref from, ref to);
+        Assert.Equal(42, to.Id);
+        Assert.Equal("base", to.BaseText);
+        Assert.Equal("derived", to.Text);
+
+        var source = new DerivedPointerTarget((byte*)0x1234, &PointerTargetFunction, (byte*)0x5678, 7, "derived");
+        var destination = new DerivedPointerTarget(null, null, null, 0, string.Empty);
+        CreateReflectionDelegate<DerivedPointerTarget>()(ref source, ref destination);
+        Assert.Equal((nint)0x1234, (nint)destination.Pointer);
+        Assert.Equal((nint)source.Function, (nint)destination.Function);
+        Assert.Equal((nint)0x5678, (nint)destination.MutablePointer);
+        Assert.Equal(7, destination.Value);
+        Assert.Equal("derived", destination.Text);
+    }
+
+    private static void PointerTargetFunction()
+    {
+    }
+
+    private sealed class NoFieldTarget
+    {
+        public int Value => 1;
+    }
+
+    private class BaseFieldTarget
+    {
+        public int A { get; set; }
+    }
+
+    private sealed class DerivedFieldTarget : BaseFieldTarget
+    {
+        public int B { get; set; }
+    }
+
+    private unsafe class BasePointerTarget
+    {
+        private readonly byte* pointer;
+        private readonly delegate*<void> function;
+        private readonly int value;
+
+        protected BasePointerTarget(byte* pointer, delegate*<void> function, byte* mutablePointer, int value)
+        {
+            this.pointer = pointer;
+            this.function = function;
+            this.MutablePointer = mutablePointer;
+            this.value = value;
+        }
+
+        public byte* Pointer => this.pointer;
+
+        public delegate*<void> Function => this.function;
+
+        public byte* MutablePointer { get; private set; }
+
+        public int Value => this.value;
+    }
+
+    private sealed unsafe class DerivedPointerTarget : BasePointerTarget
+    {
+        private readonly string text;
+
+        public DerivedPointerTarget(byte* pointer, delegate*<void> function, byte* mutablePointer, int value, string text)
+            : base(pointer, function, mutablePointer, value)
+        {
+            this.text = text;
+        }
+
+        public string Text => this.text;
+    }
+
     private class BaseCopyTarget
     {
         private readonly int id;

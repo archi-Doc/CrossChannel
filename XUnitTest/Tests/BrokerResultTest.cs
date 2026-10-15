@@ -203,6 +203,26 @@ public class BrokerResultTest
     }
 
     [Fact]
+    public void SynchronousExceptionStopsLaterReceivers()
+    {// The receivers are invoked one by one in the order of the links (a fresh channel fills its slots in order).
+        var radio = new LocalRadio();
+        var first = new CountingResultService(1, false);
+        var thrower = new CountingResultService(2, true);
+        var last = new CountingResultService(3, false);
+
+        using (radio.Open<IResultService>(first))
+        using (radio.Open<IResultService>(thrower))
+        using (radio.Open<IResultService>(last))
+        {
+            Assert.Throws<InvalidOperationException>(() => radio.Send<IResultService>().Value());
+        }
+
+        first.Calls.Is(1);
+        thrower.Calls.Is(1);
+        last.Calls.Is(0);
+    }
+
+    [Fact]
     public void DeadWeakReferencesAreSkipped()
     {
         var radio = new LocalRadio();
@@ -227,5 +247,31 @@ public class BrokerResultTest
         }
 
         GC.KeepAlive(service);
+    }
+
+    private sealed class CountingResultService : IResultService
+    {
+        private readonly int value;
+        private readonly bool throws;
+
+        public CountingResultService(int value, bool throws)
+        {
+            this.value = value;
+            this.throws = throws;
+        }
+
+        public int Calls { get; private set; }
+
+        RadioResult<int> IResultService.Value()
+        {
+            this.Calls++;
+            return this.throws ? throw new InvalidOperationException() : new RadioResult<int>(this.value);
+        }
+
+        RadioResult<string?> IResultService.Text() => default;
+
+        RadioResult<int> IResultService.Multiple() => default;
+
+        RadioResult<int> IResultService.Throw() => throw new InvalidOperationException();
     }
 }

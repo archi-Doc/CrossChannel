@@ -168,6 +168,26 @@ public class BrokerVoidTest
     }
 
     [Fact]
+    public void SynchronousExceptionStopsLaterReceivers()
+    {// The receivers are invoked one by one in the order of the links (a fresh channel fills its slots in order).
+        var radio = new LocalRadio();
+        var first = new VoidService();
+        var thrower = new ThrowingVoidService();
+        var last = new VoidService();
+
+        using (radio.Open<IVoidService>(first))
+        using (radio.Open<IVoidService>(thrower))
+        using (radio.Open<IVoidService>(last))
+        {
+            Assert.Throws<InvalidOperationException>(() => radio.Send<IVoidService>().Add(1));
+        }
+
+        first.Count.Is(1);
+        thrower.Count.Is(1);
+        last.Count.Is(0);
+    }
+
+    [Fact]
     public void ClosedLinksAreSkipped()
     {// The enumeration must reach every live link, whatever its position in the internal array.
         for (var pattern = 0; pattern < 3; pattern++)
@@ -262,6 +282,35 @@ public class BrokerVoidTest
         radio.Send<IConductorPresentationService>().ActivateWindow();
         service1.Count.Is(1);
         service2.Count.Is(0);
+    }
+
+    private sealed class ThrowingVoidService : IVoidService
+    {
+        public int Count { get; private set; }
+
+        void IVoidService.NoParameter()
+        {
+        }
+
+        void IVoidService.Add(int x)
+        {
+            this.Count++;
+            throw new InvalidOperationException();
+        }
+
+        void IVoidService.Concat(string a, int b, double c)
+        {
+        }
+
+        void IVoidService.Nullable(string? a, int? b)
+        {
+        }
+
+        void IVoidService.Generic(List<int> a, KeyValuePair<string, int> b)
+        {
+        }
+
+        void IVoidService.Throw() => throw new InvalidOperationException();
     }
 }
 

@@ -1,7 +1,6 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 using Arc.Visceral;
-using Microsoft.CodeAnalysis;
 
 namespace CrossChannel;
 
@@ -11,20 +10,13 @@ public sealed class RadioServiceAttributeMock
     public static readonly string StandardName = SimpleName + "Attribute";
     public static readonly string FullName = "CrossChannel." + StandardName;
 
-    public RadioServiceAttributeMock(Location location)
-    {
-        this.Location = location;
-    }
-
-    public Location Location { get; }
-
     public int MaxLinks { get; set; } = int.MaxValue;
 
     public bool AutoRegisterServiceAndSender { get; set; } = true;
 
-    public static RadioServiceAttributeMock FromArray(Location location, object?[] constructorArguments, KeyValuePair<string, object?>[] namedArguments)
+    public static RadioServiceAttributeMock FromArray(object?[] constructorArguments, KeyValuePair<string, object?>[] namedArguments)
     {
-        var attribute = new RadioServiceAttributeMock(location);
+        var attribute = new RadioServiceAttributeMock();
 
         object? val;
         val = VisceralHelper.GetValue(-1, nameof(MaxLinks), constructorArguments, namedArguments);

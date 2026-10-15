@@ -4,9 +4,11 @@ namespace CrossChannel;
 
 /// <summary>
 /// Marks an interface as a radio service, so that the source generator emits a broker for it.<br/>
-/// The interface must also derive from <see cref="IRadioService"/>, and the return type of each of its
-/// methods must be <see cref="void"/>, <see cref="Task"/>, <see cref="RadioResult{T}"/>,
-/// or <see cref="Task{TResult}"/> of <see cref="RadioResult{T}"/>.
+/// The interface must also derive from <see cref="IRadioService"/>, the return type of each of its abstract or virtual
+/// methods (including inherited ones) must be <see langword="void"/>, <see cref="Task"/>, <see cref="RadioResult{T}"/>,
+/// or <see cref="Task{TResult}"/> of <see cref="RadioResult{T}"/>, and the types containing it must be partial.<br/>
+/// Not supported: generic or file-local interfaces (or ones nested in such a type), properties, events,
+/// generic, static abstract, or protected abstract methods, ref returns, and ref, out, or in parameters.
 /// </summary>
 [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false, Inherited = false)]
 public sealed class RadioServiceAttribute : Attribute
@@ -20,7 +22,8 @@ public sealed class RadioServiceAttribute : Attribute
 
     /// <summary>
     /// Gets or sets the maximum number of instances which can subscribe to a single channel (default is <see cref="int.MaxValue"/>).<br/>
-    /// Opening a link beyond this limit returns <see langword="null"/>.
+    /// When the limit is reached, dead weak links are removed first; if the channel is still full, opening a link returns <see langword="null"/>.
+    /// A value of 0 or less accepts no subscriptions.
     /// </summary>
     public int MaxLinks { get; set; } = int.MaxValue;
 

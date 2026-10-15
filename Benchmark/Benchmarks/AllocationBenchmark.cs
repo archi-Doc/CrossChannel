@@ -1,6 +1,7 @@
 // Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using CrossChannel;
@@ -33,7 +34,6 @@ public class AllocationService : IAllocationService
 public class AllocationBenchmark
 {
     private IAllocationService broker = default!;
-    private Task<RadioResult<int>[]> sparseResults = default!;
 
     [Params(0, 1, 8)]
     public int Receivers { get; set; }
@@ -48,7 +48,6 @@ public class AllocationBenchmark
         }
 
         this.broker = channel.GetBroker();
-        this.sparseResults = Task.FromResult<RadioResult<int>[]>([default, new(1), default, new(2), default, default, default, default]);
     }
 
     [Benchmark]
@@ -60,25 +59,22 @@ public class AllocationBenchmark
     [Benchmark]
     public RadioResult<int> Result() => this.broker.Value();
 
-    [Benchmark]
-    public Task<RadioResult<int>> SparseAggregate() => RadioTask.AggregateAsync(this.sparseResults);
-
     public static void CheckAllocations()
     {
         foreach (var receivers in new[] { 0, 1, 8 })
         {
             var benchmark = new AllocationBenchmark { Receivers = receivers };
             benchmark.Setup();
-            Measure("Notify", receivers, benchmark.Notify);
-            Measure("CompletedTasks", receivers, () => benchmark.CompletedTasks().GetAwaiter().GetResult());
-            Measure("Result", receivers, () => _ = benchmark.Result());
-            if (receivers == 8)
-            {
-                Measure("SparseAggregate", receivers, () => benchmark.SparseAggregate().GetAwaiter().GetResult());
-            }
+            Measure($"Notify, receivers={receivers}", benchmark.Notify);
+            Measure($"CompletedTasks, receivers={receivers}", () => benchmark.CompletedTasks().GetAwaiter().GetResult());
+            Measure($"Result, receivers={receivers}", () => _ = benchmark.Result());
         }
 
-        static void Measure(string name, int receivers, Action action)
+        // SparseAggregate does not depend on the number of receivers, so it is measured once.
+        var aggregate = new AggregateAllocationBenchmark();
+        Measure("SparseAggregate", () => aggregate.SparseAggregate().GetAwaiter().GetResult());
+
+        static void Measure(string name, Action action)
         {
             for (var i = 0; i < 10_000; i++)
             {
@@ -92,7 +88,21 @@ public class AllocationBenchmark
             }
 
             var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            Console.WriteLine($"{name}, receivers={receivers}, bytes/op={allocated / 100_000d:F2}");
+            Console.WriteLine($"{name}, bytes/op={allocated / 100_000d:F2}");
         }
     }
+}
+
+/// <summary>
+/// Measures <see cref="RadioTask.AggregateAsync{T}(Task{RadioResult{T}}[], int)"/> with sparse completed results (2 of 8 receivers respond).<br/>
+/// Kept apart from <see cref="AllocationBenchmark"/> because it does not depend on the number of receivers.
+/// </summary>
+[MemoryDiagnoser]
+[ShortRunJob]
+public class AggregateAllocationBenchmark
+{
+    private readonly Task<RadioResult<int>>[] sparseResults = [.. new RadioResult<int>[] { default, new(1), default, new(2), default, default, default, default, }.Select(x => Task.FromResult(x))];
+
+    [Benchmark]
+    public Task<RadioResult<int>> SparseAggregate() => RadioTask.AggregateAsync(this.sparseResults, this.sparseResults.Length);
 }

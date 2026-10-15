@@ -7,9 +7,20 @@ using Xunit;
 
 namespace XUnitTest;
 
+/// <summary>
+/// The static <see cref="Radio"/> is shared by the whole process, so the test classes which open links on it
+/// (and assert the exact number of receivers) are put in this collection, which runs their tests one at a time.
+/// </summary>
+[CollectionDefinition(Name)]
+public class StaticRadioCollection
+{
+    public const string Name = "StaticRadio";
+}
+
+[Collection(StaticRadioCollection.Name)]
 public class StaticTest
 { // I prefer static Radio class. but because it's a static class, it causes testing problems.
-   // So this is the only test code for the static class.
+   // So every test class which opens links on the static Radio joins the StaticRadio collection, and its tests run one at a time.
 
     [Fact]
     public void Static_TwoWay()

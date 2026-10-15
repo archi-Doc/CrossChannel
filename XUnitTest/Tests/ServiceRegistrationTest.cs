@@ -13,10 +13,13 @@ public class ServiceRegistrationTest
     [Fact]
     public void EveryRegisteredChannelIsAdded()
     {
+        // Take the snapshot first: registrations are only ever added (other tests may add one concurrently),
+        // so every entry of this snapshot is seen by AddCrossChannel.
+        var registrations = RadioServiceRegistry.Registrations.ToArray();
         var services = new ServiceCollection();
         services.AddCrossChannel();
 
-        foreach (var x in RadioServiceRegistry.Registrations)
+        foreach (var x in registrations)
         {
             var channelType = typeof(IChannel<>).MakeGenericType(x.ServiceType);
             services.Count(y => y.ServiceType == channelType).Is(1);
@@ -120,5 +123,21 @@ public class ServiceRegistrationTest
 
         var sender = provider.GetRequiredService<ISender<ITestService>>();
         ReferenceEquals(sender.Send(), Radio.Send<ITestService>()).IsTrue();
+    }
+
+    [Fact]
+    public void StaticRadioRegistrationHonorsOptOut()
+    {
+        var services = new ServiceCollection();
+        services.AddCrossChannel(false);
+
+        services.Count(x => x.ServiceType == typeof(IChannel<IManualRegistrationService>)).Is(1);
+        services.Count(x => x.ServiceType == typeof(ISender<IManualRegistrationService>)).Is(0);
+        services.Count(x => x.ServiceType == typeof(IManualRegistrationService)).Is(0);
+
+        var provider = services.BuildServiceProvider();
+        provider.GetService<ISender<IManualRegistrationService>>().IsNull();
+        provider.GetService<IManualRegistrationService>().IsNull();
+        ReferenceEquals(provider.GetRequiredService<IChannel<IManualRegistrationService>>(), Radio.GetChannel<IManualRegistrationService>()).IsTrue();
     }
 }

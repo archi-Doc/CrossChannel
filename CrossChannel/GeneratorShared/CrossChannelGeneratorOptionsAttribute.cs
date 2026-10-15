@@ -22,9 +22,9 @@ public sealed class CrossChannelGeneratorOptionsAttribute : Attribute
     public bool AttachDebugger { get; set; } = false;
 
     /// <summary>
-    /// Gets or sets a value indicating whether source is written to an existing "Generated" folder
-    /// beside the annotated file instead of added to the compilation in memory (default is false).
-    /// If the folder does not exist, source is added in memory. Include disk output in compilation when using this option.
+    /// Gets or sets a value indicating whether the generated source is written to an existing "Generated" folder
+    /// beside the annotated file instead of being added to the compilation in memory (default is <see langword="false"/>).<br/>
+    /// If the folder does not exist, the source is added in memory. The written files must be compiled as part of the project.
     /// </summary>
     public bool GenerateToFile { get; set; } = false;
 }

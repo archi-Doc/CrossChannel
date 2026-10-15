@@ -19,6 +19,13 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
     public const string RootName = "__CrossChannelRoot__";
     public const string InitializerName = "__Initialize__";
 
+    /// <summary>
+    /// Marks every generated member (initializers and brokers) as obsolete, so that obsolete services, methods,
+    /// and types used inside them report no diagnostic: an obsolete context suppresses CS0612, CS0618, CS0619
+    /// (Obsolete with error: true), and custom DiagnosticIds, which a pragma cannot fully cover.
+    /// </summary>
+    public const string ObsoleteContext = "[global::System.Obsolete]";
+
     public static readonly DiagnosticDescriptor Error_NotPartialParent = new DiagnosticDescriptor(
         id: "CCG001", title: "Partial class/struct", messageFormat: "Parent type '{0}' is not a partial class/struct",
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
@@ -35,12 +42,14 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
         id: "CCG004", title: "Unsupported service declaration", messageFormat: "Radio services require non-generic interfaces and instance methods with value parameters; properties, events, generic methods, and ref returns are not supported",
         category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
+    public static readonly DiagnosticDescriptor Error_FileLocal = new DiagnosticDescriptor(
+        id: "CCG005", title: "File-local type", messageFormat: "Radio services cannot be file-local or nested in a file-local type '{0}'",
+        category: GeneratorName, DiagnosticSeverity.Error, isEnabledByDefault: true);
+
     public CrossChannelBody(SourceProductionContext context)
         : base(context)
     {
     }
-
-    internal List<CrossChannelObject> Objects = new();
 
     internal Dictionary<string, List<CrossChannelObject>> Namespaces = new();
 
@@ -80,6 +89,8 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
     public void Generate(IGeneratorInformation generator, CancellationToken cancellationToken)
     {
         var ssb = new ScopingStringBuilder();
+        var rootName = string.IsNullOrEmpty(generator.AssemblyName) ? RootName : RootName + VisceralHelper.AssemblyNameToIdentifier(generator.AssemblyName!);
+        var hintNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // Namespace: string - List<CrossChannelObject>
         foreach (var x in this.Namespaces)
@@ -90,74 +101,71 @@ public class CrossChannelBody : VisceralBody<CrossChannelObject>
 
             // var topObjects = x.Value.Where(y => y.ContainingObject is null).ToList();
             // var nestedObjects = x.Value.Where(y => y.ContainingObject is not null).ToList();
-            var assemblyId = string.Empty;
-            if (!string.IsNullOrEmpty(generator.AssemblyName))
+            using (var scopeClass = ssb.ScopeBrace($"internal static class {rootName}"))
             {
-                assemblyId = VisceralHelper.AssemblyNameToIdentifier(generator.AssemblyName!);
-            }
+                ssb.AppendLine("[global::System.Runtime.CompilerServices.ModuleInitializer]");
+                ssb.AppendLine(ObsoleteContext);
 
-            var rootName = $"{RootName}{assemblyId}";
-            using (var scopeClass = ssb.ScopeBrace($"public static class {rootName}"))
-            {
-                ssb.AppendLine("private static bool Initialized;");
-                ssb.AppendLine("[ModuleInitializer]");
-
-                using (var scopeMethod = ssb.ScopeBrace("public static void Initialize()"))
+                using (var scopeMethod = ssb.ScopeBrace("internal static void Initialize()"))
                 {
-                    ssb.AppendLine("if (Initialized) return;");
-                    ssb.AppendLine("Initialized = true;");
-
                     foreach (var y in x.Value)
-                    {
+                    {// Top-level services
                         y.GenerateRegister(ssb);
                     }
 
-                    foreach (var y in x.Value.Where(y => y.Kind != VisceralObjectKind.Interface))
-                    {
-                        ssb.AppendLine($"{y.FullName}.{InitializerName}();");
+                    foreach (var y in x.Value)
+                    {// Types which host nested services
+                        if (y.IsContainer)
+                        {
+                            ssb.AppendLine($"{y.QualifiedName}.{InitializerName}();");
+                        }
                     }
                 }
 
                 ssb.AppendLine();
-                foreach (var y in x.Value.Where(y => y.Kind == VisceralObjectKind.Interface))
-                {
-                    y.GenerateObject(ssb);
+                foreach (var y in x.Value)
+                {// The brokers of top-level services are nested in the root class.
+                    y.GenerateOutObject(ssb);
                 }
             }
 
-            foreach (var y in x.Value.Where(y => y.Kind != VisceralObjectKind.Interface))
-            {
-                y.GenerateObject(ssb);
+            foreach (var y in x.Value)
+            {// The partial declarations of the types which host nested services follow the root class, so that they extend the user's types.
+                y.GenerateContainer(ssb);
             }
 
             var result = ssb.Finalize();
 
+            // Hint names may not contain '@' (escaped keyword namespaces) and must be unique ignoring case.
+            var hintName = $"gen.{Name}.{x.Key.Replace("@", string.Empty)}";
+            if (!hintNames.Add(hintName))
+            {
+                var n = 2;
+                while (!hintNames.Add($"{hintName}{n}"))
+                {
+                    n++;
+                }
+
+                hintName = $"{hintName}{n}";
+            }
+
             if (generator.GenerateToFile && generator.TargetFolder != null && Directory.Exists(generator.TargetFolder))
             {
-                this.StringToFile(result, Path.Combine(generator.TargetFolder, $"gen.{Name}.{x.Key}.cs"));
+                this.StringToFile(result, Path.Combine(generator.TargetFolder, $"{hintName}.cs"));
             }
             else
             {
-                this.Context?.AddSource($"gen.{Name}.{x.Key}", SourceText.From(result, Encoding.UTF8));
-                this.Context2?.AddSource($"gen.{Name}.{x.Key}", SourceText.From(result, Encoding.UTF8));
+                this.Context?.AddSource(hintName, SourceText.From(result, Encoding.UTF8));
+                this.Context2?.AddSource(hintName, SourceText.From(result, Encoding.UTF8));
             }
         }
     }
 
     private void GenerateHeader(ScopingStringBuilder ssb)
-    {
+    {// Every name in the generated code is global:: qualified, so no using directive is needed.
         ssb.AddHeader("// <auto-generated/>");
-        ssb.AddUsing("System");
-        ssb.AddUsing("System.Collections.Generic");
-        ssb.AddUsing("System.Diagnostics.CodeAnalysis");
-        ssb.AddUsing("System.Linq");
-        ssb.AddUsing("System.Runtime.CompilerServices");
-        ssb.AddUsing("System.Threading.Tasks");
-        ssb.AddUsing("CrossChannel");
 
-        ssb.AppendLine("#nullable enable", false);
-        ssb.AppendLine("#pragma warning disable CS1591", false);
-        ssb.AppendLine("#pragma warning disable CS1998", false);
+        ssb.AppendLine("#nullable enable annotations", false); // The signatures keep their annotations, but the generated code reports no nullable warnings (e.g. for [NotNull] or [MaybeNull] parameters).
         ssb.AppendLine();
     }
 }

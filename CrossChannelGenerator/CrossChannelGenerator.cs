@@ -3,7 +3,6 @@
 using System.Collections.Immutable;
 using Arc.Visceral;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 #pragma warning disable RS1036
@@ -15,59 +14,39 @@ public class CrossChannelGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var provider = context.CompilationProvider.Combine(
-            context.SyntaxProvider
-            .CreateSyntaxProvider(
-                static (node, _) =>
-                {// Interface declaration with one or more attributes.
-                    return node is InterfaceDeclarationSyntax syntax && syntax.AttributeLists.Count > 0;
-                },
-                static (context, _) =>
+        /*if (syntax.BaseList is not null)
+        {// IRadioService (check later)
+            foreach (var baseType in syntax.BaseList.Types)
+            {
+                var name = baseType.ToString();
+                if (name.EndsWith(IRadioServiceMock.StandardName))
                 {
-                    if (context.Node is InterfaceDeclarationSyntax syntax)
-                    {
-                        foreach (var attributeList in syntax.AttributeLists)
-                        {
-                            foreach (var attribute in attributeList.Attributes)
-                            {
-                                var name = context.SemanticModel.GetSymbolInfo(attribute).Symbol?.ContainingType.ToDisplayString();
-                                if (name == CrossChannelGeneratorOptionsAttributeMock.FullName)
-                                {// [CrossChannelGeneratorOptionsAttribute]
-                                    return syntax;
-                                }
-                                else if (name == RadioServiceAttributeMock.FullName)
-                                {// [RadioServiceAttribute]
-                                    return syntax;
-                                }
-                            }
-                        }
+                    return syntax;
+                }
+            }
+        }*/
 
-                        /*if (syntax.BaseList is not null)
-                        {// IRadioService (check later)
-                            foreach (var baseType in syntax.BaseList.Types)
-                            {
-                                var name = baseType.ToString();
-                                if (name.EndsWith(IRadioServiceMock.StandardName))
-                                {
-                                    return syntax;
-                                }
-                            }
-                        }*/
-                    }
+        // [RadioService] interfaces
+        var services = context.SyntaxProvider.ForAttributeWithMetadataName(
+            RadioServiceAttributeMock.FullName,
+            static (node, _) => node is InterfaceDeclarationSyntax,
+            static (context, _) => (INamedTypeSymbol)context.TargetSymbol)
+            .Collect();
 
-                    return null;
-                })
-            .Collect());
+        // [CrossChannelGeneratorOptions] and the path of the annotated file
+        var options = context.SyntaxProvider.ForAttributeWithMetadataName(
+            CrossChannelGeneratorOptionsAttributeMock.FullName,
+            static (node, _) => node is InterfaceDeclarationSyntax,
+            static (context, _) => (Attribute: context.Attributes[0], FilePath: context.TargetNode.SyntaxTree.FilePath))
+            .Collect();
 
-        context.RegisterImplementationSourceOutput(provider, Emit);
+        var provider = context.CompilationProvider.Combine(services).Combine(options);
+        context.RegisterImplementationSourceOutput(provider, static (context, source) => Emit(context, source.Left.Left, source.Left.Right, source.Right));
     }
 
-    private static void Emit(SourceProductionContext context, (Compilation Compilation, ImmutableArray<InterfaceDeclarationSyntax?> Types) source)
+    private static void Emit(SourceProductionContext context, Compilation compilation, ImmutableArray<INamedTypeSymbol> services, ImmutableArray<(AttributeData Attribute, string FilePath)> options)
     {
-        var compilation = source.Compilation;
-
-        var generatorOptionAttributeSymbol = compilation.GetTypeByMetadataName(CrossChannelGeneratorOptionsAttributeMock.FullName);
-        if (generatorOptionAttributeSymbol == null)
+        if (services.IsDefaultOrEmpty)
         {
             return;
         }
@@ -78,56 +57,28 @@ public class CrossChannelGenerator : IIncrementalGenerator
             return;
         }
 
-        var radioServiceInterface = compilation.GetTypeByMetadataName(RadioServiceAttributeMock.FullName);
-        if (radioServiceInterface == null)
-        {
-            return;
-        }
-
         // The host may share a generator instance between compilations, so the options of this run are kept locally.
         var information = new GeneratorInformation(compilation.AssemblyName ?? string.Empty, compilation.Options.OutputKind);
+        if (options.Length > 0)
+        {// [CrossChannelGeneratorOptions] (the first one takes effect)
+            var (y, filePath) = options[0];
+            var attribute = new VisceralAttribute(CrossChannelGeneratorOptionsAttributeMock.FullName, y);
+            var generatorOption = CrossChannelGeneratorOptionsAttributeMock.FromArray(attribute.ConstructorArguments, attribute.NamedArguments);
+
+            information.AttachDebugger = generatorOption.AttachDebugger;
+            information.GenerateToFile = generatorOption.GenerateToFile;
+
+            // A syntax tree which is not backed by a file (e.g. an in-memory compilation) has no folder to write to.
+            var directory = string.IsNullOrEmpty(filePath) ? null : Path.GetDirectoryName(filePath);
+            information.TargetFolder = string.IsNullOrEmpty(directory) ? null : Path.Combine(directory, "Generated");
+        }
+
         var body = new CrossChannelBody(context);
-        var processed = new HashSet<INamedTypeSymbol>(SymbolEqualityComparer.Default);
-
-        var generatorOptionIsSet = false;
-        foreach (var x in source.Types)
-        {
-            if (x == null)
-            {
-                continue;
-            }
-
+        foreach (var symbol in services)
+        {// [RadioService] (Body.Add ignores a symbol which is already added)
             context.CancellationToken.ThrowIfCancellationRequested();
-
-            var model = compilation.GetSemanticModel(x.SyntaxTree);
-            if (model.GetDeclaredSymbol(x) is INamedTypeSymbol symbol &&
-                symbol.TypeKind == TypeKind.Interface &&
-                processed.Add(symbol))
-            {
-                foreach (var y in symbol.GetAttributes())
-                {
-                    if (!generatorOptionIsSet &&
-                        SymbolEqualityComparer.Default.Equals(y.AttributeClass, generatorOptionAttributeSymbol))
-                    {// [CrossChannelGeneratorOptions]
-                        generatorOptionIsSet = true;
-                        var attribute = new VisceralAttribute(CrossChannelGeneratorOptionsAttributeMock.FullName, y);
-                        var generatorOption = CrossChannelGeneratorOptionsAttributeMock.FromArray(attribute.ConstructorArguments, attribute.NamedArguments);
-
-                        information.AttachDebugger = generatorOption.AttachDebugger;
-                        information.GenerateToFile = generatorOption.GenerateToFile;
-
-                        // A syntax tree which is not backed by a file (e.g. an in-memory compilation) has no folder to write to.
-                        var filePath = x.SyntaxTree.FilePath;
-                        var directory = string.IsNullOrEmpty(filePath) ? null : Path.GetDirectoryName(filePath);
-                        information.TargetFolder = string.IsNullOrEmpty(directory) ? null : Path.Combine(directory, "Generated");
-                    }
-                    else if (SymbolEqualityComparer.Default.Equals(y.AttributeClass, radioServiceInterface))
-                    {// [RadioService]
-                        body.Add(symbol);
-                        // if (symbol.AllInterfaces.Any(z => SymbolEqualityComparer.Default.Equals(z, iRadioService))) // IRadioService (check later)
-                    }
-                }
-            }
+            body.Add(symbol);
+            // if (symbol.AllInterfaces.Any(z => SymbolEqualityComparer.Default.Equals(z, iRadioService))) // IRadioService (check later)
         }
 
         context.CancellationToken.ThrowIfCancellationRequested();
@@ -146,7 +97,6 @@ public class CrossChannelGenerator : IIncrementalGenerator
         public GeneratorInformation(string assemblyName, OutputKind outputKind)
         {
             this.AssemblyName = assemblyName;
-            this.AssemblyId = assemblyName.GetHashCode();
             this.OutputKind = outputKind;
         }
 
@@ -158,7 +108,7 @@ public class CrossChannelGenerator : IIncrementalGenerator
 
         public string? AssemblyName { get; }
 
-        public int AssemblyId { get; }
+        public int AssemblyId => 0; // Not used.
 
         public OutputKind OutputKind { get; }
 

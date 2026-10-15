@@ -5,9 +5,9 @@ using System.Text;
 namespace CrossChannel;
 
 /// <summary>
-/// Holds the results of a radio message.<br/>
-/// A receiver returns a single value, but a sender collects one value per receiver, so the number of
-/// results is zero or more. The zero and one result cases do not allocate.
+/// Holds the results of a radio message: zero or more values, collected from the receivers in order.<br/>
+/// Each receiver should return zero or one value, since a broker may keep only the first value of each receiver.
+/// Zero or one value is held without allocation.
 /// </summary>
 /// <typeparam name="T">The type of the result.</typeparam>
 public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<RadioResult<T>>
@@ -20,7 +20,9 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     private readonly T[]? resultArray;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RadioResult{T}"/> struct with a single result.
+    /// Initializes a new instance of the <see cref="RadioResult{T}"/> struct with a single result.<br/>
+    /// Use <see cref="FromValue(T)"/> instead when the value is <see langword="null"/>, <see langword="default"/>, or <c>[]</c>,
+    /// or when <typeparamref name="T"/> is a type that arrays convert to (e.g. <see cref="object"/>) and the value is an array.
     /// </summary>
     /// <param name="result">The single result.</param>
     public RadioResult(T result)
@@ -30,9 +32,10 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RadioResult{T}"/> struct with an array of results.
+    /// Initializes a new instance of the <see cref="RadioResult{T}"/> struct with an array of results.<br/>
+    /// An empty array gives an empty result, and an array with a single element gives a single result.
     /// </summary>
-    /// <param name="results">The results. Arrays with two or more elements are retained without copying.</param>
+    /// <param name="results">The results. An array with two or more elements is retained without copying and must not be modified afterwards.</param>
     /// <exception cref="ArgumentNullException"><paramref name="results"/> is null.</exception>
     public RadioResult(T[] results)
     {
@@ -71,9 +74,12 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     public int Count => this.resultArray is null ? 0 : (this.resultArray.Length == 0 ? 1 : this.resultArray.Length);
 
     /// <summary>
-    /// Creates a <see cref="RadioResult{T}"/> that holds a single result.<br/>
-    /// Use this method instead of the constructor when the constructor overload is ambiguous
-    /// (e.g. <typeparamref name="T"/> is a reference type and the value is <c>null</c>, or <typeparamref name="T"/> is an array type).
+    /// Creates a <see cref="RadioResult{T}"/> that holds a single result, whatever the value is.<br/>
+    /// Use this method when the constructor would not bind to the single-value overload. <c>null</c>, <c>default</c>,
+    /// or <c>[]</c> can make the call ambiguous (a compile error). When <typeparamref name="T"/> is a type that arrays convert to
+    /// (e.g. <see cref="object"/>, <see cref="Array"/>, <see cref="IEnumerable"/>, or <see cref="IEnumerable{T}"/> of <see cref="object"/>),
+    /// <c>null</c>, <c>default</c>, <c>[]</c>, and arrays of a reference type convertible to <typeparamref name="T"/> (e.g. <c>string[]</c>) silently bind to the array overload: the array
+    /// elements become separate results, <c>null</c> and <c>default</c> throw <see cref="ArgumentNullException"/>, and <c>[]</c> gives an empty result.
     /// </summary>
     /// <param name="value">The single result.</param>
     /// <returns>A <see cref="RadioResult{T}"/> with a single result.</returns>
@@ -84,7 +90,7 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     /// Creates a <see cref="RadioResult{T}"/> from an array of results.<br/>
     /// An empty array becomes an empty result, and an array with a single element becomes a single result.
     /// </summary>
-    /// <param name="results">The results. Arrays with two or more elements are retained without copying.</param>
+    /// <param name="results">The results. An array with two or more elements is retained without copying and must not be modified afterwards.</param>
     /// <returns>A <see cref="RadioResult{T}"/> with the specified results.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="results"/> is null.</exception>
     public static RadioResult<T> FromArray(T[] results)
@@ -117,10 +123,10 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
     }
 
     /// <summary>
-    /// Determines whether the specified <see cref="RadioResult{T}"/> is equal to the current <see cref="RadioResult{T}"/>.
+    /// Determines whether this result and <paramref name="other"/> hold the same values in the same order, compared with <see cref="EqualityComparer{T}.Default"/>.
     /// </summary>
-    /// <param name="other">The <see cref="RadioResult{T}"/> to compare with the current <see cref="RadioResult{T}"/>.</param>
-    /// <returns><c>true</c> if the specified <see cref="RadioResult{T}"/> is equal to the current <see cref="RadioResult{T}"/>; otherwise, <c>false</c>.</returns>
+    /// <param name="other">The result to compare with.</param>
+    /// <returns><see langword="true"/> if the results are equal; otherwise, <see langword="false"/>.</returns>
     public bool Equals(RadioResult<T> other)
     {
         if (this.resultArray is null)
@@ -134,8 +140,9 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
         }
         else
         {// >1: Array
+            // ReadOnlySpan<T>(T[]) has no array covariance check, unlike Span<T> (AsSpan throws for a string[] stored as object[]).
             return other.resultArray is { Length: > 1 } &&
-                this.resultArray.AsSpan().SequenceEqual(other.resultArray.AsSpan());
+                new ReadOnlySpan<T>(this.resultArray).SequenceEqual(new ReadOnlySpan<T>(other.resultArray));
         }
     }
 
@@ -144,19 +151,19 @@ public readonly struct RadioResult<T> : IEnumerable, IEnumerable<T>, IEquatable<
         => obj is RadioResult<T> other && this.Equals(other);
 
     /// <summary>
-    /// Determines whether two <see cref="RadioResult{T}"/> instances are equal.
+    /// Determines whether two results are equal (see <see cref="Equals(RadioResult{T})"/>).
     /// </summary>
     /// <param name="left">The left operand.</param>
     /// <param name="right">The right operand.</param>
-    /// <returns><c>true</c> if the instances are equal; otherwise, <c>false</c>.</returns>
+    /// <returns><see langword="true"/> if the results are equal; otherwise, <see langword="false"/>.</returns>
     public static bool operator ==(RadioResult<T> left, RadioResult<T> right) => left.Equals(right);
 
     /// <summary>
-    /// Determines whether two <see cref="RadioResult{T}"/> instances are not equal.
+    /// Determines whether two results are not equal (see <see cref="Equals(RadioResult{T})"/>).
     /// </summary>
     /// <param name="left">The left operand.</param>
     /// <param name="right">The right operand.</param>
-    /// <returns><c>true</c> if the instances are not equal; otherwise, <c>false</c>.</returns>
+    /// <returns><see langword="true"/> if the results are not equal; otherwise, <see langword="false"/>.</returns>
     public static bool operator !=(RadioResult<T> left, RadioResult<T> right) => !left.Equals(right);
 
     /// <inheritdoc/>

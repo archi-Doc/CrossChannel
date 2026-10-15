@@ -85,7 +85,8 @@ public static class RadioServiceRegistry
     }
 
     /// <summary>
-    /// Gets the shared channel which accepts no link.
+    /// Gets the shared channel of the service which accepts no link (<see cref="RadioServiceRegistration.EmptyChannel"/>).<br/>
+    /// Sending through its broker does nothing.
     /// </summary>
     /// <typeparam name="TService">The type of the service.</typeparam>
     /// <returns>The empty channel.</returns>

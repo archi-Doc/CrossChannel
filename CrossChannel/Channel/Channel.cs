@@ -1,6 +1,7 @@
 ﻿// Copyright (c) All contributors. All rights reserved. Licensed under the MIT license.
 
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Threading;
 
 namespace CrossChannel;
@@ -21,7 +22,8 @@ public abstract class Channel
     public const int WeakReferenceCheckThreshold = 32;
 
     /// <summary>
-    /// Gets the maximum number of links the channel can hold.
+    /// Gets the maximum number of links the channel can hold (<see cref="RadioServiceAttribute.MaxLinks"/>).<br/>
+    /// A value of 0 or less accepts no links; the shared empty channel uses 0.
     /// </summary>
     public int MaxLinks { get; internal set; }
 
@@ -31,14 +33,14 @@ public abstract class Channel
     internal int NodeIndex { get; set; }
 
     /// <summary>
-    /// Gets the broker of the channel. Calling a method of the broker invokes that method on every linked instance.
+    /// Gets the broker of the channel. Calling a method of the broker invokes that method on every subscribed instance.
     /// </summary>
-    /// <returns>The broker.</returns>
+    /// <returns>The broker, which implements the service interface.</returns>
     public abstract object GetBroker();
 }
 
 /// <summary>
-/// Delivers messages to the instances linked to it.<br/>
+/// Delivers messages to the instances subscribed to it.<br/>
 /// Instances subscribe with <see cref="Open(TService, bool)"/>, and messages are sent through <see cref="GetBroker"/>.
 /// </summary>
 /// <typeparam name="TService">The type of the service.</typeparam>
@@ -54,7 +56,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
     public sealed class Link : IDisposable
     {
 #pragma warning disable SA1401 // Fields should be private
-        internal int Index = -1; // The index of FastList<T>, lock() required.
+        internal int Index = -1; // The index in FastList, or -1 if closed. Written only under the channel lock.
 #pragma warning restore SA1401 // Fields should be private
 
         private readonly Channel<TService> channel;
@@ -75,12 +77,14 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         }
 
         /// <summary>
-        /// Gets a value indicating whether the link is open (still registered in the channel).
+        /// Gets a value indicating whether the link is still registered in the channel.<br/>
+        /// A weak link whose instance has been collected stays open until the channel removes it.
         /// </summary>
         public bool IsOpen => Volatile.Read(ref this.Index) != -1;
 
         /// <summary>
-        /// Tries to get the linked instance. Fails when the instance was held by a weak reference and has been collected.
+        /// Tries to get the linked instance. Fails only when the instance was held by a weak reference and has been collected.<br/>
+        /// It does not check <see cref="IsOpen"/>: a closed link still returns its instance if it is alive.
         /// </summary>
         /// <param name="instance">When this method returns, contains the linked instance, if it is still alive.</param>
         /// <returns><see langword="true"/> if the instance was retrieved; otherwise, <see langword="false"/>.</returns>
@@ -99,12 +103,15 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         }
 
         /// <summary>
-        /// Unsubscribes the instance. Equivalent to <see cref="Dispose"/> and safe to call more than once.
+        /// Unsubscribes the instance. Equivalent to <see cref="Dispose"/> and safe to call more than once.<br/>
+        /// Closing the last link of a keyed channel removes the channel from its radio.
         /// </summary>
         public void Close()
             => this.channel.Remove(this);
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Unsubscribes the instance. Equivalent to <see cref="Close"/> and safe to call more than once.
+        /// </summary>
         public void Dispose()
             => this.channel.Remove(this);
     }
@@ -118,14 +125,15 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         private const int InitialCapacity = 1;
         private const int MinShrinkStart = 8;
 
-        private Link?[] values = default!;
+        private readonly FastIntQueue freeIndex = new(InitialCapacity);
+        private Link?[] values;
         private int count;
         private int peakCount; // The largest count since the last trim (>= count).
-        private FastIntQueue freeIndex = default!;
 
         public FastList()
         {
-            this.Initialize();
+            this.values = new Link?[InitialCapacity];
+            this.freeIndex.Reset(InitialCapacity, 0, InitialCapacity);
         }
 
         public int Count => Volatile.Read(ref this.count); // It may lead to inconsistent results between 'count' and 'values'.
@@ -142,7 +150,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
             return (values, countHint);
         }
 
-        public int Add(Link value)
+        public void Add(Link value)
         {
             if (this.count >= this.peakCount)
             {
@@ -155,35 +163,26 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
                 value.Index = index;
                 Volatile.Write(ref this.values[index], value);
                 Volatile.Write(ref this.count, this.count + 1);
-                return index;
             }
             else
             {// Resize
-                var newValues = new Link[this.values.Length * 2];
-                Array.Copy(this.values, 0, newValues, 0, this.values.Length);
-                this.freeIndex.EnsureNewCapacity(newValues.Length);
-                for (var i = this.values.Length; i < newValues.Length; i++)
-                {
-                    this.freeIndex.Enqueue(i);
-                }
+                var index = this.values.Length; // The first new slot is used by this link, and the rest are free.
+                var newValues = new Link[index * 2];
+                Array.Copy(this.values, 0, newValues, 0, index);
+                this.freeIndex.Reset(newValues.Length, index + 1, newValues.Length);
 
-                var index = this.freeIndex.Dequeue();
                 value.Index = index;
                 newValues[index] = value;
                 Volatile.Write(ref this.count, this.count + 1);
                 Volatile.Write(ref this.values, newValues);
-                return index;
             }
         }
 
         public void Remove(Link value)
-        {
+        {// The caller guarantees that the link is in the list (link.Index != -1).
             var index = value.Index;
             ref var v = ref this.values[index];
-            if (v == null)
-            {
-                return;
-            }
+            Debug.Assert(v == value, "The link must be stored at its index.");
 
             Volatile.Write(ref v, null);
             this.freeIndex.Enqueue(index);
@@ -200,15 +199,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         {
             var size = this.peakCount;
             this.peakCount = this.count;
-            if (size == 0)
-            {// Empty
-                if (this.values.Length > MinShrinkStart)
-                {
-                    this.Initialize();
-                }
-
-                return;
-            }
+            Debug.Assert(size > 0, "A trim follows an addition or a removal, so the peak count is positive.");
 
             if (this.values.Length <= MinShrinkStart)
             {
@@ -225,14 +216,12 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
                 newLength >>= 1;
             }
 
-            newLength <<= 1;
-            newLength = (newLength < InitialCapacity) ? InitialCapacity : newLength;
+            newLength <<= 1; // newLength >= 2, since size >= 1.
             var newValues = new Link[newLength];
 
             var oldValues = this.values;
             var oldIndex = 0;
-            var i = 0;
-            for (i = 0; i < this.count; i++)
+            for (var i = 0; i < this.count; i++)
             {
                 while (oldValues[oldIndex] is null)
                 {
@@ -245,26 +234,8 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
                 link.Index = i;
             }
 
-            this.freeIndex = new FastIntQueue(newLength);
-            for (; i < newLength; i++)
-            {
-                this.freeIndex.Enqueue(i);
-            }
-
+            this.freeIndex.Reset(newLength, this.count, newLength);
             Volatile.Write(ref this.values, newValues);
-        }
-
-        private void Initialize()
-        {
-            this.freeIndex = new FastIntQueue(InitialCapacity);
-            for (int i = 0; i < InitialCapacity; i++)
-            {
-                this.freeIndex.Enqueue(i);
-            }
-
-            this.count = 0;
-            var v = new Link?[InitialCapacity];
-            Volatile.Write(ref this.values, v);
         }
     }
 
@@ -280,23 +251,19 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
     private int checkReferenceCount;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Channel{TService}"/> class.
+    /// Initializes a new instance of the <see cref="Channel{TService}"/> class.<br/>
+    /// The channel is standalone, independent of <see cref="Radio"/> and <see cref="LocalRadio"/>.
     /// </summary>
     /// <exception cref="InvalidOperationException">The service type is not registered.</exception>
     public Channel()
+        : this(null)
     {
-        this.LockObject = new Lock();
-        this.NodeIndex = -1;
-
-        var registration = RadioServiceRegistry.GetRegistration<TService>();
-        this.MaxLinks = registration.MaxLinks;
-        this.Broker = (TService)registration.BrokerFactory(this);
     }
 
-    internal Channel(IUnorderedMapWithLock map)
+    internal Channel(IUnorderedMapWithLock? map)
     {
         this.map = map;
-        this.LockObject = map.LockObject; // Shared with the map (the node is added/removed while holding this lock).
+        this.LockObject = map?.LockObject ?? new Lock(); // A keyed channel shares the lock with its map (the node is added/removed while holding this lock).
         this.NodeIndex = -1;
 
         var registration = RadioServiceRegistry.GetRegistration<TService>();
@@ -319,7 +286,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
     /// </summary>
     /// <param name="instance">The instance to register.</param>
     /// <param name="useWeakReference">Indicates whether to use a weak reference for the instance.</param>
-    /// <returns>A link to the opened channel, or null if the channel is full.</returns>
+    /// <returns>The link, or <see langword="null"/> if the channel is full.</returns>
     internal Link? OpenInternal(TService instance, bool useWeakReference)
     {// using (this.LockObject.EnterScope()) is required
         ArgumentNullException.ThrowIfNull(instance);
@@ -340,15 +307,15 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
     }
 
     /// <summary>
-    /// Gets the current number of registered links, including weak links not yet cleaned up.
+    /// Gets the number of registered links, including weak links whose instances were collected but not yet removed.
     /// </summary>
     public int Count => this.list.Count;
 
     /// <summary>
-    /// Gets the internal link array together with a hint of the number of links it holds.<br/>
-    /// Intended for the generated broker code: the array is shared, must be treated as read-only,
-    /// and contains null entries for unused slots. CountHint is an allocation hint, not a snapshot
-    /// or an iteration limit. Links may be added or removed concurrently.
+    /// Gets the shared link array and a hint of the number of links. Intended for the generated broker code.<br/>
+    /// Treat the array as read-only and read each entry with <c>Volatile.Read</c>: unused slots are <see langword="null"/>,
+    /// and links may be added or closed concurrently, so check <see cref="Link.IsOpen"/>.
+    /// CountHint is only an allocation hint, not a snapshot or an iteration limit.
     /// </summary>
     /// <returns>The shared link array and an approximate link count.</returns>
     [EditorBrowsable(EditorBrowsableState.Never)]
@@ -364,7 +331,7 @@ public sealed class Channel<TService> : Channel, IChannel<TService>
         {
             if (link.Index != -1)
             {
-                this.list.Remove(link); // this.Index is set to -1
+                this.list.Remove(link); // link.Index is set to -1
                 this.TrimPeriodically();
             }
 

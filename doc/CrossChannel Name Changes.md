@@ -1,6 +1,6 @@
 # CrossChannel Name Changes
 
-This release renames several public APIs. Behavior is unchanged; only names changed.
+This release renames several public APIs. The renames themselves do not change behavior.
 No `[Obsolete]` aliases are provided, so code referencing the old names will not compile until updated.
 
 The runtime library (`Arc.CrossChannel`) and its bundled source generator must be the same version:
@@ -31,7 +31,7 @@ Rebuild after upgrading so the generated code is regenerated.
 | Parameter | `weakReference` in `Radio.Open`, `Radio.OpenWithKey`, `RadioClass.Open`, `RadioClass.OpenWithKey`, `IChannel<TService>.Open`, `Channel<TService>.Open` | `useWeakReference` |
 | Parameter | `from`, `to` in `GhostCopy.Copy<T>` and `GhostCopy.CopyDelegate<T>` | `source`, `destination` |
 
-Unchanged: `Radio`, `Channel<TService>`, `IChannel<TService>`, `ISender<TService>`, `IRadioService`, `RadioServiceAttribute`, `RadioResult<T>` (type), `RadioTask` (type), `FieldCopier.Copy<T>` (method name), `FieldCopier.CopyDelegate<T>` (delegate name), diagnostic IDs `CCG001`-`CCG004`.
+Unchanged: `Radio`, `Channel<TService>`, `IChannel<TService>`, `ISender<TService>`, `IRadioService`, `RadioServiceAttribute`, `RadioResult<T>` (type), `RadioTask` (type), `FieldCopier.Copy<T>` (method name), `FieldCopier.CopyDelegate<T>` (delegate name), diagnostic IDs `CCG001`-`CCG004` (`CCG005`, for file-local services, is new).
 
 ## Migration
 
@@ -82,7 +82,7 @@ Notes:
 | Constant | `ServiceMethod.TaskRadioResultName` | `ServiceMethod.GenericTaskName` |
 | Field | `CrossChannelBody.Error_IRadioService` | `CrossChannelBody.Error_NotRadioService` |
 | Method | `ServiceMethod.GetParameters()` | `ServiceMethod.GetParameterDeclarations()` |
-| Parameter | `obj` in `ServiceMethod.Create` and the `ServiceMethod` constructor | `serviceObject` |
+| Parameter | `obj` in `ServiceMethod.Create` | `serviceObject` |
 
 ## Renamed files
 

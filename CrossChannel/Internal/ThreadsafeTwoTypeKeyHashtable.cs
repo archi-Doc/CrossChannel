@@ -77,7 +77,7 @@ internal sealed class ThreadsafeTwoTypeKeyHashtable<TValue>
 
     /// <summary>
     /// Combines the hash codes of the two keys.<br/>
-    /// The two are mixed asymmetrically, so that (A, B) and (B, A) do not land in the same bucket.
+    /// The two are mixed asymmetrically, so that (A, B) and (B, A) usually land in different buckets.
     /// </summary>
     /// <param name="key">The first key.</param>
     /// <param name="key2">The second key.</param>

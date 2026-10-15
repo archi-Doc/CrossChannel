@@ -10,27 +10,23 @@ namespace CrossChannel.Generator;
 
 public partial class CrossChannelObject
 {
-    private const string TaskName = "System.Threading.Tasks.Task";
-
     internal void GenerateBrokerClass(ScopingStringBuilder ssb)
     {
-        using (ssb.ScopeBrace($"private sealed class {this.BrokerClassName} : {this.LocalName}"))
+        var serviceName = this.QualifiedName;
+        ssb.AppendLine(CrossChannelBody.ObsoleteContext);
+        var unsafeModifier = this.Methods?.Any(x => x.RequiresUnsafe) == true ? "unsafe " : string.Empty; // Only when needed, since 'unsafe' requires AllowUnsafeBlocks.
+        using (ssb.ScopeBrace($"private sealed {unsafeModifier}class {this.BrokerClassName} : {serviceName}"))
         {
-            ssb.AppendLine($"private readonly Channel<{this.LocalName}> channel;");
+            ssb.AppendLine($"private readonly global::CrossChannel.Channel<{serviceName}> channel;");
             using (ssb.ScopeBrace($"public {this.BrokerClassName}(object channel)"))
             {
-                ssb.AppendLine($"this.channel = (Channel<{this.LocalName}>)channel;");
+                ssb.AppendLine($"this.channel = (global::CrossChannel.Channel<{serviceName}>)channel;");
             }
 
             if (this.Methods is not null)
             {
                 foreach (var x in this.Methods)
                 {
-                    if (x.ReturnKind == ServiceMethod.MethodReturnKind.Other)
-                    {
-                        continue;
-                    }
-
                     // The broker methods are deliberately not 'async': the common cases (no receiver,
                     // a single receiver) complete without allocating an async state machine.
                     using (ssb.ScopeBrace($"{x.ReturnName} {x.DeclaringName}.@{x.SimpleName}({x.GetParameterDeclarations()})"))
@@ -73,7 +69,7 @@ public partial class CrossChannelObject
         this.Generate_GetList(ssb);
         ssb.AppendLine("if (countHint == 0) return default;");
         ssb.AppendLine($"{method.ResultName} firstResult = default!;");
-        ssb.AppendLine($"var results = System.Array.Empty<{method.ResultName}>();");
+        ssb.AppendLine($"var results = global::System.Array.Empty<{method.ResultName}>();");
         ssb.AppendLine("var count = 0;");
 
         using (this.Generate_ForEach(ssb))
@@ -85,16 +81,16 @@ public partial class CrossChannelObject
         // 0 receivers: empty, 1 receiver: a single result (no array is allocated).
         ssb.AppendLine("if (count == 0) return default;");
         ssb.AppendLine("else if (count == 1) return new(firstResult);");
-        ssb.AppendLine("else if (count != results!.Length) System.Array.Resize(ref results, count);");
+        ssb.AppendLine("else if (count != results!.Length) global::System.Array.Resize(ref results, count);");
         ssb.AppendLine("return new(results!);");
     }
 
     private void GenerateBrokerMethod_Task(ScopingStringBuilder ssb, ServiceMethod method)
     {// Task
-        var taskName = method.ReturnName; // System.Threading.Tasks.Task
+        var taskName = method.ElementName; // global::System.Threading.Tasks.Task
 
         this.Generate_GetList(ssb);
-        ssb.AppendLine($"if (countHint == 0) return {TaskName}.CompletedTask;");
+        ssb.AppendLine($"if (countHint == 0) return global::{ServiceMethod.TaskName}.CompletedTask;");
         ssb.AppendLine($"{taskName}? firstTask = default;");
         ssb.AppendLine($"{taskName}[]? tasks = default;");
         ssb.AppendLine("var count = 0;");
@@ -106,26 +102,28 @@ public partial class CrossChannelObject
             using (this.Generate_ForEach(ssb))
             {
                 ssb.AppendLine($"var t = (({method.DeclaringName})instance).@{method.SimpleName}({method.GetParameterNames()});");
-                ssb.AppendLine("if (t.IsCompletedSuccessfully) continue;");
+
+                // A null task (allowed by a nullable return type) is treated as completed.
+                ssb.AppendLine(method.IsReturnNullable ? "if (t is null || t.IsCompletedSuccessfully) continue;" : "if (t.IsCompletedSuccessfully) continue;");
                 this.Generate_AddValue(ssb, taskName, "tasks", "firstTask", "t");
             }
         }
 
-        using (ssb.ScopeBrace("catch (System.Exception ex)"))
+        using (ssb.ScopeBrace("catch (global::System.Exception ex)"))
         {
-            ssb.AppendLine($"return {TaskName}.FromException(ex);");
+            ssb.AppendLine($"return global::{ServiceMethod.TaskName}.FromException(ex);");
         }
 
         // 0 receivers: a cached completed task, 1 receiver: the task is passed through as-is.
-        ssb.AppendLine($"if (count == 0) return {TaskName}.CompletedTask;");
+        ssb.AppendLine($"if (count == 0) return global::{ServiceMethod.TaskName}.CompletedTask;");
         ssb.AppendLine("else if (count == 1) return firstTask!;");
-        ssb.AppendLine($"return {TaskName}.WhenAll(tasks!.AsSpan(0, count));");
+        ssb.AppendLine($"return global::{ServiceMethod.TaskName}.WhenAll(global::System.MemoryExtensions.AsSpan(tasks!, 0, count));");
     }
 
     private void GenerateBrokerMethod_TaskRadioResult(ScopingStringBuilder ssb, ServiceMethod method)
     {// Task<RadioResult<T>>
-        var taskName = method.ReturnName; // System.Threading.Tasks.Task<CrossChannel.RadioResult<T>>
-        var emptyTask = $"CrossChannel.RadioTask.GetEmptyResultTask<{method.ResultName}>()";
+        var taskName = method.ElementName; // global::System.Threading.Tasks.Task<global::CrossChannel.RadioResult<T>>
+        var emptyTask = $"global::CrossChannel.RadioTask.GetEmptyResultTask<{method.ResultName}>()";
 
         this.Generate_GetList(ssb);
         ssb.AppendLine($"if (countHint == 0) return {emptyTask};");
@@ -138,19 +136,25 @@ public partial class CrossChannelObject
             using (this.Generate_ForEach(ssb))
             {
                 ssb.AppendLine($"var t = (({method.DeclaringName})instance).@{method.SimpleName}({method.GetParameterNames()});");
+                if (method.IsReturnNullable)
+                {// A null task (allowed by a nullable return type) is treated as a completed task without a result.
+                    ssb.AppendLine("if (t is null) continue;");
+                }
+
                 this.Generate_AddValue(ssb, taskName, "tasks", "firstTask", "t");
             }
         }
 
-        using (ssb.ScopeBrace("catch (System.Exception ex)"))
+        using (ssb.ScopeBrace("catch (global::System.Exception ex)"))
         {
-            ssb.AppendLine($"return {TaskName}.FromException<CrossChannel.RadioResult<{method.ResultName}>>(ex);");
+            ssb.AppendLine($"return global::{ServiceMethod.TaskName}.FromException<global::CrossChannel.RadioResult<{method.ResultName}>>(ex);");
         }
 
         // 0 receivers: a cached completed task, 1 receiver: the task is passed through as-is.
+        // 2 or more: aggregated synchronously when every task has already completed successfully.
         ssb.AppendLine($"if (count == 0) return {emptyTask};");
         ssb.AppendLine("else if (count == 1) return firstTask!;");
-        ssb.AppendLine($"return CrossChannel.RadioTask.AggregateAsync<{method.ResultName}>({TaskName}.WhenAll(tasks!.AsSpan(0, count)));");
+        ssb.AppendLine($"return global::CrossChannel.RadioTask.AggregateAsync<{method.ResultName}>(tasks!, count);");
     }
 
     private void Generate_GetList(ScopingStringBuilder ssb)
@@ -162,7 +166,7 @@ public partial class CrossChannelObject
     private ScopingStringBuilder.IScope Generate_ForEach(ScopingStringBuilder ssb)
     {
         var scope = ssb.ScopeBrace("for (var linkIndex = 0; linkIndex < array.Length; linkIndex++)");
-        ssb.AppendLine("var x = System.Threading.Volatile.Read(ref array[linkIndex]);");
+        ssb.AppendLine("var x = global::System.Threading.Volatile.Read(ref array[linkIndex]);");
         ssb.AppendLine("if (x is null || !x.IsOpen) continue;");
         ssb.AppendLine("if (!x.TryGetInstance(out var instance)) { x.Dispose(); continue; }");
 
@@ -183,13 +187,13 @@ public partial class CrossChannelObject
         {
             using (ssb.ScopeBrace($"if ({arrayName} is null || {arrayName}.Length == 0)"))
             {
-                ssb.AppendLine($"{arrayName} = System.GC.AllocateUninitializedArray<{elementName}>(System.Math.Max(2, countHint));");
+                ssb.AppendLine($"{arrayName} = global::System.GC.AllocateUninitializedArray<{elementName}>(global::System.Math.Max(2, countHint));");
                 ssb.AppendLine($"{arrayName}[0] = {firstName}!;");
             }
 
             using (ssb.ScopeBrace($"else if (count == {arrayName}.Length)"))
             {
-                ssb.AppendLine($"System.Array.Resize(ref {arrayName}, System.Math.Min(array.Length, {arrayName}.Length * 2));");
+                ssb.AppendLine($"global::System.Array.Resize(ref {arrayName}, global::System.Math.Min(array.Length, {arrayName}.Length * 2));");
             }
 
             ssb.AppendLine($"{arrayName}[count] = {value};");
